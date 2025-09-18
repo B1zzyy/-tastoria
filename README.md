@@ -1,9 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tastoria - Recipe Parser
 
-## Getting Started
+A sleek and modern web application built with Next.js that transforms recipe URLs into beautifully formatted, easy-to-follow recipes. Simply paste any recipe URL from popular cooking websites and get a clean, organized display of ingredients, instructions, and nutritional information.
 
-First, run the development server:
+## ✨ Features
 
+- **Easy URL Parsing**: Simply paste any recipe URL from popular cooking websites
+- **Clean Format**: Get recipes in a beautiful, clutter-free format that's easy to follow
+- **Lightning Fast**: Parse recipes in seconds with advanced extraction technology
+- **Responsive Design**: Works perfectly on desktop, tablet, and mobile devices
+- **Dark/Light Mode**: Supports both light and dark themes
+- **Structured Data**: Extracts ingredients, instructions, prep time, cooking time, and nutrition info
+- **Modern UI**: Built with a custom color palette and smooth animations
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ installed on your machine
+- npm, yarn, pnpm, or bun package manager
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <your-repo-url>
+cd recipe-parser
+```
+
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn install
+# or
+pnpm install
+# or
+bun install
+```
+
+3. Run the development server:
 ```bash
 npm run dev
 # or
@@ -14,23 +49,144 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🎯 How to Use
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Paste Recipe URL**: Copy any recipe URL from popular cooking websites like AllRecipes, Food Network, Bon Appétit, etc.
+2. **Click Parse Recipe**: Hit the "Parse Recipe" button and wait a few seconds
+3. **View Clean Recipe**: Get a beautifully formatted recipe with:
+   - Clear ingredient list with measurements
+   - Step-by-step instructions
+   - Cooking times and serving information
+   - Nutritional information (when available)
+   - Recipe rating and reviews
 
-## Learn More
+## 🛠️ Technology Stack
 
-To learn more about Next.js, take a look at the following resources:
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS with custom color palette
+- **Web Scraping**: Cheerio for HTML parsing
+- **HTTP Client**: Axios for fetching web pages
+- **Icons**: Lucide React
+- **Deployment**: Ready for Vercel deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🎨 Custom Color Palette
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The application uses a carefully crafted color palette with OKLCH color space for better color consistency:
 
-## Deploy on Vercel
+- **Primary**: Warm earth tones
+- **Secondary**: Soft yellows and creams
+- **Accent**: Neutral grays
+- **Background**: Clean whites and soft grays
+- **Dark Mode**: Deep blues and purples with high contrast
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📁 Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/
+│   ├── api/
+│   │   └── parse-recipe/
+│   │       └── route.ts          # API endpoint for recipe parsing
+│   ├── globals.css               # Global styles and color variables
+│   ├── layout.tsx                # Root layout with metadata
+│   └── page.tsx                  # Main page component
+├── components/
+│   ├── LoadingSpinner.tsx        # Loading animation component
+│   ├── RecipeDisplay.tsx         # Recipe display component
+│   └── RecipeForm.tsx            # URL input form component
+└── lib/
+    ├── recipe-parser.ts          # Core recipe parsing logic
+    └── utils.ts                  # Utility functions
+```
+
+## 🔧 API Endpoints
+
+### POST `/api/parse-recipe`
+
+Parses a recipe from a given URL.
+
+**Request Body:**
+```json
+{
+  "url": "https://example.com/recipe-url"
+}
+```
+
+**Response:**
+```json
+{
+  "recipe": {
+    "title": "Recipe Title",
+    "description": "Recipe description",
+    "image": "https://example.com/image.jpg",
+    "prepTime": "15m",
+    "cookTime": "30m",
+    "totalTime": "45m",
+    "servings": "4",
+    "ingredients": ["ingredient 1", "ingredient 2"],
+    "instructions": ["step 1", "step 2"],
+    "nutrition": {
+      "calories": "250",
+      "protein": "15g",
+      "carbs": "30g",
+      "fat": "8g"
+    },
+    "author": "Recipe Author",
+    "rating": "4.5",
+    "reviewCount": "123"
+  }
+}
+```
+
+## 🌐 Supported Websites
+
+The parser supports recipes from most major cooking websites that use:
+- JSON-LD structured data
+- Microdata markup
+- Common HTML patterns
+
+Popular supported sites include:
+- AllRecipes
+- Food Network
+- Bon Appétit
+- Serious Eats
+- BBC Good Food
+- And many more!
+
+## 🚀 Deployment
+
+The application is ready for deployment on Vercel:
+
+1. Push your code to GitHub
+2. Connect your repository to Vercel
+3. Deploy with zero configuration
+
+For other platforms, build the application:
+
+```bash
+npm run build
+npm start
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## 📝 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+## 🐛 Issues and Support
+
+If you encounter any issues or have questions, please [open an issue](https://github.com/your-username/recipe-parser/issues) on GitHub.
+
+---
+
+Built with ❤️ using Next.js and modern web technologies.
