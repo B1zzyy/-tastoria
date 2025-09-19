@@ -35,6 +35,19 @@ export default function Home() {
   useEffect(() => {
     console.log('User state changed:', user);
   }, [user]);
+
+  // Handle shared recipe URLs
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedRecipeUrl = urlParams.get('recipe');
+    
+    if (sharedRecipeUrl && !recipe) {
+      // Auto-parse the shared recipe
+      handleParseRecipe(decodeURIComponent(sharedRecipeUrl));
+      // Clean up the URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [recipe]);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const desktopDropdownRef = useRef<HTMLDivElement>(null);
@@ -155,7 +168,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       {/* Top Right Controls */}
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
+      <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
         {/* Saved Recipes Button - Only show when user is logged in and not viewing a recipe */}
         {user && !recipe && (
           <button
@@ -269,22 +282,24 @@ export default function Home() {
                 <button 
                   onClick={async () => {
                     try {
+                      const shareUrl = `${window.location.origin}?recipe=${encodeURIComponent(currentRecipeUrl)}`;
                       if (navigator.share && recipe) {
                         await navigator.share({
-                          title: recipe.title,
-                          text: `Check out this recipe: ${recipe.title}`,
-                          url: window.location.href
+                          title: `${recipe.title} - Tastoria`,
+                          text: `Check out this clean, easy-to-follow recipe: ${recipe.title}`,
+                          url: shareUrl
                         });
                       } else {
                         // Fallback: copy to clipboard
-                        await navigator.clipboard.writeText(window.location.href);
+                        await navigator.clipboard.writeText(shareUrl);
                         // Could show a toast notification here
                       }
                     } catch (error) {
                       console.log('Share failed:', error);
                       // Fallback: try to copy to clipboard
                       try {
-                        await navigator.clipboard.writeText(window.location.href);
+                        const shareUrl = `${window.location.origin}?recipe=${encodeURIComponent(currentRecipeUrl)}`;
+                        await navigator.clipboard.writeText(shareUrl);
                       } catch (clipboardError) {
                         console.log('Clipboard fallback failed:', clipboardError);
                       }
@@ -364,22 +379,24 @@ export default function Home() {
                   <button 
                     onClick={async () => {
                       try {
+                        const shareUrl = `${window.location.origin}?recipe=${encodeURIComponent(currentRecipeUrl)}`;
                         if (navigator.share && recipe) {
                           await navigator.share({
-                            title: recipe.title,
-                            text: `Check out this recipe: ${recipe.title}`,
-                            url: window.location.href
+                            title: `${recipe.title} - Tastoria`,
+                            text: `Check out this clean, easy-to-follow recipe: ${recipe.title}`,
+                            url: shareUrl
                           });
                         } else {
                           // Fallback: copy to clipboard
-                          await navigator.clipboard.writeText(window.location.href);
+                          await navigator.clipboard.writeText(shareUrl);
                           // Could show a toast notification here
                         }
                       } catch (error) {
                         console.log('Share failed:', error);
                         // Fallback: try to copy to clipboard
                         try {
-                          await navigator.clipboard.writeText(window.location.href);
+                          const shareUrl = `${window.location.origin}?recipe=${encodeURIComponent(currentRecipeUrl)}`;
+                          await navigator.clipboard.writeText(shareUrl);
                         } catch (clipboardError) {
                           console.log('Clipboard fallback failed:', clipboardError);
                         }
