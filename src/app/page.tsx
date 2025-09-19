@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { Recipe } from '@/lib/recipe-parser';
 import RecipeForm from '@/components/RecipeForm';
 import RecipeDisplay from '@/components/RecipeDisplay';
@@ -10,7 +11,8 @@ import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
 import { saveRecipe, isRecipeSaved } from '@/lib/recipeService';
 import SavedRecipes from '@/components/SavedRecipes';
-import { ChefHat, ChevronDown, LogOut, User, Bookmark, BookmarkCheck } from 'lucide-react';
+import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck } from 'lucide-react';
+import '@/lib/keepAlive'; // Import to initialize keep-alive service
 
 export default function Home() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -284,7 +286,13 @@ export default function Home() {
                   className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                 >
                   <div className="p-1.5 bg-primary/10 rounded-lg">
-                    <ChefHat className="w-5 h-5 text-primary" />
+                    <Image 
+                      src="/logo.png" 
+                      alt="Tastoria Logo" 
+                      width={32} 
+                      height={32}
+                      className="w-8 h-8"
+                    />
                   </div>
                   <span className="font-bold text-lg text-foreground">Tastoria</span>
                 </button>
@@ -415,8 +423,14 @@ export default function Home() {
           <div className="md:hidden flex flex-col min-h-screen">
             {/* Mobile Header */}
             <div className="flex items-center justify-between p-4 pt-6">
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold text-foreground">Tastoria</span>
+              <div className="flex items-center">
+          <Image
+                  src="/logo.png" 
+                  alt="Tastoria Logo" 
+                  width={48} 
+                  height={48}
+                  className="w-12 h-12 -mt-3 -mr-1"
+                />
               </div>
             </div>
 
@@ -498,7 +512,13 @@ export default function Home() {
               <div className="mb-8">
                 <div className="flex items-center justify-center gap-3 mb-6">
                   <div className="p-4 bg-primary/10 rounded-2xl">
-                    <ChefHat className="w-10 h-10 text-primary" />
+          <Image
+                      src="/logo.png" 
+                      alt="Tastoria Logo" 
+                      width={64} 
+                      height={64}
+                      className="w-16 h-16"
+                    />
                   </div>
                 </div>
                 
