@@ -31,6 +31,11 @@ export default function Home() {
   // Use real authentication
   const { user, signOut } = useAuth();
   
+  // Debug user state changes
+  useEffect(() => {
+    console.log('User state changed:', user);
+  }, [user]);
+  
   const dropdownRef = useRef<HTMLDivElement>(null);
   const desktopDropdownRef = useRef<HTMLDivElement>(null);
 

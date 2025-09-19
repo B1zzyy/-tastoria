@@ -43,13 +43,16 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
         setFormData({ name: '', email: '', password: '' });
         setError(null);
       } else {
+        console.log('Starting sign in...');
         const { error } = await signIn(formData.email, formData.password);
+        console.log('Sign in result:', { error });
         
         if (error) {
           setError(error.message);
           return;
         }
         // Success - close modal and reset form for login
+        console.log('Sign in successful, closing modal');
         onClose();
         setFormData({ name: '', email: '', password: '' });
         setError(null);

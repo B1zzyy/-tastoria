@@ -26,6 +26,7 @@ export function useAuth() {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', { event, hasUser: !!session?.user });
       if (session?.user) {
         await fetchUserProfile(session.user)
       } else {
@@ -38,6 +39,7 @@ export function useAuth() {
   }, [])
 
   const fetchUserProfile = async (authUser: User) => {
+    console.log('Fetching profile for user:', authUser.id);
     try {
       // Add timeout to profile fetch
       const profilePromise = supabase
@@ -55,11 +57,13 @@ export function useAuth() {
       if (error) {
         console.warn('Profile not found, using auth user data:', error)
         // Fallback to auth user data if profile doesn't exist
-        setUser({
+        const fallbackUser = {
           id: authUser.id,
           email: authUser.email || '',
           name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User'
-        })
+        };
+        console.log('Setting fallback user:', fallbackUser);
+        setUser(fallbackUser);
         return
       }
 
