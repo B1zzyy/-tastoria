@@ -39,11 +39,29 @@ export function useAuth() {
 
   const fetchUserProfile = async (authUser: User) => {
     try {
-      const { data: profile } = await supabase
+      // Add timeout to profile fetch
+      const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
         .single()
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+      })
+
+      const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]) as any
+
+      if (error) {
+        console.warn('Profile not found, using auth user data:', error)
+        // Fallback to auth user data if profile doesn't exist
+        setUser({
+          id: authUser.id,
+          email: authUser.email || '',
+          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User'
+        })
+        return
+      }
 
       if (profile) {
         setUser({
@@ -51,9 +69,22 @@ export function useAuth() {
           email: profile.email,
           name: profile.name
         })
+      } else {
+        // Fallback if profile is null
+        setUser({
+          id: authUser.id,
+          email: authUser.email || '',
+          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User'
+        })
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
+      // Fallback to auth user data on any error
+      setUser({
+        id: authUser.id,
+        email: authUser.email || '',
+        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User'
+      })
     }
   }
 
