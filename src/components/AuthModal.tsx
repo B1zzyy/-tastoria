@@ -38,7 +38,8 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
     try {
       if (mode === 'signup') {
         const authPromise = signUp(formData.email, formData.password, formData.name);
-        const { error } = await Promise.race([authPromise, timeoutPromise]) as any;
+        const result = await Promise.race([authPromise, timeoutPromise]) as { error?: { message: string } };
+        const { error } = result;
         
         if (error) {
           setError(error.message);
@@ -50,7 +51,8 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
         setError(null);
       } else {
         const authPromise = signIn(formData.email, formData.password);
-        const { error } = await Promise.race([authPromise, timeoutPromise]) as any;
+        const result = await Promise.race([authPromise, timeoutPromise]) as { error?: { message: string } };
+        const { error } = result;
         
         if (error) {
           setError(error.message);

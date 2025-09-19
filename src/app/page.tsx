@@ -29,7 +29,7 @@ export default function Home() {
   const [showConstructionAlert, setShowConstructionAlert] = useState(false);
   
   // Use real authentication
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const desktopDropdownRef = useRef<HTMLDivElement>(null);

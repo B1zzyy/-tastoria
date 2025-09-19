@@ -57,12 +57,18 @@ class KeepAliveService {
 // Create singleton instance
 export const keepAliveService = new KeepAliveService();
 
-// Auto-start when imported (only in browser)
+// Auto-start when imported (only in browser and not on localhost)
 if (typeof window !== 'undefined') {
-  // Start after a short delay to avoid blocking initial page load
-  setTimeout(() => {
-    keepAliveService.start();
-  }, 3000);
+  // Only start keep-alive in production (not on localhost)
+  const isProduction = !window.location.hostname.includes('localhost') && 
+                      !window.location.hostname.includes('127.0.0.1');
+  
+  if (isProduction) {
+    // Start after a short delay to avoid blocking initial page load
+    setTimeout(() => {
+      keepAliveService.start();
+    }, 3000);
+  }
 
   // Stop when page is about to unload
   window.addEventListener('beforeunload', () => {
@@ -71,7 +77,7 @@ if (typeof window !== 'undefined') {
 
   // Restart when page becomes visible again (user comes back to tab)
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && !keepAliveService.isActive()) {
+    if (document.visibilityState === 'visible' && !keepAliveService.isActive() && isProduction) {
       keepAliveService.start();
     } else if (document.visibilityState === 'hidden') {
       keepAliveService.stop();
