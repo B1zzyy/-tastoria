@@ -52,7 +52,8 @@ export function useAuth() {
         setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
       })
 
-      const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]) as any
+      const result = await Promise.race([profilePromise, timeoutPromise]) as { data: unknown; error: unknown };
+      const { data: profile, error } = result;
 
       if (error) {
         console.warn('Profile not found, using auth user data:', error)
@@ -67,11 +68,12 @@ export function useAuth() {
         return
       }
 
-      if (profile) {
+      if (profile && typeof profile === 'object' && profile !== null) {
+        const profileData = profile as { id: string; email: string; name: string };
         setUser({
-          id: profile.id,
-          email: profile.email,
-          name: profile.name
+          id: profileData.id,
+          email: profileData.email,
+          name: profileData.name
         })
       } else {
         // Fallback if profile is null
