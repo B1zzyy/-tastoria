@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tastoria - Recipe Parser",
-  description: "Transform any recipe URL into a beautifully formatted, easy-to-follow recipe. Parse recipes from popular cooking websites instantly.",
-  keywords: ["recipe parser", "cooking", "recipes", "food", "ingredients", "instructions"],
+  title: "Tastoria - Recipes Made Easy",
+  description: "Clear away the clutter on any recipe site. Transform any recipe URL into a beautifully formatted, easy-to-follow recipe instantly.",
+  keywords: ["recipes", "recipe parser", "cooking", "food", "ingredients", "instructions", "clean recipes"],
   authors: [{ name: "Tastoria" }],
   creator: "Tastoria",
   publisher: "Tastoria",
@@ -25,15 +25,23 @@ export const metadata: Metadata = {
     follow: true,
   },
   openGraph: {
-    title: "Tastoria - Recipe Parser",
-    description: "Transform any recipe URL into a beautifully formatted, easy-to-follow recipe.",
+    title: "Tastoria - Recipes Made Easy",
+    description: "Clear away the clutter on any recipe site. Transform any recipe URL into a beautifully formatted, easy-to-follow recipe.",
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tastoria - Recipe Parser",
-    description: "Transform any recipe URL into a beautifully formatted, easy-to-follow recipe.",
+    title: "Tastoria - Recipes Made Easy",
+    description: "Clear away the clutter on any recipe site. Transform any recipe URL into a beautifully formatted, easy-to-follow recipe.",
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '16x16 32x32', type: 'image/x-icon' },
+      { url: '/favicon.svg', type: 'image/svg+xml' }
+    ],
+    apple: '/apple-touch-icon.png',
+    shortcut: '/favicon.ico',
   },
 };
 
