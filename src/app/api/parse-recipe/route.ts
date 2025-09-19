@@ -22,7 +22,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const recipe = await parseRecipeFromUrl(url);
+    // Create a timeout promise that rejects after 25 seconds
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Recipe parsing timed out after 25 seconds')), 25000);
+    });
+
+    // Race the parsing against the timeout
+    const recipe = await Promise.race([
+      parseRecipeFromUrl(url),
+      timeoutPromise
+    ]);
     
     return NextResponse.json({ recipe });
   } catch (error) {

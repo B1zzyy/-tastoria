@@ -30,9 +30,16 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
     setLoading(true);
     setError(null);
     
+    // Create a timeout promise that rejects after 20 seconds
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out after 20 seconds')), 20000);
+    });
+    
     try {
       if (mode === 'signup') {
-        const { error } = await signUp(formData.email, formData.password, formData.name);
+        const authPromise = signUp(formData.email, formData.password, formData.name);
+        const { error } = await Promise.race([authPromise, timeoutPromise]) as any;
+        
         if (error) {
           setError(error.message);
           return;
@@ -42,7 +49,9 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
         setFormData({ name: '', email: '', password: '' });
         setError(null);
       } else {
-        const { error } = await signIn(formData.email, formData.password);
+        const authPromise = signIn(formData.email, formData.password);
+        const { error } = await Promise.race([authPromise, timeoutPromise]) as any;
+        
         if (error) {
           setError(error.message);
           return;
@@ -53,7 +62,11 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
         setError(null);
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unexpected error occurred');
+      }
     } finally {
       setLoading(false);
     }

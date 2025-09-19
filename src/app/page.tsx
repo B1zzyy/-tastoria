@@ -97,6 +97,14 @@ export default function Home() {
     setCurrentRecipeUrl(url);
     setIsRecipeCurrentlySaved(false);
 
+    // Create AbortController for request cancellation
+    const abortController = new AbortController();
+    
+    // Set timeout to cancel request after 30 seconds
+    const timeoutId = setTimeout(() => {
+      abortController.abort();
+    }, 30000);
+
     try {
       const response = await fetch('/api/parse-recipe', {
         method: 'POST',
@@ -104,7 +112,11 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ url }),
+        signal: abortController.signal, // Add abort signal
       });
+
+      // Clear timeout if request completes
+      clearTimeout(timeoutId);
 
       const data = await response.json();
 
@@ -119,7 +131,17 @@ export default function Home() {
         await checkIfRecipeSaved(url);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      clearTimeout(timeoutId);
+      
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          setError('Request timed out after 30 seconds. Please try again or check if the URL is accessible.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('An error occurred while parsing the recipe');
+      }
     } finally {
       setLoading(false);
     }
@@ -593,8 +615,19 @@ export default function Home() {
 
       {/* Loading State */}
       {loading && (
-        <div className="flex justify-center py-16">
+        <div className="flex flex-col items-center justify-center py-16">
           <LoadingSpinner />
+          <p className="text-muted-foreground mt-4">Parsing recipe...</p>
+          <p className="text-muted-foreground text-sm mt-1">This may take up to 30 seconds</p>
+          <button 
+            onClick={() => {
+              setLoading(false);
+              setError('Recipe parsing was cancelled');
+            }}
+            className="mt-4 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
+          >
+            Cancel
+          </button>
         </div>
       )}
 
