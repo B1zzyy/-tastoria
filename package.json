@@ -14,6 +14,7 @@
     "axios": "^1.12.2",
     "cheerio": "^1.1.2",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.23.16",
     "gsap": "^3.13.0",
     "lucide-react": "^0.544.0",
     "next": "15.5.3",

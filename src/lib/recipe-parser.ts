@@ -55,6 +55,8 @@ export interface Recipe {
 
 export async function parseRecipeFromUrl(url: string): Promise<Recipe> {
   try {
+    console.log('🔍 Starting recipe parsing for:', url);
+    
     // Fetch the webpage
     const response = await axios.get(url, {
       headers: {
@@ -67,7 +69,26 @@ export async function parseRecipeFromUrl(url: string): Promise<Recipe> {
       timeout: 10000,
     });
 
+    console.log('✅ Got response, content length:', response.data.length);
     const $ = cheerio.load(response.data);
+    
+    // Debug: Check what spans we can find
+    const allSpans = $('span');
+    console.log(`🔍 Found ${allSpans.length} span elements on page`);
+    
+    // Debug: Look for spans with cooking words
+    const cookingSpans = $('span').filter((_, el) => {
+      const text = $(el).text().trim();
+      return /\b(steam|melt|add|stir|cook|bake|mix|combine|heat|place|sprinkle|season|drain|remove|return|gradually|continue|crumble|dot|brown|grill)\b/i.test(text) && text.length > 20;
+    });
+    console.log(`🍳 Found ${cookingSpans.length} spans with cooking instructions`);
+    
+    if (cookingSpans.length > 0) {
+      console.log('📝 Sample cooking spans:');
+      cookingSpans.slice(0, 3).each((_, el) => {
+        console.log(`- "${$(el).text().trim().substring(0, 80)}..."`);
+      });
+    }
     
     // Try to find JSON-LD structured data first (most reliable)
     const jsonLdScript = $('script[type="application/ld+json"]').get();
@@ -98,6 +119,92 @@ export async function parseRecipeFromUrl(url: string): Promise<Recipe> {
 
     if (!recipe) {
       throw new Error('Could not parse recipe from the provided URL');
+    }
+
+    // ENHANCED PARSING - force span parsing for incomplete instructions (apply to all sites)
+    if (recipe.instructions.length <= 8) { // Apply to any recipe with limited instructions
+      console.log('🎯 Applying enhanced parsing for incomplete instructions');
+      
+      // Look for the instructions section specifically
+      const instructionsSection = $('h3:contains("Instructions"), h2:contains("Instructions")').parent();
+      const targetContainer = instructionsSection.length > 0 ? instructionsSection : $('.entry-content, .recipe-content').first();
+      
+      const allSpansWithInstructions = targetContainer.find('span').filter((_, el) => {
+        const text = $(el).text().trim();
+        
+        // More inclusive instruction detection
+        const hasInstructionWords = /\b(steam|melt|add|stir|cook|bake|mix|combine|heat|place|sprinkle|season|drain|remove|return|gradually|continue|crumble|dot|brown|grill|preheat|roast|oven|temperature|reduce|transfer|cover|rest|spoon|crumble|cube|flour|water|thickened|juices|serve)\b/i.test(text);
+        const hasTemperature = /\d+°?[CF]|\d+℃/i.test(text);
+        const hasTime = /\d+\s*(minutes?|hours?|mins?|hrs?)/i.test(text);
+        const hasAction = /^(preheat|roast|remove|combine|when|to make|spoon|transfer)/i.test(text);
+        
+        const isLongEnough = text.length > 15; // Reduced from 20
+        const isNotIngredient = !text.match(/^\d+\s*(g|kg|ml|l|cup|tsp|tbsp|oz|lb)\s/i);
+        
+        // Less restrictive notes filtering
+        const isNotNotes = !text.match(/\b(misnomer|term|best made using bread that is beginning|if you don't have stale bread)\b/i);
+        const isNotAboutBreadcrumbs = !text.includes('fresh breadcrumbs') || text.includes('sprinkle');
+        
+        return isLongEnough && 
+               (hasInstructionWords || hasTemperature || hasTime || hasAction) && 
+               isNotIngredient && 
+               isNotNotes && 
+               isNotAboutBreadcrumbs;
+      });
+      
+      if (allSpansWithInstructions.length > 0) {
+        const spanInstructions = allSpansWithInstructions.map((_, el) => decodeHtmlEntities($(el).text().trim())).get().filter(Boolean);
+        console.log(`🔧 Found ${spanInstructions.length} span instructions (filtered), replacing existing ${recipe.instructions.length}`);
+        
+        // Additional filtering: remove anything that looks like notes or tips
+        let cleanedInstructions = spanInstructions.filter(instruction => {
+          const lowerInstruction = instruction.toLowerCase();
+          return !lowerInstruction.includes('misnomer') && 
+                 !lowerInstruction.includes('best made using bread that is beginning') &&
+                 !lowerInstruction.includes('if you don\'t have stale bread') &&
+                 !(lowerInstruction.includes('fresh breadcrumbs') && !lowerInstruction.includes('sprinkle'));
+        });
+        
+        console.log(`🧹 After cleaning: ${cleanedInstructions.length} instructions`);
+        
+        // Special handling for incomplete section headings (like "To make the gravy")
+        const hasIncompleteSection = cleanedInstructions.some(instruction => {
+          const lowerInstruction = instruction.toLowerCase();
+          return (
+            lowerInstruction.includes('to make the') || 
+            lowerInstruction.includes('for the') ||
+            lowerInstruction.includes('to prepare') ||
+            lowerInstruction.includes('for serving') ||
+            (instruction.length < 50 && lowerInstruction.match(/^(to|for)\s/)) // Short instructions starting with "to" or "for"
+          );
+        });
+        
+        if (hasIncompleteSection) {
+          console.log('🔍 Detected incomplete section, looking for more content...');
+          
+          // Look for additional spans that might contain the rest of the instructions
+          const additionalSpans = targetContainer.find('span').filter((_, el) => {
+            const text = $(el).text().trim();
+            const hasInstructionWords = /\b(spoon|crumble|stir|cook|remove|gradually|transfer|scraping|stirring|preheat|roast|oven|temperature|reduce|cover|rest)\b/i.test(text);
+            const hasTemperature = /\d+°?[CF]|\d+℃/i.test(text);
+            const hasTime = /\d+\s*(minutes?|hours?|mins?|hrs?)/i.test(text);
+            const isLongEnough = text.length > 20; // Reduced from 30
+            const isNotAlreadyIncluded = !cleanedInstructions.some(existing => existing.includes(text) || text.includes(existing));
+            
+            return isLongEnough && 
+                   (hasInstructionWords || hasTemperature || hasTime) && 
+                   isNotAlreadyIncluded;
+          });
+          
+          if (additionalSpans.length > 0) {
+            const additionalInstructions = additionalSpans.map((_, el) => decodeHtmlEntities($(el).text().trim())).get().filter(Boolean);
+            console.log(`➕ Found ${additionalInstructions.length} additional instruction spans`);
+            cleanedInstructions = cleanedInstructions.concat(additionalInstructions);
+          }
+        }
+        
+        recipe.instructions = cleanedInstructions;
+      }
     }
 
     return recipe;
@@ -176,10 +283,28 @@ function parseRecipeFromMicrodata($: cheerio.Root): Recipe | null {
     totalTime: formatTime(recipeElement.find('[itemprop="totalTime"]').first().attr('datetime') || recipeElement.find('[itemprop="totalTime"]').first().text()),
     servings: decodeHtmlEntities(recipeElement.find('[itemprop="recipeYield"], [itemprop="yield"]').first().text().trim()),
     ingredients: recipeElement.find('[itemprop="recipeIngredient"]').map((_, el) => decodeHtmlEntities($(el).text().trim())).get().filter(Boolean),
-    instructions: recipeElement.find('[itemprop="recipeInstructions"]').map((_, el) => {
-      const text = $(el).find('[itemprop="text"]').text() || $(el).text();
-      return decodeHtmlEntities(text.trim());
-    }).get().filter(Boolean),
+    instructions: (() => {
+      // First try to get instructions with itemprop
+      let instructions = recipeElement.find('[itemprop="recipeInstructions"]').map((_, el) => {
+        const text = $(el).find('[itemprop="text"]').text() || $(el).text();
+        return decodeHtmlEntities(text.trim());
+      }).get().filter(Boolean);
+      
+      // If no instructions found, try looking within instruction containers for lists, paragraphs, spans
+      if (instructions.length === 0) {
+        const instructionContainer = recipeElement.find('[itemprop="recipeInstructions"]').first();
+        if (instructionContainer.length > 0) {
+          const stepElements = instructionContainer.find('li, p, div, span').filter((_, el) => {
+            const text = $(el).text().trim();
+            const hasInstructionWords = /\b(steam|melt|add|stir|cook|bake|mix|combine|heat|place|sprinkle|season|drain|remove|return|gradually|continue|crumble|dot|brown|grill)\b/i.test(text);
+            return text.length > 15 && hasInstructionWords; // Only include substantial instruction text
+          });
+          instructions = stepElements.map((_, el) => decodeHtmlEntities($(el).text().trim())).get().filter(Boolean);
+        }
+      }
+      
+      return instructions;
+    })(),
     author: decodeHtmlEntities(recipeElement.find('[itemprop="author"]').first().text().trim()),
     rating: recipeElement.find('[itemprop="ratingValue"]').first().text().trim(),
     reviewCount: recipeElement.find('[itemprop="reviewCount"]').first().text().trim(),
@@ -211,11 +336,220 @@ function parseRecipeGeneral($: cheerio.Root): Recipe | null {
   }
 
   let instructions: string[] = [];
+  
+  // Enhanced instruction parsing - try multiple approaches
   for (const selector of instructionSelectors) {
     const elements = $(selector);
     if (elements.length > 0) {
       instructions = elements.map((_, el) => decodeHtmlEntities($(el).text().trim())).get().filter(Boolean);
       if (instructions.length > 0) break;
+    }
+  }
+  
+  // Special handling for recipe card structures (like recipesmadeeasy.co.uk)
+  if (instructions.length === 0) {
+    const recipeCard = $('.recipe-card, [class*="recipe-card"], .entry-content, [itemtype*="Recipe"]');
+    if (recipeCard.length > 0) {
+      // Look for instruction lists within the recipe card
+      const instructionLists = recipeCard.find('ul li, ol li').filter((_, el) => {
+        const text = $(el).text().trim();
+        return text.length > 20 && !text.match(/^\d+\s*(g|kg|ml|l|cup|tsp|tbsp|oz|lb)\s/i); // Not just ingredients
+      });
+      
+      if (instructionLists.length > 0) {
+        instructions = instructionLists.map((_, el) => decodeHtmlEntities($(el).text().trim())).get().filter(Boolean);
+      }
+    }
+  }
+  
+  // If no instructions found, try looking for ordered/unordered lists
+  if (instructions.length === 0) {
+    const listSelectors = ['ol li', 'ul li', '.instructions ol li', '.instructions ul li', '.recipe-instructions ol li', '.recipe-instructions ul li'];
+    for (const selector of listSelectors) {
+      const elements = $(selector);
+      if (elements.length > 0) {
+        instructions = elements.map((_, el) => decodeHtmlEntities($(el).text().trim())).get().filter(Boolean);
+        if (instructions.length > 0) break;
+      }
+    }
+  }
+  
+  // If still no instructions, try to find them in divs or paragraphs within instruction containers
+  if (instructions.length === 0) {
+    const containerSelectors = [
+      '.instructions', '.recipe-instructions', '.method', '.directions', 
+      '[class*="instruction"]', '[class*="method"]', '[class*="step"]',
+      '.recipe-method', '.cooking-instructions', '.preparation'
+    ];
+    
+    for (const containerSelector of containerSelectors) {
+      const container = $(containerSelector).first();
+      if (container.length > 0) {
+        console.log(`Found container: ${containerSelector}`);
+        
+        // Try to find paragraphs or divs within the container
+        const stepElements = container.find('p, div, li, span').filter((_, el) => {
+          const text = $(el).text().trim();
+          const hasSubstantialText = text.length > 15; // Increased threshold
+          const isNotJustNumber = !/^\d+\.?\s*$/.test(text); // Not just a number
+          return hasSubstantialText && isNotJustNumber;
+        });
+        
+        console.log(`Found ${stepElements.length} step elements in ${containerSelector}`);
+        
+        if (stepElements.length > 0) {
+          instructions = stepElements.map((_, el) => {
+            const text = $(el).text().trim();
+            console.log(`Step text: ${text.substring(0, 50)}...`);
+            return decodeHtmlEntities(text);
+          }).get().filter(Boolean);
+          
+          if (instructions.length > 0) break;
+        }
+        
+        // If no sub-elements found, try getting all text content and splitting it
+        if (instructions.length === 0) {
+          const fullText = container.text().trim();
+          if (fullText.length > 50) {
+            // Try to split on numbered steps or line breaks
+            const splitInstructions = fullText
+              .split(/(?=\d+\.?\s)|(?:\n\s*\n)/)
+              .map(step => step.trim())
+              .filter(step => step.length > 15 && !/^\d+\.?\s*$/.test(step));
+            
+            if (splitInstructions.length > 1) {
+              instructions = splitInstructions.map(step => decodeHtmlEntities(step));
+              console.log(`Split instructions into ${instructions.length} steps`);
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // Specific parsing for structured recipe formats (headings with sub-instructions)
+  if (instructions.length <= 3) { // If we only got main headings
+    console.log('Trying structured recipe parsing...');
+    
+    // First, try to find the actual instructions container
+    let instructionsContainer = $('h3:contains("Instructions"), h2:contains("Instructions")').next();
+    
+    // If not found, look for the instructions section in different ways
+    if (instructionsContainer.length === 0) {
+      instructionsContainer = $('.recipe-instructions, [class*="instructions"], .method, .directions').first();
+    }
+    
+    // Try looking in the recipe card or main content area
+    if (instructionsContainer.length === 0) {
+      instructionsContainer = $('.entry-content, .recipe-content, [itemtype*="Recipe"]').first();
+    }
+    
+    if (instructionsContainer.length > 0) {
+      console.log('Found instructions container');
+      
+      // Look for ALL elements (li, span, p) that contain cooking instructions
+      const allInstructionItems = instructionsContainer.find('ul li, ol li, span, p').filter((_, el) => {
+        const text = $(el).text().trim();
+        const hasInstructionVerbs = /\b(steam|melt|add|stir|cook|bake|mix|combine|heat|place|sprinkle|season|drain|remove|return|gradually|continue|crumble|dot|brown|grill)\b/i.test(text);
+        const isLongEnough = text.length > 15;
+        const isNotIngredient = !text.match(/^\d+\s*(g|kg|ml|l|cup|tsp|tbsp|oz|lb)\s/i);
+        
+        return isLongEnough && hasInstructionVerbs && isNotIngredient;
+      });
+      
+      console.log(`Found ${allInstructionItems.length} instruction items`);
+      
+      if (allInstructionItems.length > instructions.length) {
+        instructions = allInstructionItems.map((_, el) => decodeHtmlEntities($(el).text().trim())).get().filter(Boolean);
+        console.log('Using detailed instruction items');
+      }
+    }
+    
+    // Alternative: Look for recipe schema or structured data
+    if (instructions.length <= 3) {
+      console.log('Trying alternative parsing methods...');
+      
+      // Method 1: Look for ANY elements (li, span) on the page that contain cooking instructions
+      const allInstructionElements = $('li, span').filter((_, el) => {
+        const text = $(el).text().trim();
+        const hasInstructionWords = /\b(steam|melt|add|stir|cook|bake|mix|combine|heat|place|sprinkle|season|drain|remove|return|gradually|continue|crumble|dot|brown|grill)\b/i.test(text);
+        const isLongEnough = text.length > 20;
+        const isNotIngredient = !text.match(/^\d+\s*(g|kg|ml|l|cup|tsp|tbsp|oz|lb)\s/i);
+        const isNotNavigation = !text.match(/^(about|recipes|contact|home|subscribe)/i);
+        
+        return isLongEnough && hasInstructionWords && isNotIngredient && isNotNavigation;
+      });
+      
+      console.log(`Found ${allInstructionElements.length} potential instruction elements`);
+      
+      if (allInstructionElements.length > 3) {
+        instructions = allInstructionElements.map((_, el) => decodeHtmlEntities($(el).text().trim())).get().filter(Boolean);
+        console.log('Using all instruction list items from page');
+      }
+      
+      // Method 2: If still not enough, look for paragraphs with instruction content
+      if (instructions.length <= 3) {
+        const instructionParagraphs = $('p').filter((_, el) => {
+          const text = $(el).text().trim();
+          const hasInstructionWords = /\b(steam|melt|add|stir|cook|bake|mix|combine|heat|place|sprinkle|season|drain|remove|return|gradually|continue|crumble|dot|brown|grill)\b/i.test(text);
+          const isLongEnough = text.length > 30;
+          const startsWithAction = /^(steam|melt|add|stir|cook|bake|mix|combine|heat|place|sprinkle|season|drain|remove|return|gradually|continue|crumble|dot|brown|grill)/i.test(text);
+          
+          return isLongEnough && (hasInstructionWords || startsWithAction);
+        });
+        
+        console.log(`Found ${instructionParagraphs.length} instruction paragraphs`);
+        
+        if (instructionParagraphs.length > 0) {
+          const paragraphInstructions = instructionParagraphs.map((_, el) => decodeHtmlEntities($(el).text().trim())).get().filter(Boolean);
+          instructions = instructions.concat(paragraphInstructions);
+          console.log('Added instruction paragraphs');
+        }
+      }
+    }
+  }
+  
+  // Debug: Log what we found so far
+  console.log(`Current instructions count: ${instructions.length}`);
+  if (instructions.length > 0) {
+    console.log('Current instructions:', instructions.slice(0, 3));
+  }
+  
+  // BRUTE FORCE: If we still only have vague instructions, scan EVERYTHING
+  if (instructions.length <= 3) {
+    console.log('Using brute force approach...');
+    
+    // Get ALL text content and look for instruction-like sentences
+    const allText = $('body').text();
+    
+    // Split into sentences and look for cooking instructions
+    const sentences = allText.split(/[.!?]+/).filter(sentence => {
+      const text = sentence.trim();
+      const hasInstructionWords = /\b(steam|melt|add|stir|cook|bake|mix|combine|heat|place|sprinkle|season|drain|remove|return|gradually|continue|crumble|dot|brown|grill|until|while|then|over|into|with)\b/i.test(text);
+      const isLongEnough = text.length > 25;
+      const hasNumbers = /\d+/.test(text);
+      const hasUnits = /(g|kg|ml|l|minutes?|hours?|°C|°F)/i.test(text);
+      
+      return isLongEnough && hasInstructionWords && (hasNumbers || hasUnits);
+    });
+    
+    console.log(`Found ${sentences.length} potential instruction sentences`);
+    
+    if (sentences.length > instructions.length) {
+      const cleanSentences = sentences.map(s => decodeHtmlEntities(s.trim() + '.')).filter(Boolean);
+      instructions = cleanSentences;
+      console.log('Using brute force sentence extraction');
+    }
+  }
+  
+  // Last resort: look for any numbered or bulleted content
+  if (instructions.length === 0) {
+    const allText = $('body').text();
+    const numberedSteps = allText.match(/\d+\.?\s+[A-Z][^.!?]*[.!?]/g);
+    if (numberedSteps && numberedSteps.length > 2) {
+      instructions = numberedSteps.map(step => decodeHtmlEntities(step.trim()));
+      console.log(`Found ${instructions.length} numbered steps via regex`);
     }
   }
 
@@ -283,19 +617,56 @@ function extractIngredients(ingredients: unknown): string[] {
 
 function extractInstructions(instructions: unknown): string[] {
   if (!instructions) return [];
+  
   if (Array.isArray(instructions)) {
-    return instructions.map(inst => {
-      if (typeof inst === 'string') return decodeHtmlEntities(inst);
-      if (typeof inst === 'object' && inst !== null) {
+    const extractedInstructions: string[] = [];
+    
+    for (const inst of instructions) {
+      if (typeof inst === 'string') {
+        extractedInstructions.push(decodeHtmlEntities(inst));
+      } else if (typeof inst === 'object' && inst !== null) {
         const instObj = inst as Record<string, unknown>;
-        const text = typeof instObj.text === 'string' ? instObj.text :
-                     typeof instObj.name === 'string' ? instObj.name : '';
-        return decodeHtmlEntities(text);
+        
+        // Try different text properties
+        let text = '';
+        if (typeof instObj.text === 'string') {
+          text = instObj.text;
+        } else if (typeof instObj.name === 'string') {
+          text = instObj.name;
+        } else if (typeof instObj.description === 'string') {
+          text = instObj.description;
+        }
+        
+        if (text) {
+          // Check if this might be a main step with sub-steps
+          // Split on common patterns that indicate multiple steps
+          const subSteps = text.split(/(?:\n\s*\n|\r\n\s*\r\n)/).filter(step => step.trim().length > 10);
+          
+          if (subSteps.length > 1) {
+            // Multiple sub-steps found
+            subSteps.forEach(subStep => {
+              extractedInstructions.push(decodeHtmlEntities(subStep.trim()));
+            });
+          } else {
+            // Single step
+            extractedInstructions.push(decodeHtmlEntities(text));
+          }
+        }
       }
-      return '';
-    }).filter(Boolean);
+    }
+    
+    return extractedInstructions.filter(Boolean);
   }
-  if (typeof instructions === 'string') return [decodeHtmlEntities(instructions)];
+  
+  if (typeof instructions === 'string') {
+    // Handle multi-line instructions by splitting them
+    const steps = instructions.split(/(?:\n\s*\n|\r\n\s*\r\n)/).filter(step => step.trim().length > 10);
+    if (steps.length > 1) {
+      return steps.map(step => decodeHtmlEntities(step.trim()));
+    }
+    return [decodeHtmlEntities(instructions)];
+  }
+  
   return [];
 }
 

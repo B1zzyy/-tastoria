@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Recipe } from '@/lib/recipe-parser';
 import RecipeForm from '@/components/RecipeForm';
 import RecipeDisplay from '@/components/RecipeDisplay';
@@ -27,6 +28,7 @@ export default function Home() {
   const [isRecipeCurrentlySaved, setIsRecipeCurrentlySaved] = useState(false);
   const [savingRecipe, setSavingRecipe] = useState(false);
   const [showConstructionAlert, setShowConstructionAlert] = useState(false);
+  const [isViewingFromSavedRecipes, setIsViewingFromSavedRecipes] = useState(false);
   
   // Use real authentication
   const { user, signOut } = useAuth();
@@ -105,6 +107,7 @@ export default function Home() {
     setRecipe(savedRecipe);
     setCurrentRecipeUrl(url);
     setIsRecipeCurrentlySaved(true);
+    setIsViewingFromSavedRecipes(true); // Mark as viewing from saved recipes
     setError(null);
   };
 
@@ -114,6 +117,7 @@ export default function Home() {
     setRecipe(null);
     setCurrentRecipeUrl(url);
     setIsRecipeCurrentlySaved(false);
+    setIsViewingFromSavedRecipes(false); // Reset flag when manually searching
 
     // Create AbortController for request cancellation
     const abortController = new AbortController();
@@ -196,21 +200,44 @@ export default function Home() {
             </button>
 
             {/* Dropdown Menu */}
-            {showUserDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
-                <div className="p-3 border-b border-border">
-                  <p className="text-sm font-medium text-card-foreground">{user.name}</p>
-                  <p className="text-xs text-muted-foreground">{user.email}</p>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-card-foreground hover:bg-accent transition-colors"
+            <AnimatePresence>
+              {showUserDropdown && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 300, 
+                    damping: 30,
+                    duration: 0.2
+                  }}
+                  className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden origin-top-right"
                 >
-                  <LogOut className="w-4 h-4" />
-                  Sign out
-                </button>
-              </div>
-            )}
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="p-3 border-b border-border"
+                  >
+                    <p className="text-sm font-medium text-card-foreground">{user.name}</p>
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                  </motion.div>
+                  <motion.button
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.15 }}
+                    whileHover={{ backgroundColor: "hsl(var(--accent))" }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-card-foreground transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign out
+                  </motion.button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         ) : (
           <button
@@ -241,6 +268,7 @@ export default function Home() {
                 onClick={() => {
                   setRecipe(null);
                   setError(null);
+                  setIsViewingFromSavedRecipes(false);
                 }}
                 className="p-2 hover:bg-accent rounded-lg transition-colors"
                 aria-label="Go back"
@@ -324,6 +352,7 @@ export default function Home() {
                   onClick={() => {
                     setRecipe(null);
                     setError(null);
+                    setIsViewingFromSavedRecipes(false);
                   }}
                   className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                 >
@@ -426,21 +455,44 @@ export default function Home() {
                       </button>
 
                       {/* Dropdown Menu */}
-                      {showDesktopUserDropdown && (
-                        <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
-                          <div className="p-3 border-b border-border">
-                            <p className="text-sm font-medium text-card-foreground">{user.name}</p>
-                            <p className="text-xs text-muted-foreground">{user.email}</p>
-                          </div>
-                          <button
-                            onClick={handleDesktopLogout}
-                            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-card-foreground hover:bg-accent transition-colors"
+                      <AnimatePresence>
+                        {showDesktopUserDropdown && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                            transition={{ 
+                              type: "spring", 
+                              stiffness: 300, 
+                              damping: 30,
+                              duration: 0.2
+                            }}
+                            className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden origin-top-right"
                           >
-                            <LogOut className="w-4 h-4" />
-                            Sign out
-                          </button>
-                        </div>
-                      )}
+                            <motion.div 
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 0.1 }}
+                              className="p-3 border-b border-border"
+                            >
+                              <p className="text-sm font-medium text-card-foreground">{user.name}</p>
+                              <p className="text-xs text-muted-foreground">{user.email}</p>
+                            </motion.div>
+                            <motion.button
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.15 }}
+                              whileHover={{ backgroundColor: "hsl(var(--accent))" }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={handleDesktopLogout}
+                              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-card-foreground transition-colors"
+                            >
+                              <LogOut className="w-4 h-4" />
+                              Sign out
+                            </motion.button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   ) : (
                     <button
@@ -671,8 +723,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* Floating Save Recipe Button */}
-      {recipe && user && (
+      {/* Floating Save Recipe Button - Only show when not viewing from saved recipes */}
+      {recipe && user && !isViewingFromSavedRecipes && (
         <div className="fixed bottom-4 right-4 z-50">
           <button
             onClick={handleSaveRecipe}
