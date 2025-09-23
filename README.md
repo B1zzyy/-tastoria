@@ -12,45 +12,6 @@ A sleek and modern web application built with Next.js that transforms recipe URL
 - **Structured Data**: Extracts ingredients, instructions, prep time, cooking time, and nutrition info
 - **Modern UI**: Built with a custom color palette and smooth animations
 
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js 18+ installed on your machine
-- npm, yarn, pnpm, or bun package manager
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone <your-repo-url>
-cd recipe-parser
-```
-
-2. Install dependencies:
-```bash
-npm install
-# or
-yarn install
-# or
-pnpm install
-# or
-bun install
-```
-
-3. Run the development server:
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-4. Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
-
 ## 🎯 How to Use
 
 1. **Paste Recipe URL**: Copy any recipe URL from popular cooking websites like AllRecipes, Food Network, Bon Appétit, etc.
