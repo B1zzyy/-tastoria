@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Recipe } from '@/lib/recipe-parser';
@@ -10,7 +10,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import ThemeToggle from '@/components/ThemeToggle';
 import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
-import { saveRecipe, isRecipeSaved } from '@/lib/recipeService';
+import { isRecipeSaved } from '@/lib/recipeService';
 import SavedRecipes from '@/components/SavedRecipes';
 import CollectionModal from '@/components/CollectionModal';
 import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck } from 'lucide-react';
@@ -27,7 +27,6 @@ export default function Home() {
   const [showSavedRecipes, setShowSavedRecipes] = useState(false);
   const [currentRecipeUrl, setCurrentRecipeUrl] = useState<string>('');
   const [isRecipeCurrentlySaved, setIsRecipeCurrentlySaved] = useState(false);
-  const [savingRecipe, setSavingRecipe] = useState(false);
   const [showConstructionAlert, setShowConstructionAlert] = useState(false);
   const [isViewingFromSavedRecipes, setIsViewingFromSavedRecipes] = useState(false);
   const [showCollectionModal, setShowCollectionModal] = useState(false);
@@ -40,18 +39,6 @@ export default function Home() {
     console.log('User state changed:', user);
   }, [user]);
 
-  // Handle shared recipe URLs
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const sharedRecipeUrl = urlParams.get('recipe');
-    
-    if (sharedRecipeUrl && !recipe) {
-      // Auto-parse the shared recipe
-      handleParseRecipe(decodeURIComponent(sharedRecipeUrl));
-      // Clean up the URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, [recipe]);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const desktopDropdownRef = useRef<HTMLDivElement>(null);
@@ -108,7 +95,7 @@ export default function Home() {
     setError(null);
   };
 
-  const handleParseRecipe = async (url: string) => {
+  const handleParseRecipe = useCallback(async (url: string) => {
     setLoading(true);
     setError(null);
     setRecipe(null);
@@ -164,7 +151,20 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Handle shared recipe URLs
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedRecipeUrl = urlParams.get('recipe');
+    
+    if (sharedRecipeUrl && !recipe) {
+      // Auto-parse the shared recipe
+      handleParseRecipe(decodeURIComponent(sharedRecipeUrl));
+      // Clean up the URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [recipe, handleParseRecipe]);
 
   return (
     <div className="min-h-screen bg-background">

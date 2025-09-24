@@ -343,7 +343,6 @@ function parseRecipeGeneral($: cheerio.Root): Recipe | null {
   // Common selectors for recipe elements
   const titleSelectors = ['h1', '.recipe-title', '.entry-title', '[class*="title"]'];
   const ingredientSelectors = ['.recipe-ingredient', '.ingredient', '[class*="ingredient"]', 'li[class*="ingredient"]'];
-  const instructionSelectors = ['.recipe-instruction', '.instruction', '.recipe-step', '[class*="instruction"]', '[class*="step"]'];
 
   let title = '';
   for (const selector of titleSelectors) {

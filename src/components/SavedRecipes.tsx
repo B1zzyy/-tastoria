@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Clock, User, Trash2, Folder, ArrowLeft, Plus } from 'lucide-react';
+import Image from 'next/image';
+import { X, Clock, User, Trash2, Folder, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getSavedRecipes, deleteSavedRecipe, type SavedRecipe } from '@/lib/recipeService';
+import { deleteSavedRecipe, type SavedRecipe } from '@/lib/recipeService';
 import { getUserCollections, getRecipesInCollection, ensureRecipesInAllCollection, cleanupDuplicateRecipes, deleteRecipeFromAllCollections, deleteCollection, type Collection, type SavedRecipeWithCollection } from '@/lib/collectionsService';
 import type { Recipe } from '@/lib/recipe-parser';
 
@@ -14,7 +15,6 @@ interface SavedRecipesProps {
 }
 
 export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedRecipesProps) {
-  const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
   const [collectionRecipes, setCollectionRecipes] = useState<SavedRecipeWithCollection[]>([]);
@@ -247,10 +247,11 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
               {Array.from({ length: 4 }).map((_, index) => (
                 <div key={index} className="relative bg-accent aspect-square">
                   {thumbnails[index] ? (
-                    <img
+                    <Image
                       src={thumbnails[index]}
                       alt=""
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
                     />
                   ) : (
                     <div className="w-full h-full bg-accent flex items-center justify-center">
@@ -469,10 +470,11 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                         {/* Recipe Image */}
                         {savedRecipe.recipe_data.image && (
                           <div className="aspect-video relative overflow-hidden">
-                            <img
+                            <Image
                               src={savedRecipe.recipe_data.image}
                               alt={savedRecipe.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                           </div>
                         )}
@@ -565,8 +567,8 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
             </div>
             
             <p className="text-muted-foreground mb-6">
-              Are you sure you want to delete "<strong>{collectionToDelete.name}</strong>"? 
-              All recipes in this collection will be moved to "All Recipes". This action cannot be undone.
+              Are you sure you want to delete &quot;<strong>{collectionToDelete.name}</strong>&quot;? 
+              All recipes in this collection will be moved to &quot;All Recipes&quot;. This action cannot be undone.
             </p>
             
             <div className="flex gap-3">
