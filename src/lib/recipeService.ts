@@ -18,6 +18,14 @@ export async function saveRecipe(recipe: Recipe, url: string): Promise<{ data: S
       return { data: null, error: { message: 'User not authenticated' } }
     }
 
+    // Get the "All Recipes" collection
+    const { data: allRecipesCollection } = await supabase
+      .from('collections')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('name', 'All Recipes')
+      .single()
+
     const { data, error } = await supabase
       .from('saved_recipes')
       .insert([
@@ -25,7 +33,8 @@ export async function saveRecipe(recipe: Recipe, url: string): Promise<{ data: S
           user_id: user.id,
           recipe_url: url,
           recipe_data: recipe,
-          title: recipe.title
+          title: recipe.title,
+          collection_id: allRecipesCollection?.id || null
         }
       ])
       .select()

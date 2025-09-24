@@ -303,6 +303,34 @@ function parseRecipeFromMicrodata($: cheerio.Root): Recipe | null {
         }
       }
       
+      // Clean up fragmented instructions
+      instructions = instructions.filter(instruction => {
+        const text = instruction.trim();
+        
+        // Remove very short fragments
+        if (text.length < 10) return false;
+        
+        // Remove fragments that are just numbers/times without context
+        if (/^\d+\s*(minutes?|hours?|seconds?)?\s*$/.test(text)) return false;
+        
+        // Remove fragments that are just temperature units or partial temperatures
+        if (/^°?[CF]\)?\s*(or|and)?\s*(the|juices?|until)?$/i.test(text)) return false;
+        
+        // Remove fragments that start with units or incomplete phrases
+        if (/^(°F|°C|\)|\s*or\s+the|and\s+the|until\s+the)/i.test(text)) return false;
+        
+        // Remove standalone numbers at the beginning
+        if (/^\d+\s*$/.test(text)) return false;
+        
+        // Keep instructions that have actual cooking verbs, reasonable length, or cooking context
+        const hasActionVerbs = /\b(place|cut|add|stir|cook|bake|mix|combine|heat|sprinkle|season|drain|remove|return|gradually|continue|crumble|dot|brown|grill|preheat|roast|marinate|garnish|allow|beat|coat|dip|drizzle|flatten|lightly)\b/i.test(text);
+        const hasReasonableLength = text.length > 15;
+        const hasCookingContext = /\b(oven|temperature|°C|°F|minutes|hours|dish|pan|tray|oil|flour|egg|breadcrumbs|lemon|thyme|oregano|paprika|chilli|cling film|mallet|rolling pin)\b/i.test(text);
+        const hasTemperatureOrTime = /\d+\s*°[CF]|\d+\s*(minutes?|hours?|seconds?)/i.test(text);
+        
+        return hasReasonableLength && (hasActionVerbs || hasCookingContext || hasTemperatureOrTime);
+      });
+      
       return instructions;
     })(),
     author: decodeHtmlEntities(recipeElement.find('[itemprop="author"]').first().text().trim()),
@@ -337,12 +365,42 @@ function parseRecipeGeneral($: cheerio.Root): Recipe | null {
 
   let instructions: string[] = [];
   
-  // Enhanced instruction parsing - try multiple approaches
-  for (const selector of instructionSelectors) {
+  // SIMPLE AND DIRECT: Mirror the successful ingredients approach
+  console.log('Using SIMPLE DIRECT instruction parsing...');
+  
+  const directInstructionSelectors = [
+    '[itemprop="recipeInstructions"] li',
+    '[itemprop="recipeInstructions"] p',
+    '.recipe-instructions li',
+    '.instructions li', 
+    '.method li',
+    '.directions li',
+    '.recipe-method li',
+    '.recipe-directions li',
+    '[class*="instruction"] li',
+    '[class*="method"] li',
+    '[class*="step"] li',
+    'ol li',
+    '.recipe-card ol li',
+    '.entry-content ol li'
+  ];
+  
+  for (const selector of directInstructionSelectors) {
+    console.log(`Trying direct instruction selector: ${selector}`);
     const elements = $(selector);
+    
     if (elements.length > 0) {
-      instructions = elements.map((_, el) => decodeHtmlEntities($(el).text().trim())).get().filter(Boolean);
-      if (instructions.length > 0) break;
+      console.log(`Found ${elements.length} instruction elements with: ${selector}`);
+      instructions = elements.map((_, el) => {
+        const text = $(el).text().trim();
+        console.log(`Instruction found: "${text.substring(0, 100)}..."`);
+        return decodeHtmlEntities(text);
+      }).get().filter(text => text.length > 10);
+      
+      if (instructions.length >= 3) {
+        console.log(`SUCCESS: Got ${instructions.length} instructions with selector: ${selector}`);
+        break;
+      }
     }
   }
   
@@ -411,11 +469,25 @@ function parseRecipeGeneral($: cheerio.Root): Recipe | null {
         if (instructions.length === 0) {
           const fullText = container.text().trim();
           if (fullText.length > 50) {
-            // Try to split on numbered steps or line breaks
+            // Try to split on numbered steps at the beginning of lines, but not mid-sentence
             const splitInstructions = fullText
-              .split(/(?=\d+\.?\s)|(?:\n\s*\n)/)
-              .map(step => step.trim())
-              .filter(step => step.length > 15 && !/^\d+\.?\s*$/.test(step));
+              .split(/(?:\n|^)(\d+\.?\s)/)
+              .filter(part => part.trim().length > 0)
+              .reduce((acc: string[], part: string, index: number) => {
+                if (/^\d+\.?\s$/.test(part.trim())) {
+                  // This is a step number, combine with next part
+                  return acc;
+                } else if (index > 0 && /^\d+\.?\s$/.test(splitInstructions[index - 1]?.trim())) {
+                  // This follows a step number
+                  const stepNumber = splitInstructions[index - 1].trim();
+                  acc.push(stepNumber + part.trim());
+                } else if (!/^\d+\.?\s/.test(part.trim()) && part.trim().length > 15) {
+                  // This is content without a step number
+                  acc.push(part.trim());
+                }
+                return acc;
+              }, [])
+              .filter(step => step.length > 15);
             
             if (splitInstructions.length > 1) {
               instructions = splitInstructions.map(step => decodeHtmlEntities(step));
@@ -513,33 +585,67 @@ function parseRecipeGeneral($: cheerio.Root): Recipe | null {
   // Debug: Log what we found so far
   console.log(`Current instructions count: ${instructions.length}`);
   if (instructions.length > 0) {
-    console.log('Current instructions:', instructions.slice(0, 3));
+    console.log('Current instructions:', instructions.slice(0, 8).map((inst, i) => `${i+1}: "${inst.substring(0, 100)}..."`));
   }
   
-  // BRUTE FORCE: If we still only have vague instructions, scan EVERYTHING
+  // ULTRA AGGRESSIVE: If we still don't have enough instructions, scan EVERYTHING
   if (instructions.length <= 3) {
-    console.log('Using brute force approach...');
+    console.log('Using ULTRA AGGRESSIVE approach...');
     
-    // Get ALL text content and look for instruction-like sentences
-    const allText = $('body').text();
+    // Get ALL elements that could possibly contain instructions
+    const allPossibleInstructions: string[] = [];
     
-    // Split into sentences and look for cooking instructions
-    const sentences = allText.split(/[.!?]+/).filter(sentence => {
-      const text = sentence.trim();
-      const hasInstructionWords = /\b(steam|melt|add|stir|cook|bake|mix|combine|heat|place|sprinkle|season|drain|remove|return|gradually|continue|crumble|dot|brown|grill|until|while|then|over|into|with)\b/i.test(text);
-      const isLongEnough = text.length > 25;
-      const hasNumbers = /\d+/.test(text);
-      const hasUnits = /(g|kg|ml|l|minutes?|hours?|°C|°F)/i.test(text);
-      
-      return isLongEnough && hasInstructionWords && (hasNumbers || hasUnits);
+    // Method 1: Look for ANY text that starts with cooking verbs
+    $('p, div, li, span').each((_, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 20 && 
+          /^(preheat|cut|combine|place|coat|bake|add|stir|cook|mix|heat|season|drain|remove|beat|dip|drizzle|flatten)/i.test(text)) {
+        allPossibleInstructions.push(decodeHtmlEntities(text));
+      }
     });
     
-    console.log(`Found ${sentences.length} potential instruction sentences`);
+    // Method 2: Look for text with cooking context words
+    $('p, div, li, span').each((_, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 30 && 
+          /\b(oven|temperature|°C|°F|minutes|dish|pan|tray|oil|flour|egg|breadcrumbs)\b/i.test(text) &&
+          /\b(preheat|cut|combine|place|coat|bake|add|stir|cook|mix|heat|season|drain|remove|beat|dip|drizzle|flatten|lightly|until|then|with)\b/i.test(text)) {
+        allPossibleInstructions.push(decodeHtmlEntities(text));
+      }
+    });
     
-    if (sentences.length > instructions.length) {
-      const cleanSentences = sentences.map(s => decodeHtmlEntities(s.trim() + '.')).filter(Boolean);
-      instructions = cleanSentences;
-      console.log('Using brute force sentence extraction');
+    // Method 3: Look in the raw text for numbered instructions
+    const bodyText = $('body').text();
+    const numberedMatches = bodyText.match(/(?:^|\n)\s*(?:\d+\.?\s+)?([^.\n]{30,200}(?:preheat|cut|combine|place|coat|bake|add|stir|cook|mix|heat|season|drain|remove|beat|dip|drizzle|flatten|lightly|until|then|with|oven|temperature|°C|°F|minutes|dish|pan|tray|oil|flour|egg|breadcrumbs)[^.\n]{0,200})[.\n]/gim);
+    
+    if (numberedMatches) {
+      numberedMatches.forEach(match => {
+        const cleanMatch = match.replace(/^\s*\d+\.?\s*/, '').trim();
+        if (cleanMatch.length > 20) {
+          allPossibleInstructions.push(decodeHtmlEntities(cleanMatch));
+        }
+      });
+    }
+    
+    console.log(`Found ${allPossibleInstructions.length} potential instructions from ultra-aggressive search`);
+    
+    if (allPossibleInstructions.length > instructions.length) {
+      // Remove duplicates and sort by likely instruction order
+      const uniqueInstructions = [...new Set(allPossibleInstructions)]
+        .filter(inst => inst.length > 15 && inst.length < 500)
+        .sort((a, b) => {
+          // Prioritize instructions that start with action verbs
+          const aStartsWithVerb = /^(preheat|cut|combine|place|coat|bake)/i.test(a);
+          const bStartsWithVerb = /^(preheat|cut|combine|place|coat|bake)/i.test(b);
+          if (aStartsWithVerb && !bStartsWithVerb) return -1;
+          if (!aStartsWithVerb && bStartsWithVerb) return 1;
+          return 0;
+        });
+      
+      if (uniqueInstructions.length > 0) {
+        instructions = uniqueInstructions.slice(0, 10); // Limit to 10 max
+        console.log('Using ultra-aggressive instruction extraction');
+      }
     }
   }
   
@@ -551,6 +657,71 @@ function parseRecipeGeneral($: cheerio.Root): Recipe | null {
       instructions = numberedSteps.map(step => decodeHtmlEntities(step.trim()));
       console.log(`Found ${instructions.length} numbered steps via regex`);
     }
+  }
+
+  // Final cleanup - Remove fragmented instructions
+  console.log(`Before cleanup - instructions count: ${instructions.length}`);
+  if (instructions.length > 0) {
+    console.log('Before cleanup preview:', instructions.slice(0, 7).map((inst, i) => `${i+1}: ${inst.substring(0, 50)}...`));
+  }
+  
+  // Filter out fragmented or incomplete instructions
+  instructions = instructions.filter(instruction => {
+    const text = instruction.trim();
+    
+    // Remove very short fragments
+    if (text.length < 10) {
+      console.log(`Removing short fragment: "${text}"`);
+      return false;
+    }
+    
+    // Remove fragments that are just numbers/times without context
+    if (/^\d+\s*(minutes?|hours?|seconds?)?\s*$/.test(text)) {
+      console.log(`Removing time fragment: "${text}"`);
+      return false;
+    }
+    
+    // Remove fragments that are just temperature units or partial temperatures
+    if (/^°?[CF]\)?\s*(or|and)?\s*(the|juices?|until)?$/i.test(text)) {
+      console.log(`Removing temperature fragment: "${text}"`);
+      return false;
+    }
+    
+    // Remove fragments that start with units or incomplete phrases
+    if (/^(°F|°C|\)|\s*or\s+the|and\s+the|until\s+the)/i.test(text)) {
+      console.log(`Removing incomplete fragment: "${text}"`);
+      return false;
+    }
+    
+    // Remove standalone numbers at the beginning
+    if (/^\d+\s*$/.test(text)) {
+      console.log(`Removing standalone number: "${text}"`);
+      return false;
+    }
+    
+    // Keep instructions that have actual cooking verbs, reasonable length, or cooking context
+    const hasActionVerbs = /\b(place|cut|add|stir|cook|bake|mix|combine|heat|sprinkle|season|drain|remove|return|gradually|continue|crumble|dot|brown|grill|preheat|roast|marinate|garnish|allow|beat|coat|dip|drizzle|flatten|lightly)\b/i.test(text);
+    const hasReasonableLength = text.length > 15;
+    const hasCookingContext = /\b(oven|temperature|°C|°F|minutes|hours|dish|pan|tray|oil|flour|egg|breadcrumbs|lemon|thyme|oregano|paprika|chilli|cling film|mallet|rolling pin)\b/i.test(text);
+    const hasTemperatureOrTime = /\d+\s*°[CF]|\d+\s*(minutes?|hours?|seconds?)/i.test(text);
+    
+    // Keep if it has reasonable length AND (action verbs OR cooking context OR temperature/time)
+    if (!hasReasonableLength) {
+      console.log(`Removing too short: "${text}"`);
+      return false;
+    }
+    
+    if (!hasActionVerbs && !hasCookingContext && !hasTemperatureOrTime) {
+      console.log(`Removing non-cooking instruction: "${text.substring(0, 50)}..."`);
+      return false;
+    }
+    
+    return true;
+  });
+  
+  console.log(`After cleanup - instructions count: ${instructions.length}`);
+  if (instructions.length > 0) {
+    console.log('After cleanup preview:', instructions.slice(0, 5).map((inst, i) => `${i+1}: ${inst.substring(0, 50)}...`));
   }
 
   if (!title && ingredients.length === 0 && instructions.length === 0) {
@@ -638,18 +809,24 @@ function extractInstructions(instructions: unknown): string[] {
         }
         
         if (text) {
-          // Check if this might be a main step with sub-steps
-          // Split on common patterns that indicate multiple steps
-          const subSteps = text.split(/(?:\n\s*\n|\r\n\s*\r\n)/).filter(step => step.trim().length > 10);
+          // Clean up the text and preserve complete instructions
+          const cleanText = text.trim();
+          
+          // Only split if we have clear paragraph breaks, not just any line break
+          const subSteps = cleanText.split(/\n\s*\n/).filter(step => {
+            const trimmedStep = step.trim();
+            return trimmedStep.length > 15 && 
+                   /\b(steam|melt|add|stir|cook|bake|mix|combine|heat|place|sprinkle|season|drain|remove|return|gradually|continue|crumble|dot|brown|grill|preheat|roast|marinate|garnish|cut|allow)\b/i.test(trimmedStep);
+          });
           
           if (subSteps.length > 1) {
-            // Multiple sub-steps found
+            // Multiple clear instruction steps found
             subSteps.forEach(subStep => {
               extractedInstructions.push(decodeHtmlEntities(subStep.trim()));
             });
           } else {
-            // Single step
-            extractedInstructions.push(decodeHtmlEntities(text));
+            // Single step - keep it intact
+            extractedInstructions.push(decodeHtmlEntities(cleanText));
           }
         }
       }
@@ -659,12 +836,18 @@ function extractInstructions(instructions: unknown): string[] {
   }
   
   if (typeof instructions === 'string') {
-    // Handle multi-line instructions by splitting them
-    const steps = instructions.split(/(?:\n\s*\n|\r\n\s*\r\n)/).filter(step => step.trim().length > 10);
+    // Handle multi-line instructions by splitting on clear paragraph breaks only
+    const cleanInstructions = instructions.trim();
+    const steps = cleanInstructions.split(/\n\s*\n/).filter(step => {
+      const trimmedStep = step.trim();
+      return trimmedStep.length > 15 && 
+             /\b(steam|melt|add|stir|cook|bake|mix|combine|heat|place|sprinkle|season|drain|remove|return|gradually|continue|crumble|dot|brown|grill|preheat|roast|marinate|garnish|cut|allow)\b/i.test(trimmedStep);
+    });
+    
     if (steps.length > 1) {
       return steps.map(step => decodeHtmlEntities(step.trim()));
     }
-    return [decodeHtmlEntities(instructions)];
+    return [decodeHtmlEntities(cleanInstructions)];
   }
   
   return [];

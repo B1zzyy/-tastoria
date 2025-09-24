@@ -12,6 +12,7 @@ import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
 import { saveRecipe, isRecipeSaved } from '@/lib/recipeService';
 import SavedRecipes from '@/components/SavedRecipes';
+import CollectionModal from '@/components/CollectionModal';
 import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck } from 'lucide-react';
 import '@/lib/keepAlive'; // Import to initialize keep-alive service
 
@@ -29,6 +30,7 @@ export default function Home() {
   const [savingRecipe, setSavingRecipe] = useState(false);
   const [showConstructionAlert, setShowConstructionAlert] = useState(false);
   const [isViewingFromSavedRecipes, setIsViewingFromSavedRecipes] = useState(false);
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
   
   // Use real authentication
   const { user, signOut } = useAuth();
@@ -84,16 +86,8 @@ export default function Home() {
   const handleSaveRecipe = async () => {
     if (!recipe || !user) return;
     
-    setSavingRecipe(true);
-    const { error } = await saveRecipe(recipe, currentRecipeUrl);
-    
-    if (error) {
-      setError(error instanceof Error ? error.message : 'Failed to save recipe');
-    } else {
-      setIsRecipeCurrentlySaved(true);
-    }
-    
-    setSavingRecipe(false);
+    // Open the collection modal to let user choose which collection to save to
+    setShowCollectionModal(true);
   };
 
   const checkIfRecipeSaved = async (url: string) => {
@@ -101,6 +95,9 @@ export default function Home() {
     
     const { data } = await isRecipeSaved(url);
     setIsRecipeCurrentlySaved(data);
+    
+    // If recipe is already saved, keep the button visible but show "Saved" state
+    // Don't animate it out since user might want to see the saved status
   };
 
   const handleSelectSavedRecipe = (savedRecipe: Recipe, url: string) => {
@@ -286,11 +283,11 @@ export default function Home() {
                       setAuthMode('signup');
                       setShowAuthModal(true);
                     } else {
-                      setShowConstructionAlert(true);
+                      setShowSavedRecipes(true);
                     }
                   }}
                   className="p-2 hover:bg-accent rounded-lg transition-colors" 
-                  aria-label="Save to collection"
+                  aria-label="View saved recipes"
                 >
                   <svg className="w-6 h-6 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -380,12 +377,12 @@ export default function Home() {
                         setAuthMode('signup');
                         setShowAuthModal(true);
                       } else {
-                        setShowConstructionAlert(true);
+                        setShowSavedRecipes(true);
                       }
                     }}
                     className="p-2 hover:bg-accent rounded-lg transition-colors" 
-                    aria-label="Save to collection"
-                    title="Save to collection"
+                    aria-label="View saved recipes"
+                    title="View saved recipes"
                   >
                     <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -727,26 +724,41 @@ export default function Home() {
       {recipe && user && !isViewingFromSavedRecipes && (
         <div className="fixed bottom-4 right-4 z-50">
           <button
-            onClick={handleSaveRecipe}
-            disabled={savingRecipe || isRecipeCurrentlySaved}
+            onClick={isRecipeCurrentlySaved ? undefined : handleSaveRecipe}
+            disabled={isRecipeCurrentlySaved}
             className={`flex items-center gap-2 px-4 py-3 rounded-xl font-medium shadow-lg transition-all duration-200 ${
-              isRecipeCurrentlySaved
-                ? 'bg-green-600 text-green-50 hover:bg-green-700'
-                : 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-xl'
-            } ${savingRecipe ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
+              isRecipeCurrentlySaved 
+                ? 'bg-green-600 text-green-50 cursor-default' 
+                : 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-xl hover:scale-105'
+            }`}
           >
-            {savingRecipe ? (
-              <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            ) : isRecipeCurrentlySaved ? (
+            {isRecipeCurrentlySaved ? (
               <BookmarkCheck className="w-5 h-5" />
             ) : (
               <Bookmark className="w-5 h-5" />
             )}
             <span className="font-semibold">
-              {isRecipeCurrentlySaved ? 'Saved' : savingRecipe ? 'Saving...' : 'Save'}
+              {isRecipeCurrentlySaved ? 'Saved' : 'Save'}
             </span>
           </button>
         </div>
+      )}
+
+      {/* Collection Modal */}
+      {recipe && (
+        <CollectionModal
+          isOpen={showCollectionModal}
+          onClose={() => setShowCollectionModal(false)}
+          recipe={recipe}
+          recipeUrl={currentRecipeUrl}
+          onSaved={() => {
+            setIsRecipeCurrentlySaved(true);
+            setShowCollectionModal(false);
+            
+            // Don't animate the button away - instead show "Saved" state
+            // The button will now show green "Saved" state instead of disappearing
+          }}
+        />
       )}
 
       {/* Saved Recipes Modal */}
