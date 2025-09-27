@@ -193,7 +193,7 @@ function parseRecipeFromCaption(caption: string): Recipe | null {
     const line = lines[i].trim();
     if (line && !line.startsWith('#') && !line.startsWith('@') && line.length > 5 && line.length < 150) {
       // Clean up the line to make a good title
-      let cleanTitle = line
+      const cleanTitle = line
         .replace(/[🍽️🥘🍳👩‍🍳👨‍🍳🔥✨💫⭐🌟💯❤️😍🤤👌🙌💪🎉🎊]/g, '') // Remove emojis
         .replace(/\s+/g, ' ') // Normalize spaces
         .trim();
@@ -596,7 +596,7 @@ export async function POST(request: NextRequest) {
       return { recipe };
     };
 
-    const result = await Promise.race([parsePromise(), timeoutPromise]) as any;
+    const result = await Promise.race([parsePromise(), timeoutPromise]) as { error?: Error; recipe?: Recipe; fallbackMode?: boolean; caption?: string };
 
     if (result.error) {
       return NextResponse.json(result, { status: 422 }); // Unprocessable Entity

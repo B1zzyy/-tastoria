@@ -170,7 +170,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [checkIfRecipeSaved, user]);
 
   // Handle shared recipe URLs
   useEffect(() => {

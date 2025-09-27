@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { X, Clock, User, Trash2, Folder, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { deleteSavedRecipe, type SavedRecipe } from '@/lib/recipeService';
+import { deleteSavedRecipe } from '@/lib/recipeService';
 import { getUserCollections, getRecipesInCollection, ensureRecipesInAllCollection, cleanupDuplicateRecipes, deleteRecipeFromAllCollections, deleteCollection, type Collection, type SavedRecipeWithCollection } from '@/lib/collectionsService';
 import type { Recipe } from '@/lib/recipe-parser';
 
