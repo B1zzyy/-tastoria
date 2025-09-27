@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Recipe } from '@/lib/recipe-parser';
-import { Clock, Users, Star, ChefHat, List, BookOpen, Check } from 'lucide-react';
+
+import { Clock, Users, Star, ChefHat, List, BookOpen, Check, Play, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 
 interface RecipeDisplayProps {
@@ -11,6 +12,7 @@ interface RecipeDisplayProps {
 
 export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [showInstagramPopup, setShowInstagramPopup] = useState(false);
 
   const toggleStep = (stepIndex: number) => {
     const newCompletedSteps = new Set(completedSteps);
@@ -27,9 +29,70 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
       {/* Bento Grid Container */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Hero Section - Recipe Image & Title */}
+        {/* Hero Section - Recipe Image/Video & Title */}
         <div className="lg:col-span-8 bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
-          {recipe.image && (
+          {recipe.image === 'instagram-video' && recipe.instagramUrl ? (
+            <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500">
+              {/* Instagram-style pattern overlay */}
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute inset-0" style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.3'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                  backgroundSize: '30px 30px'
+                }} />
+              </div>
+              
+              {/* Recipe info preview */}
+              <div className="absolute top-3 left-3 right-3 sm:top-6 sm:left-6 sm:right-6">
+                <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                    <ChefHat className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-white/90 text-xs sm:text-sm font-medium">Instagram Recipe</p>
+                    <p className="text-white/70 text-xs hidden sm:block">Tap to watch video</p>
+                  </div>
+                </div>
+                
+                {/* Quick recipe stats */}
+                <div className="flex flex-wrap gap-2 sm:gap-4 text-white/80 text-xs sm:text-sm">
+                  {recipe.prepTime && (
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span>{recipe.prepTime}</span>
+                    </div>
+                  )}
+                  {recipe.servings && (
+                    <div className="flex items-center gap-1">
+                      <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span>{recipe.servings}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1">
+                    <List className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">{recipe.ingredients.length} ingredients</span>
+                    <span className="sm:hidden">{recipe.ingredients.length} items</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Simple play button overlay */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <button
+                  onClick={() => setShowInstagramPopup(true)}
+                  className="group transition-all duration-300 hover:scale-110"
+                >
+                  <Play className="w-16 h-16 sm:w-20 sm:h-20 text-white group-hover:text-white/90 transition-colors duration-300" fill="white" />
+                </button>
+              </div>
+              
+              {/* Title overlay */}
+              <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-6 bg-gradient-to-t from-black/80 to-transparent">
+                <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-white">
+                  {recipe.title}
+                </h1>
+              </div>
+            </div>
+          ) : recipe.image && recipe.image !== 'instagram-video' ? (
             <div className="relative aspect-video overflow-hidden">
               <Image
                 src={recipe.image}
@@ -45,7 +108,7 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
                  </h1>
                </div>
             </div>
-          )}
+          ) : null}
           
           {!recipe.image && (
             <div className="p-6">
@@ -269,6 +332,50 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
                 <div className="text-sm text-purple-700/70 dark:text-purple-300/70 font-medium">Fat</div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Instagram Video Popup */}
+      {showInstagramPopup && recipe.instagramUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="relative w-full max-w-md bg-card rounded-2xl shadow-2xl border border-border overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-card-foreground">Watch Recipe Video</h3>
+                <button
+                  onClick={() => setShowInstagramPopup(false)}
+                  className="p-2 hover:bg-accent rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <p className="text-muted-foreground text-sm">
+                  This recipe was extracted from an Instagram post. Click below to view the original video on Instagram.
+                </p>
+                
+                <a
+                  href={recipe.instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-3 w-full p-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105"
+                >
+                  <ExternalLink className="w-5 h-5" />
+                  Open on Instagram
+                </a>
+                
+                <button
+                  onClick={() => setShowInstagramPopup(false)}
+                  className="w-full p-3 text-muted-foreground hover:text-card-foreground border border-border rounded-xl hover:bg-accent transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

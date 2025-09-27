@@ -42,6 +42,7 @@ export interface Recipe {
   servings?: string;
   ingredients: string[];
   instructions: string[];
+  instagramUrl?: string; // For Instagram video popup
   nutrition?: {
     calories?: string;
     protein?: string;

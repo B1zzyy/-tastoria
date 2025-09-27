@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Recipe } from '@/lib/recipe-parser';
-import RecipeForm from '@/components/RecipeForm';
+import RecipeForm, { type SourceType } from '@/components/RecipeForm';
 import RecipeDisplay from '@/components/RecipeDisplay';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -95,13 +95,23 @@ export default function Home() {
     setError(null);
   };
 
-  const handleParseRecipe = useCallback(async (url: string) => {
+  const handleParseRecipe = useCallback(async (url: string, sourceType: SourceType = 'web') => {
     setLoading(true);
     setError(null);
     setRecipe(null);
     setCurrentRecipeUrl(url);
     setIsRecipeCurrentlySaved(false);
     setIsViewingFromSavedRecipes(false); // Reset flag when manually searching
+
+    // Check if it's an Instagram URL
+    const isInstagramUrl = url.includes('instagram.com/p/') || 
+                          url.includes('instagram.com/reel/') || 
+                          url.includes('instagram.com/tv/');
+
+    // If Instagram URL is detected but sourceType is 'web', auto-switch
+    if (isInstagramUrl && sourceType === 'web') {
+      sourceType = 'instagram';
+    }
 
     // Create AbortController for request cancellation
     const abortController = new AbortController();
@@ -112,7 +122,10 @@ export default function Home() {
     }, 30000);
 
     try {
-      const response = await fetch('/api/parse-recipe', {
+      // Route to appropriate API endpoint based on source type
+      const apiEndpoint = sourceType === 'instagram' ? '/api/parse-instagram' : '/api/parse-recipe';
+      
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,6 +140,12 @@ export default function Home() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle Instagram fallback mode
+        if (response.status === 422 && data.fallbackMode) {
+          setError(`${data.error}\n\n${data.caption ? 'Caption preview: ' + data.caption : ''}`);
+          // TODO: Show manual recipe builder modal
+          return;
+        }
         throw new Error(data.error || 'Failed to parse recipe');
       }
 
@@ -160,7 +179,9 @@ export default function Home() {
     
     if (sharedRecipeUrl && !recipe) {
       // Auto-parse the shared recipe
-      handleParseRecipe(decodeURIComponent(sharedRecipeUrl));
+      const decodedUrl = decodeURIComponent(sharedRecipeUrl);
+      const isInstagram = decodedUrl.includes('instagram.com/');
+      handleParseRecipe(decodedUrl, isInstagram ? 'instagram' : 'web');
       // Clean up the URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }

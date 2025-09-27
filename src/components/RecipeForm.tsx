@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Search, Link2 } from 'lucide-react';
+import { Search, Link2, Globe, Instagram } from 'lucide-react';
 
 // Custom Arrow Right component using the provided SVG
 const ArrowRight = ({ className }: { className?: string }) => (
@@ -31,19 +31,22 @@ const ArrowRight = ({ className }: { className?: string }) => (
   </svg>
 );
 
+export type SourceType = 'web' | 'instagram';
+
 interface RecipeFormProps {
-  onSubmit: (url: string) => void;
+  onSubmit: (url: string, sourceType: SourceType) => void;
   loading?: boolean;
   compact?: boolean;
 }
 
 export default function RecipeForm({ onSubmit, loading = false, compact = false }: RecipeFormProps) {
   const [url, setUrl] = useState('');
+  const [sourceType, setSourceType] = useState<SourceType>('web');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (url.trim() && !loading) {
-      onSubmit(url.trim());
+      onSubmit(url.trim(), sourceType);
       setUrl(''); // Clear the input after submission
     }
   };
@@ -51,15 +54,41 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
   if (compact) {
     return (
       <form onSubmit={handleSubmit} className="flex gap-2">
+        {/* Source Type Selector */}
+        <div className="relative">
+          <select
+            value={sourceType}
+            onChange={(e) => setSourceType(e.target.value as SourceType)}
+            className={cn(
+              "appearance-none bg-background border border-input rounded-lg px-3 py-2 text-sm",
+              "focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent",
+              "transition-all duration-200 hover:border-ring/50 pr-8"
+            )}
+            disabled={loading}
+          >
+            <option value="web">🌐 Web</option>
+            <option value="instagram">📱 IG</option>
+          </select>
+          <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+            <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Link2 className="h-4 w-4 text-muted-foreground" />
+            {sourceType === 'instagram' ? (
+              <Instagram className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <Link2 className="h-4 w-4 text-muted-foreground" />
+            )}
           </div>
           <input
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="Paste another recipe URL..."
+            placeholder={sourceType === 'instagram' ? "Paste Instagram reel/post URL..." : "Paste another recipe URL..."}
             className={cn(
               "w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-input bg-background text-foreground",
               "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent",
@@ -92,15 +121,51 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Source Type Selector */}
+      <div className="flex justify-center">
+        <div className="inline-flex bg-muted rounded-lg p-1">
+          <button
+            type="button"
+            onClick={() => setSourceType('web')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
+              sourceType === 'web' 
+                ? "bg-background text-foreground shadow-sm" 
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Globe className="w-4 h-4" />
+            Website
+          </button>
+          <button
+            type="button"
+            onClick={() => setSourceType('instagram')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
+              sourceType === 'instagram' 
+                ? "bg-background text-foreground shadow-sm" 
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Instagram className="w-4 h-4" />
+            Instagram
+          </button>
+        </div>
+      </div>
+
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Link2 className="h-5 w-5 text-muted-foreground" />
+          {sourceType === 'instagram' ? (
+            <Instagram className="h-5 w-5 text-muted-foreground" />
+          ) : (
+            <Link2 className="h-5 w-5 text-muted-foreground" />
+          )}
         </div>
         <input
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="Paste a recipe URL to remove the clutter"
+          placeholder={sourceType === 'instagram' ? "Paste an Instagram reel or post URL" : "Paste a recipe URL to remove the clutter"}
           className={cn(
             "w-full pl-10 pr-4 py-4 text-lg rounded-xl border border-input bg-background text-foreground",
             "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent",
@@ -128,8 +193,12 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
           </>
         ) : (
           <>
-            <Search className="w-6 h-6" />
-            Get recipe
+            {sourceType === 'instagram' ? (
+              <Instagram className="w-6 h-6" />
+            ) : (
+              <Search className="w-6 h-6" />
+            )}
+            {sourceType === 'instagram' ? 'Parse Instagram' : 'Get recipe'}
           </>
         )}
       </button>
