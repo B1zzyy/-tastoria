@@ -41,9 +41,9 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
                 }} />
               </div>
               
-              {/* Recipe info preview */}
-              <div className="absolute top-3 left-3 right-3 sm:top-6 sm:left-6 sm:right-6">
-                <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              {/* Clean header with Instagram badge - mobile optimized */}
+              <div className="absolute top-4 left-4 right-4 sm:top-6 sm:left-6 sm:right-6">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
                     <ChefHat className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
@@ -52,42 +52,21 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
                     <p className="text-white/70 text-xs hidden sm:block">Tap to watch video</p>
                   </div>
                 </div>
-                
-                {/* Quick recipe stats */}
-                <div className="flex flex-wrap gap-2 sm:gap-4 text-white/80 text-xs sm:text-sm">
-                  {recipe.prepTime && (
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>{recipe.prepTime}</span>
-                    </div>
-                  )}
-                  {recipe.servings && (
-                    <div className="flex items-center gap-1">
-                      <Users className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>{recipe.servings}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1">
-                    <List className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline">{recipe.ingredients.length} ingredients</span>
-                    <span className="sm:hidden">{recipe.ingredients.length} items</span>
-                  </div>
-                </div>
               </div>
               
-              {/* Simple play button overlay */}
+              {/* Subtle play button - mobile optimized */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <button
                   onClick={() => setShowInstagramPopup(true)}
-                  className="group transition-all duration-300 hover:scale-110"
+                  className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
                 >
-                  <Play className="w-16 h-16 sm:w-20 sm:h-20 text-white group-hover:text-white/90 transition-colors duration-300" fill="white" />
+                  <Play className="w-5 h-5 sm:w-6 sm:h-6 text-white ml-0.5 group-hover:scale-110 transition-transform" fill="white" />
                 </button>
               </div>
               
-              {/* Title overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-6 bg-gradient-to-t from-black/80 to-transparent">
-                <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-white">
+              {/* Clean title overlay - mobile optimized */}
+              <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-black/60 to-transparent">
+                <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white leading-tight">
                   {recipe.title}
                 </h1>
               </div>
@@ -153,6 +132,14 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
                   <Users className="w-5 h-5 text-primary mx-auto mb-1" />
                   <div className="text-xs text-muted-foreground">Serves</div>
                   <div className="font-semibold text-card-foreground">{recipe.servings}</div>
+                </div>
+              )}
+              
+              {recipe.difficulty && (
+                <div className="text-center">
+                  <ChefHat className="w-5 h-5 text-primary mx-auto mb-1" />
+                  <div className="text-xs text-muted-foreground">Difficulty</div>
+                  <div className="font-semibold text-card-foreground">{recipe.difficulty}</div>
                 </div>
               )}
             </div>

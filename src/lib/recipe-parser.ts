@@ -49,6 +49,7 @@ export interface Recipe {
     carbs?: string;
     fat?: string;
   };
+  difficulty?: string;
   author?: string;
   rating?: string;
   reviewCount?: string;

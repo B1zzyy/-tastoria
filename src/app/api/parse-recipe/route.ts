@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseRecipeFromUrl, type Recipe } from '@/lib/recipe-parser';
+import { enhanceRecipeWithGemini } from '@/lib/geminiParser';
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,6 +94,26 @@ export async function POST(request: NextRequest) {
       
       console.log('API: After final cleanup:', recipe.instructions.length, 'instructions');
       console.log('API: Final instructions:', recipe.instructions.map((inst: string, i: number) => `${i+1}: ${inst.substring(0, 50)}...`));
+      
+      // If instructions are still fragmented or incomplete, try Gemini enhancement
+      const hasFragmentedInstructions = recipe.instructions.some(inst => 
+        inst.length < 20 || 
+        /^\d+\s*(minutes?|hours?|°[CF])/i.test(inst.trim()) ||
+        inst.split(' ').length < 4
+      );
+      
+      if (hasFragmentedInstructions && recipe.instructions.length < 8) {
+        console.log('🤖 Instructions appear fragmented, trying Gemini enhancement...');
+        try {
+          const enhancedRecipe = await enhanceRecipeWithGemini(recipe, url);
+          if (enhancedRecipe && enhancedRecipe.instructions.length > recipe.instructions.length) {
+            console.log('✅ Gemini enhanced recipe with better instructions');
+            return NextResponse.json({ recipe: enhancedRecipe });
+          }
+        } catch (geminiError) {
+          console.log('⚠️ Gemini enhancement failed, using original recipe:', geminiError);
+        }
+      }
     }
     
     return NextResponse.json({ recipe });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Recipe } from '@/lib/recipe-parser';
+import { parseRecipeWithGemini } from '@/lib/geminiParser';
 
 // Decode HTML entities
 function decodeHtmlEntities(text: string): string {
@@ -577,10 +578,15 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      // Try to parse recipe from caption
-      const recipe = parseRecipeFromCaption(postData.caption);
+      // Use Gemini AI to parse recipe from caption
+      console.log('🤖 Sending Instagram caption to Gemini AI...');
+      console.log('📝 Caption length:', postData.caption.length);
+      console.log('📝 Caption preview:', postData.caption.substring(0, 200));
+      
+      const recipe = await parseRecipeWithGemini(postData.caption, cleanUrl);
       
       if (!recipe) {
+        console.log('❌ Gemini failed to parse recipe from caption');
         return {
           error: 'No recipe found in the Instagram caption. You can manually create a recipe while watching the video.',
           fallbackMode: true,
@@ -589,10 +595,9 @@ export async function POST(request: NextRequest) {
       }
 
       // Set the Instagram URL for video popup
-      if (recipe.instagramUrl !== undefined) {
-        recipe.instagramUrl = cleanUrl;
-      }
+      recipe.instagramUrl = cleanUrl;
 
+      console.log('✅ Gemini successfully parsed Instagram recipe:', recipe.title);
       return { recipe };
     };
 
