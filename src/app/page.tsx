@@ -202,6 +202,49 @@ export default function Home() {
     };
   }, [recipe]);
 
+  // Handle mobile keyboard closing - scroll back to top to show header elements
+  useEffect(() => {
+    if (!recipe) { // Only on home screen
+      let initialViewportHeight = window.innerHeight;
+      
+      const handleResize = () => {
+        const currentViewportHeight = window.innerHeight;
+        
+        // If viewport height increased significantly (keyboard closed), scroll to top
+        if (currentViewportHeight > initialViewportHeight + 100) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          initialViewportHeight = currentViewportHeight;
+        } else if (currentViewportHeight < initialViewportHeight - 100) {
+          // Keyboard opened, update initial height
+          initialViewportHeight = currentViewportHeight;
+        }
+      };
+
+      // Also handle focus events on inputs
+      const handleInputBlur = () => {
+        // Small delay to ensure keyboard has closed
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 300);
+      };
+
+      window.addEventListener('resize', handleResize);
+      
+      // Add blur listeners to all input elements
+      const inputs = document.querySelectorAll('input, textarea');
+      inputs.forEach(input => {
+        input.addEventListener('blur', handleInputBlur);
+      });
+
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        inputs.forEach(input => {
+          input.removeEventListener('blur', handleInputBlur);
+        });
+      };
+    }
+  }, [recipe]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Top Right Controls */}
