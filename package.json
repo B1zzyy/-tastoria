@@ -13,6 +13,7 @@
     "@supabase/supabase-js": "^2.57.4",
     "@types/cheerio": "^0.22.35",
     "axios": "^1.12.2",
+    "canvas-confetti": "^1.9.3",
     "cheerio": "^1.1.2",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.16",
@@ -27,6 +28,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

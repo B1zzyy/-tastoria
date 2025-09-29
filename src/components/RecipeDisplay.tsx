@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Recipe } from '@/lib/recipe-parser';
 
 import { Clock, Users, Star, ChefHat, List, BookOpen, Check, Play, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
+import Confetti from './Confetti';
 
 interface RecipeDisplayProps {
   recipe: Recipe;
@@ -13,6 +14,21 @@ interface RecipeDisplayProps {
 export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [showInstagramPopup, setShowInstagramPopup] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  // Trigger confetti when all steps are completed
+  useEffect(() => {
+    console.log('🔍 Confetti check:', {
+      instructionsLength: recipe.instructions.length,
+      completedSteps: completedSteps.size,
+      shouldTrigger: recipe.instructions.length > 0 && completedSteps.size === recipe.instructions.length
+    });
+    
+    if (recipe.instructions.length > 0 && completedSteps.size === recipe.instructions.length) {
+      console.log('🎉 Triggering confetti!');
+      setShowConfetti(true);
+    }
+  }, [completedSteps, recipe.instructions.length]);
 
   const toggleStep = (stepIndex: number) => {
     const newCompletedSteps = new Set(completedSteps);
@@ -210,6 +226,14 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
                 <BookOpen className="w-5 h-5 text-primary" />
               </div>
               <h2 className="text-xl font-bold text-card-foreground">Instructions</h2>
+              {recipe.metadata?.instructionsGenerated && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ backgroundColor: '#ffe0c2' }}>
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#393028' }}>
+                    <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-xs font-medium" style={{ color: '#393028' }}>AI Instructions</span>
+                </div>
+              )}
             </div>
             
             {recipe.instructions.length > 0 && completedSteps.size > 0 && (
@@ -366,6 +390,12 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
           </div>
         </div>
       )}
+
+      {/* Confetti Effect */}
+      <Confetti 
+        fire={showConfetti} 
+        onComplete={() => setShowConfetti(false)} 
+      />
     </div>
   );
 }

@@ -53,6 +53,9 @@ export interface Recipe {
   author?: string;
   rating?: string;
   reviewCount?: string;
+  metadata?: {
+    instructionsGenerated?: boolean; // True if instructions were AI-generated
+  };
 }
 
 export async function parseRecipeFromUrl(url: string): Promise<Recipe> {

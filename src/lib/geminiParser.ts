@@ -152,12 +152,23 @@ Return ONLY the complete JSON object with missing fields filled:`;
       return null;
     }
 
+    // Check if instructions were generated (not extracted from source)
+    const originalInstructions = extractedData.instructions || [];
+    const finalInstructions = finalRecipe.instructions || [];
+    const instructionsWereGenerated = originalInstructions.length === 0 || 
+      (originalInstructions.length < 3) ||
+      (originalInstructions.some((inst: string) => 
+        inst.toLowerCase().includes('note') || 
+        inst.toLowerCase().includes('tip') || 
+        inst.toLowerCase().includes('additional')
+      ));
+
     // Convert to our Recipe format
     const recipe: Recipe = {
       title: finalRecipe.title || 'Untitled Recipe',
       description: finalRecipe.description || '',
       ingredients: finalRecipe.ingredients || [],
-      instructions: finalRecipe.instructions || [],
+      instructions: finalInstructions,
       prepTime: finalRecipe.prepTime || '',
       cookTime: finalRecipe.cookTime || '',
       totalTime: finalRecipe.totalTime || '',
@@ -170,6 +181,10 @@ Return ONLY the complete JSON object with missing fields filled:`;
         protein: finalRecipe.protein || '',
         carbs: finalRecipe.carbs || '',
         fat: finalRecipe.fat || ''
+      },
+      // Add metadata about AI generation
+      metadata: {
+        instructionsGenerated: instructionsWereGenerated
       }
     };
     
