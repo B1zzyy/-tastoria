@@ -218,11 +218,14 @@ function extractDataFromHtml(html: string): { caption: string | null; image: str
   let caption: string | null = null;
   let image: string | null = null;
   
-  // Method 1: Look for meta tags (description and image)
+  // Method 1: Look for meta tags (description and image) - but don't use if we find full caption later
   const metaDescMatch = html.match(/<meta property="og:description" content="([^"]*)"[^>]*>/);
+  let metaCaption: string | null = null;
   if (metaDescMatch && metaDescMatch[1]) {
     console.log('Found caption in meta description');
-    caption = decodeHtmlEntities(metaDescMatch[1]);
+    metaCaption = decodeHtmlEntities(metaDescMatch[1]);
+    console.log('Meta description caption length:', metaCaption.length);
+    console.log('Meta description caption preview:', metaCaption.substring(0, 300));
   }
   
   // Look for og:image meta tag
@@ -261,49 +264,61 @@ function extractDataFromHtml(html: string): { caption: string | null; image: str
     }
   }
 
-  // Method 3: Look for window._sharedData
-  if (!caption || !image) {
-    const sharedDataMatch = html.match(/window\._sharedData\s*=\s*({.*?});/);
-    if (sharedDataMatch) {
-      try {
-        const sharedData = JSON.parse(sharedDataMatch[1]);
-        const postData = sharedData?.entry_data?.PostPage?.[0]?.graphql?.shortcode_media;
+  // Method 3: Look for window._sharedData (PRIORITIZE THIS for full caption)
+  const sharedDataMatch = html.match(/window\._sharedData\s*=\s*({.*?});/);
+  if (sharedDataMatch) {
+    try {
+      const sharedData = JSON.parse(sharedDataMatch[1]);
+      const postData = sharedData?.entry_data?.PostPage?.[0]?.graphql?.shortcode_media;
+      
+      if (postData?.edge_media_to_caption?.edges?.[0]?.node?.text) {
+        const fullCaption = decodeHtmlEntities(postData.edge_media_to_caption.edges[0].node.text);
+        console.log('Found FULL caption in shared data, length:', fullCaption.length);
+        console.log('Full caption preview:', fullCaption.substring(0, 500));
         
-        if (!caption && postData?.edge_media_to_caption?.edges?.[0]?.node?.text) {
-          console.log('Found caption in shared data');
-          caption = decodeHtmlEntities(postData.edge_media_to_caption.edges[0].node.text);
-        }
-        
-        if (!image && postData?.display_url) {
-          console.log('Found image in shared data');
-          image = postData.display_url;
-        }
-      } catch (e) {
-        console.log('Failed to parse shared data:', e);
+        // ALWAYS use full caption from shared data if available
+        console.log('✅ Using full caption from shared data (overriding meta description)');
+        caption = fullCaption;
       }
+      
+      if (!image && postData?.display_url) {
+        console.log('Found image in shared data');
+        image = postData.display_url;
+      }
+    } catch (e) {
+      console.log('Failed to parse shared data:', e);
     }
   }
 
-  // Method 4: Look for any script containing caption and image data
+  // Method 4: Look for any script containing caption and image data (ENHANCED)
   if (!caption || !image) {
     const scriptMatches = html.match(/<script[^>]*>([\s\S]*?)<\/script>/g);
     if (scriptMatches) {
       for (const script of scriptMatches) {
-        // Look for various caption patterns
+        // Look for various caption patterns (ENHANCED)
         if (!caption) {
           const captionPatterns = [
+            // Modern Instagram patterns
+            /"edge_media_to_caption":\s*{\s*"edges":\s*\[\s*{\s*"node":\s*{\s*"text":\s*"([^"]*?)"/,
             /"caption":\s*"([^"]*?)"/,
             /"text":\s*"([^"]*?)"/,
             /caption['"]\s*:\s*['"]([^'"]*?)['"]/,
-            /"edge_media_to_caption":\s*{\s*"edges":\s*\[\s*{\s*"node":\s*{\s*"text":\s*"([^"]*?)"/
+            // Look for longer captions in JSON structures
+            /"shortcode_media":\s*{[\s\S]*?"edge_media_to_caption":\s*{[\s\S]*?"text":\s*"([^"]*?)"/
           ];
           
           for (const pattern of captionPatterns) {
             const match = script.match(pattern);
-            if (match && match[1] && match[1].length > 10) {
-              console.log('Found caption in script tag');
-              caption = decodeHtmlEntities(match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\u[\dA-F]{4}/gi, ''));
-              break;
+            if (match && match[1] && match[1].length > 50) { // Require longer captions
+              const extractedCaption = decodeHtmlEntities(match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\u[\dA-F]{4}/gi, ''));
+              console.log('Found caption in script tag, length:', extractedCaption.length);
+              console.log('Script caption preview:', extractedCaption.substring(0, 500));
+              
+              // Use this caption if it's longer than what we have
+              if (!caption || extractedCaption.length > caption.length) {
+                console.log('Using longer caption from script tag');
+                caption = extractedCaption;
+              }
             }
           }
         }
@@ -331,7 +346,17 @@ function extractDataFromHtml(html: string): { caption: string | null; image: str
     }
   }
 
+  // Fallback: Use meta caption if we still don't have a caption
+  if (!caption && metaCaption) {
+    console.log('⚠️ Using meta caption as fallback');
+    caption = metaCaption;
+  }
+  
   console.log('Extraction complete - Caption:', !!caption, 'Image:', !!image);
+  if (caption) {
+    console.log('Final caption length:', caption.length);
+    console.log('Final caption preview:', caption.substring(0, 500));
+  }
   return { caption, image };
 }
 
@@ -657,6 +682,50 @@ async function scrapeInstagramPost(url: string): Promise<{ caption: string; imag
       } catch (embedError) {
         console.log('Embed method failed:', embedError);
       }
+      
+      // Try alternative URL formats
+      const alternativeUrls = [
+        `https://www.instagram.com/p/${postId}/`,
+        `https://www.instagram.com/reel/${postId}/`,
+        `https://www.instagram.com/tv/${postId}/`
+      ];
+      
+      for (const altUrl of alternativeUrls) {
+        if (altUrl !== url) {
+          console.log('Trying alternative URL:', altUrl);
+          try {
+            const altResponse = await fetch(altUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': 'https://www.instagram.com/',
+              },
+            });
+            
+            if (altResponse.ok) {
+              const altHtml = await altResponse.text();
+              console.log('Alternative URL HTML length:', altHtml.length);
+              
+              // Check if this has the full caption
+              const hasFullCaption = altHtml.includes('40oz Lean Ground Beef') || 
+                                    altHtml.includes('96/4') || 
+                                    altHtml.includes('450 Calories') ||
+                                    altHtml.includes('65g Protein');
+              
+              if (hasFullCaption) {
+                console.log('✅ Found full caption in alternative URL!');
+                const altData = extractDataFromHtml(altHtml);
+                if (altData.caption) {
+                  return { caption: altData.caption, image: altData.image || undefined };
+                }
+              }
+            }
+          } catch (altError) {
+            console.log('Alternative URL failed:', altError);
+          }
+        }
+      }
     }
 
     // Method 2: Try the regular URL with updated headers
@@ -672,6 +741,8 @@ async function scrapeInstagramPost(url: string): Promise<{ caption: string; imag
         'Sec-Fetch-Mode': 'navigate',
         'Sec-Fetch-Site': 'none',
         'Cache-Control': 'max-age=0',
+        'Referer': 'https://www.instagram.com/',
+        'Origin': 'https://www.instagram.com',
       },
     });
 
@@ -682,6 +753,47 @@ async function scrapeInstagramPost(url: string): Promise<{ caption: string; imag
 
     const html = await response.text();
     console.log('Fetched HTML length:', html.length);
+    
+    // Debug: Check if we can find the full caption in the HTML
+    console.log('🔍 Searching for full caption in HTML...');
+    
+    // Look for the specific ingredients we know should be there
+    const hasFullCaption = html.includes('40oz Lean Ground Beef') || 
+                          html.includes('96/4') || 
+                          html.includes('450 Calories') ||
+                          html.includes('65g Protein');
+    
+    console.log('🔍 Does HTML contain full caption data?', hasFullCaption);
+    
+    if (hasFullCaption) {
+      console.log('✅ Found full caption data in HTML!');
+    } else {
+      console.log('❌ Full caption data NOT found in HTML');
+      // Let's see what we can find
+      const captionMatches = html.match(/"text":\s*"([^"]{500,})"/g);
+      if (captionMatches) {
+        console.log('🔍 Found potential long captions:', captionMatches.length);
+        captionMatches.forEach((match, i) => {
+          console.log(`🔍 Caption ${i + 1} preview:`, match.substring(0, 200) + '...');
+        });
+      }
+      
+      // Try alternative extraction methods
+      console.log('🔍 Trying alternative caption extraction...');
+      
+      // Look for any long text blocks that might be the caption
+      const longTextBlocks = html.match(/"text":\s*"([^"]{200,})"/g);
+      if (longTextBlocks) {
+        console.log('🔍 Found long text blocks:', longTextBlocks.length);
+        longTextBlocks.forEach((block, i) => {
+          const text = block.match(/"text":\s*"([^"]+)"/);
+          if (text && text[1]) {
+            const decodedText = decodeHtmlEntities(text[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'));
+            console.log(`🔍 Text block ${i + 1} (${decodedText.length} chars):`, decodedText.substring(0, 300) + '...');
+          }
+        });
+      }
+    }
 
     // Use the improved extraction method
     const data = extractDataFromHtml(html);

@@ -24,230 +24,161 @@ export async function parseRecipeWithGemini(content: string, sourceUrl: string):
     console.log('🔄 Using gemini-2.5-flash model');
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     
-    const prompt = `
-You are a professional recipe parser. Extract recipe information from web content and return ONLY a valid JSON object.
+    // STEP 1: Extract only what's actually in the content
+    console.log('📝 Step 1: Extracting actual content from caption...');
+    const extractionPrompt = `
+You are a strict recipe content extractor. Your job is to copy EXACTLY what is written in the content below.
 
-CRITICAL RULES:
-1. Combine ingredient fragments into complete entries (e.g., "2 cups flour" not separate "2" and "cups flour")
-2. Combine instruction fragments into complete cooking steps (e.g., "Preheat oven to 350°F and grease a baking pan" as ONE step)
-3. IGNORE all promotional text, ads, navigation menus, social media buttons, unrelated content
-4. ONLY extract actual recipe content
-5. Keep ingredients with their measurements together
-6. Keep instruction steps as complete sentences - NEVER break them into individual words or phrases
-7. ALWAYS PROVIDE ALL FIELDS - Never leave any field empty or null
-8. Handle both structured recipe data and free-form text content
-9. FORMAT INGREDIENTS PROFESSIONALLY: Capitalize first letter of each ingredient, proper spacing around measurements
-10. INSTRUCTIONS MUST BE COMPLETE SENTENCES: Each instruction should be a full, actionable step that makes sense on its own
+ABSOLUTE RULES - NO EXCEPTIONS:
+1. Copy ingredients EXACTLY as written - do NOT change measurements, quantities, or descriptions
+2. Copy nutrition info EXACTLY as written - do NOT convert or estimate
+3. Copy any instructions EXACTLY as written - do NOT paraphrase or summarize
+4. Copy time information EXACTLY as written - do NOT estimate
+5. If something is not explicitly written, leave that field empty
+6. Do NOT add, remove, or modify any text from the original content
 
-MANDATORY REQUIREMENTS:
-- ALWAYS estimate prepTime, cookTime, totalTime, servings, calories, protein, carbs, fat, difficulty
-- If exact values aren't provided, make intelligent estimates based on ingredients and cooking methods
-- NEVER return null, undefined, or empty strings for any field
-- Be consistent with estimates - similar recipes should have similar values
+EXAMPLES:
+- If caption says "40oz Lean Ground Beef (96/4)" → extract exactly "40oz Lean Ground Beef (96/4)"
+- If caption says "12 Eggs (720g)" → extract exactly "12 Eggs (720g)" 
+- If caption says "450 Calories" → extract exactly "450"
+- If caption says "65g Protein" → extract exactly "65g"
+- Do NOT convert "40oz" to "1 lb" or "12 Eggs" to "8 large eggs"
 
-JSON Structure:
+JSON Structure (copy exactly what's written):
 {
   "title": "Recipe name (clean, no emojis)",
-  "ingredients": ["complete ingredient with measurement", "another complete ingredient", ...],
-  "instructions": ["complete cooking step 1", "complete cooking step 2", ...],
-  "prepTime": "estimated prep time in minutes (e.g., '10 minutes')",
-  "cookTime": "estimated cook time in minutes (e.g., '15 minutes')",
-  "totalTime": "total time combining prep + cook (e.g., '25 minutes')",
-  "servings": "estimated servings (e.g., '4')",
-  "description": "Brief recipe description",
-  "calories": "estimated calories per serving (e.g., '450')",
-  "protein": "estimated protein per serving in grams (e.g., '25g')",
-  "carbs": "estimated carbs per serving in grams (e.g., '35g')",
-  "fat": "estimated fat per serving in grams (e.g., '18g')",
-  "difficulty": "difficulty level: Easy, Medium, or Hard"
+  "ingredients": ["copy each ingredient exactly as written"],
+  "instructions": ["copy each instruction exactly as written"],
+  "prepTime": "copy prep time exactly as written",
+  "cookTime": "copy cook time exactly as written", 
+  "totalTime": "copy total time exactly as written",
+  "servings": "copy servings exactly as written",
+  "description": "copy description exactly as written",
+  "calories": "copy calories exactly as written",
+  "protein": "copy protein exactly as written",
+  "carbs": "copy carbs exactly as written",
+  "fat": "copy fat exactly as written",
+  "difficulty": "copy difficulty exactly as written"
 }
 
-ESTIMATION GUIDELINES (ALWAYS PROVIDE THESE):
-- Prep Time: Estimate based on chopping, mixing, marinating (5-30 minutes typical)
+Content to extract from:
+${content}
+
+Return ONLY the JSON object copying exactly what's written:`;
+
+    const extractionResult = await model.generateContent(extractionPrompt);
+    const extractionResponse = await extractionResult.response;
+    const extractionText = extractionResponse.text().trim();
+    
+    console.log('📝 Step 1 response:', extractionText.substring(0, 200) + '...');
+    
+    // Parse the extraction result
+    let extractedData: any = {};
+    try {
+      const cleanExtractionJson = extractionText.replace(/```json\n?|\n?```/g, '').trim();
+      extractedData = JSON.parse(cleanExtractionJson);
+      console.log('✅ Step 1: Successfully extracted actual content');
+    } catch (parseError) {
+      console.error('❌ Step 1: Failed to parse extraction result:', parseError);
+      return null;
+    }
+    
+    // STEP 2: Fill in missing information with intelligent estimates
+    console.log('🧠 Step 2: Filling in missing information...');
+    const estimationPrompt = `
+You are a recipe completion expert. Take the extracted recipe data and fill in ONLY the missing fields with intelligent estimates.
+
+EXTRACTED DATA:
+${JSON.stringify(extractedData, null, 2)}
+
+CRITICAL RULES:
+1. DO NOT change any extracted data - keep it exactly as extracted
+2. ONLY fill in fields that are missing, null, undefined, or empty strings
+3. If a field already has data, leave it unchanged
+4. Do NOT modify ingredients or nutrition values that were extracted
+
+SPECIAL INSTRUCTION HANDLING:
+- If instructions are missing or empty → generate proper cooking steps based on ingredients and title
+- If instructions contain only "notes", "tips", or "additional info" → replace with proper cooking steps
+- If instructions are incomplete (less than 3 steps) → generate complete cooking instructions
+- If instructions are proper cooking steps → keep them as extracted
+
+FILL ONLY MISSING FIELDS:
+- If prepTime is missing → estimate based on ingredients and cooking methods
+- If cookTime is missing → estimate based on cooking methods
+- If totalTime is missing → calculate from prepTime + cookTime + buffer
+- If servings is missing → estimate based on ingredient quantities
+- If difficulty is missing → estimate based on cooking techniques required
+
+COOKING INSTRUCTION GENERATION:
+When generating instructions, create 4-8 logical cooking steps that would make sense for this dish:
+1. Use common cooking techniques appropriate for the ingredients
+2. Follow logical order: prep → cook → finish
+3. Include proper temperatures and times where appropriate
+4. Make instructions clear and actionable
+5. Consider the dish type (burritos, pasta, salad, baked, fried, etc.)
+6. Use professional cooking terminology
+
+ESTIMATION GUIDELINES:
+- Prep Time: Based on chopping, mixing, marinating (5-30 minutes typical)
 - Cook Time: Based on cooking methods - baking (20-60min), frying (5-15min), boiling (10-30min)
-- Total Time: Always prepTime + cookTime + 5-10 minutes buffer
-- Servings: Estimate based on ingredient quantities (2-8 servings typical)
-- Calories: Calculate from main ingredients (chicken ~200cal/100g, bread ~250cal/100g, oil ~900cal/100g)
-- Protein: Estimate from meat (25-30g/100g), dairy (3-8g/100g), legumes (8-15g/100g)
-- Carbs: Estimate from bread/pasta (45-50g/100g), rice (25g/100g), vegetables (5-15g/100g)
-- Fat: Estimate from oils (100g/100g), cheese (20-30g/100g), nuts (50-70g/100g), meat (5-20g/100g)
+- Total Time: prepTime + cookTime + 5-10 minutes buffer
+- Servings: Based on ingredient quantities (2-8 servings typical)
 - Difficulty: Easy (basic cooking), Medium (some techniques), Hard (advanced skills required)
 
-DEFAULT VALUES IF UNCERTAIN:
+DEFAULT VALUES FOR MISSING FIELDS:
 - prepTime: "15 minutes"
 - cookTime: "25 minutes" 
 - totalTime: "40 minutes"
 - servings: "4"
-- calories: "350"
-- protein: "20g"
-- carbs: "25g"
-- fat: "15g"
 - difficulty: "Medium"
 
-EXAMPLE - WRONG WAY (FRAGMENTED):
-"ingredients": ["2", "cups", "flour", "1", "tsp", "salt"]
-"instructions": ["Preheat", "oven", "to", "350°F", "Mix", "ingredients", "In", "a", "bowl", "combine", "chicken", "breast"]
+Return ONLY the complete JSON object with missing fields filled:`;
 
-EXAMPLE - CORRECT WAY (COMPLETE SENTENCES):
-"ingredients": ["2 cups all-purpose flour", "1 tsp salt", "1/2 cup butter, softened", "225g Greek-style yogurt", "2 teaspoons paprika", "4 chicken breasts, skinned and boned", "Coriander, to garnish (optional)"]
-"instructions": ["Preheat oven to 350°F and grease a 9-inch baking pan.", "Mix flour and salt in a large bowl, then cut in butter until mixture resembles coarse crumbs.", "In a separate bowl, combine chicken breast with yogurt and spices, mixing until fully coated."]
-
-FORMATTING RULES:
-- Capitalize first letter of each ingredient
-- Use proper spacing: "2 teaspoons paprika" not "2teaspoonpaprika"
-- Use consistent units: "teaspoons" not "teaspoon" for plural
-- Add commas for clarity: "4 chicken breasts, skinned and boned"
-- Capitalize proper nouns: "Greek-style yogurt", "Coriander"
-
-INSTRUCTION PARSING RULES:
-- If you see fragmented text like "1. Prepare the popcorn chicken: In a bowl 2. combine the chicken breast 3. black pepper", combine them into: "1. Prepare the popcorn chicken: In a bowl, combine the chicken breast and black pepper."
-- NEVER create separate instruction steps for individual words or short phrases
-- ALWAYS combine related cooking actions into logical, complete steps
-- Each instruction should be a full sentence that makes sense on its own
-
-Content to parse:
-${content}
-
-Return ONLY the JSON object, no markdown, no extra text:`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim();
+    const estimationResult = await model.generateContent(estimationPrompt);
+    const estimationResponse = await estimationResult.response;
+    const estimationText = estimationResponse.text().trim();
     
-    console.log('🤖 Gemini response:', text.substring(0, 200) + '...');
+    console.log('🧠 Step 2 response:', estimationText.substring(0, 200) + '...');
     
-    // Try to parse JSON response
+    // Parse the final result
+    let finalRecipe: any = {};
     try {
-      // Remove any markdown formatting if present
-      let cleanJson = text.replace(/```json\n?|\n?```/g, '').trim();
-      
-      // Fix common JSON issues and remove garbage - be more surgical
-      cleanJson = cleanJson
-        .replace(/Coh\],/g, '],') // Fix the specific error we saw
-        .replace(/ventilador-de-techo-con-luz-y-mando-a-distancia-marrn-40w-dc-silencioso-efecto-madera-claraboya-con-3-colores-de-luz-natural-clido-fro-y-6-velocidades-para-dormitorio-salon-comedor-cocina-infantil-ninos/g, '') // Remove garbage text
-        .replace(/focused\s*,?/g, '') // Remove "focused" text
-        .replace(/部份\s*,?/g, '') // Remove Chinese characters
-        .replace(/bottlenecks, or points of friction in the user journey\.\*/g, '') // Remove random text
-        .replace(/\*   \*\*Visual Design:\*\* Ensure the chatbot's interface is clean.*$/g, '') // Remove long random text
-        .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
-        .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // Quote unquoted keys
-        .replace(/:\s*'([^']*)'/g, ': "$1"') // Replace single quotes with double quotes
-        .replace(/,\s*,/g, ',') // Remove double commas
-        .replace(/"\s*,\s*"/g, '", "') // Fix spacing around commas in arrays
-        .replace(/\n\s*\n/g, ' ') // Remove extra newlines
-        .replace(/\s+/g, ' ') // Normalize whitespace
-        .trim();
-      
-      console.log('🧹 Cleaned JSON preview:', cleanJson.substring(0, 300) + '...');
-      
-      const recipe = JSON.parse(cleanJson);
-      
-      // Validate and restructure the parsed recipe
-      if (recipe && typeof recipe === 'object' && recipe.title) {
-        // Restructure nutrition data to match Recipe interface
-        const structuredRecipe: Recipe = {
-          title: recipe.title,
-          description: recipe.description || '',
-          ingredients: recipe.ingredients || [],
-          instructions: recipe.instructions || [],
-          prepTime: recipe.prepTime || '',
-          cookTime: recipe.cookTime || '',
-          totalTime: recipe.totalTime || '',
-          servings: recipe.servings || '',
-           difficulty: recipe.difficulty || '',
-           image: 'instagram-video', // Instagram recipes show video preview
-           instagramUrl: '', // Will be set by the calling function
-          nutrition: {
-            calories: recipe.calories || '',
-            protein: recipe.protein || '',
-            carbs: recipe.carbs || '',
-            fat: recipe.fat || ''
-          }
-        };
-        
-        console.log('✅ Gemini successfully parsed recipe:', structuredRecipe.title);
-        console.log('📊 Estimated nutrition:', structuredRecipe.nutrition);
-        console.log('⏱️ Estimated times:', `prep: ${structuredRecipe.prepTime}, cook: ${structuredRecipe.cookTime}, total: ${structuredRecipe.totalTime}`);
-        console.log('🎯 Difficulty:', structuredRecipe.difficulty);
-        
-        return structuredRecipe;
-      } else {
-        console.log('❌ Gemini returned invalid recipe structure');
-        return null;
-      }
+      const cleanEstimationJson = estimationText.replace(/```json\n?|\n?```/g, '').trim();
+      finalRecipe = JSON.parse(cleanEstimationJson);
+      console.log('✅ Step 2: Successfully filled missing information');
     } catch (parseError) {
-      console.error('❌ Failed to parse Gemini JSON response:', parseError);
-      console.log('Raw response:', text);
-      
-      // Try to extract data manually as fallback - try to parse arrays too
-      try {
-        console.log('🔧 Attempting manual extraction with array parsing...');
-        
-        // Extract basic info
-        const titleMatch = text.match(/"title":\s*"([^"]+)"/);
-        const prepTimeMatch = text.match(/"prepTime":\s*"([^"]+)"/);
-        const cookTimeMatch = text.match(/"cookTime":\s*"([^"]+)"/);
-        const totalTimeMatch = text.match(/"totalTime":\s*"([^"]+)"/);
-        const servingsMatch = text.match(/"servings":\s*"([^"]+)"/);
-        const difficultyMatch = text.match(/"difficulty":\s*"([^"]+)"/);
-        const caloriesMatch = text.match(/"calories":\s*"([^"]+)"/);
-        const proteinMatch = text.match(/"protein":\s*"([^"]+)"/);
-        const carbsMatch = text.match(/"carbs":\s*"([^"]+)"/);
-        const fatMatch = text.match(/"fat":\s*"([^"]+)"/);
-        
-        // Try to extract ingredients array
-        let ingredients: string[] = [];
-        const ingredientsMatch = text.match(/"ingredients":\s*\[([\s\S]*?)\]/);
-        if (ingredientsMatch) {
-          const ingredientsText = ingredientsMatch[1];
-          // Split by quotes and clean up
-          const ingredientMatches = ingredientsText.match(/"([^"]+)"/g);
-          if (ingredientMatches) {
-            ingredients = ingredientMatches.map(match => match.replace(/"/g, '').trim()).filter(Boolean);
-          }
-        }
-        
-        // Try to extract instructions array
-        let instructions: string[] = [];
-        const instructionsMatch = text.match(/"instructions":\s*\[([\s\S]*?)\]/);
-        if (instructionsMatch) {
-          const instructionsText = instructionsMatch[1];
-          // Split by quotes and clean up
-          const instructionMatches = instructionsText.match(/"([^"]+)"/g);
-          if (instructionMatches) {
-            instructions = instructionMatches.map(match => match.replace(/"/g, '').trim()).filter(Boolean);
-          }
-        }
-        
-        if (titleMatch) {
-          const fallbackRecipe: Recipe = {
-            title: titleMatch[1],
-            description: '',
-            ingredients: ingredients,
-            instructions: instructions,
-            prepTime: prepTimeMatch ? prepTimeMatch[1] : '',
-            cookTime: cookTimeMatch ? cookTimeMatch[1] : '',
-            totalTime: totalTimeMatch ? totalTimeMatch[1] : '',
-            servings: servingsMatch ? servingsMatch[1] : '',
-            difficulty: difficultyMatch ? difficultyMatch[1] : '',
-            image: 'instagram-video',
-            instagramUrl: '',
-            nutrition: {
-              calories: caloriesMatch ? caloriesMatch[1] : '',
-              protein: proteinMatch ? proteinMatch[1] : '',
-              carbs: carbsMatch ? carbsMatch[1] : '',
-              fat: fatMatch ? fatMatch[1] : ''
-            }
-          };
-          console.log(`✅ Manual extraction successful: ${fallbackRecipe.title} (${ingredients.length} ingredients, ${instructions.length} instructions)`);
-          return fallbackRecipe;
-        }
-      } catch (manualError) {
-        console.log('❌ Manual extraction also failed');
-      }
-      
+      console.error('❌ Step 2: Failed to parse estimation result:', parseError);
       return null;
     }
+
+    // Convert to our Recipe format
+    const recipe: Recipe = {
+      title: finalRecipe.title || 'Untitled Recipe',
+      description: finalRecipe.description || '',
+      ingredients: finalRecipe.ingredients || [],
+      instructions: finalRecipe.instructions || [],
+      prepTime: finalRecipe.prepTime || '',
+      cookTime: finalRecipe.cookTime || '',
+      totalTime: finalRecipe.totalTime || '',
+      servings: finalRecipe.servings || '',
+      difficulty: finalRecipe.difficulty || '',
+      image: sourceUrl.includes('instagram.com') ? 'instagram-video' : '',
+      instagramUrl: sourceUrl.includes('instagram.com') ? sourceUrl : '',
+      nutrition: {
+        calories: finalRecipe.calories || '',
+        protein: finalRecipe.protein || '',
+        carbs: finalRecipe.carbs || '',
+        fat: finalRecipe.fat || ''
+      }
+    };
+    
+    console.log(`✅ Two-step parsing successful: ${recipe.title}`);
+    console.log(`📊 Extracted: ${recipe.ingredients.length} ingredients, ${recipe.instructions.length} instructions`);
+    console.log(`⏱️ Times: prep: ${recipe.prepTime}, cook: ${recipe.cookTime}, total: ${recipe.totalTime}`);
+    console.log(`🎯 Difficulty: ${recipe.difficulty}`);
+    
+    return recipe;
     
   } catch (error) {
     console.error('❌ Gemini AI error:', error);
