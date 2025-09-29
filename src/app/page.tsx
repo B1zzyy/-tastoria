@@ -708,18 +708,6 @@ export default function Home() {
       {/* Loading State */}
       {loading && (
         <div className="flex flex-col items-center justify-center py-16">
-          <LoadingSpinner />
-          <p className="text-muted-foreground mt-4">Parsing recipe...</p>
-          <p className="text-muted-foreground text-sm mt-1">This may take up to 30 seconds</p>
-          <button 
-            onClick={() => {
-              setLoading(false);
-              setError('Recipe parsing was cancelled');
-            }}
-            className="mt-4 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
-          >
-            Cancel
-          </button>
         </div>
       )}
 

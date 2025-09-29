@@ -25,16 +25,24 @@ export async function parseRecipeWithGemini(content: string, sourceUrl: string):
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     
     const prompt = `
-You are a professional recipe parser. Extract recipe information from Instagram content and return ONLY a valid JSON object.
+You are a professional recipe parser. Extract recipe information from web content and return ONLY a valid JSON object.
 
 CRITICAL RULES:
-1. Combine ingredient fragments into complete entries (e.g., "4 flatbreads" not separate "4" and "flatbreads")
-2. Combine instruction fragments into complete cooking steps (e.g., "Mix the sweet chilli sauce, ketchup, and sriracha together in a bowl" as ONE step)
-3. IGNORE all promotional text, ads, hashtags, mentions, unrelated product descriptions
+1. Combine ingredient fragments into complete entries (e.g., "2 cups flour" not separate "2" and "cups flour")
+2. Combine instruction fragments into complete cooking steps (e.g., "Preheat oven to 350°F and grease a baking pan" as ONE step)
+3. IGNORE all promotional text, ads, navigation menus, social media buttons, unrelated content
 4. ONLY extract actual recipe content
 5. Keep ingredients with their measurements together
 6. Keep instruction steps as complete sentences
-7. INTELLIGENTLY ESTIMATE missing details based on ingredients and cooking methods
+7. ALWAYS PROVIDE ALL FIELDS - Never leave any field empty or null
+8. Handle both structured recipe data and free-form text content
+9. FORMAT INGREDIENTS PROFESSIONALLY: Capitalize first letter of each ingredient, proper spacing around measurements
+
+MANDATORY REQUIREMENTS:
+- ALWAYS estimate prepTime, cookTime, totalTime, servings, calories, protein, carbs, fat, difficulty
+- If exact values aren't provided, make intelligent estimates based on ingredients and cooking methods
+- NEVER return null, undefined, or empty strings for any field
+- Be consistent with estimates - similar recipes should have similar values
 
 JSON Structure:
 {
@@ -53,22 +61,42 @@ JSON Structure:
   "difficulty": "difficulty level: Easy, Medium, or Hard"
 }
 
-ESTIMATION GUIDELINES:
-- Prep Time: Consider chopping, mixing, marinating time
-- Cook Time: Based on cooking methods (baking, frying, boiling, etc.)
-- Calories: Rough estimate based on ingredients (chicken ~200cal/100g, bread ~250cal/100g, etc.)
-- Protein: Estimate from meat, dairy, legumes
-- Carbs: Estimate from bread, pasta, rice, vegetables
-- Fat: Estimate from oils, cheese, nuts, meat fat
-- Difficulty: Easy (no complex techniques), Medium (some skill needed), Hard (advanced techniques)
+ESTIMATION GUIDELINES (ALWAYS PROVIDE THESE):
+- Prep Time: Estimate based on chopping, mixing, marinating (5-30 minutes typical)
+- Cook Time: Based on cooking methods - baking (20-60min), frying (5-15min), boiling (10-30min)
+- Total Time: Always prepTime + cookTime + 5-10 minutes buffer
+- Servings: Estimate based on ingredient quantities (2-8 servings typical)
+- Calories: Calculate from main ingredients (chicken ~200cal/100g, bread ~250cal/100g, oil ~900cal/100g)
+- Protein: Estimate from meat (25-30g/100g), dairy (3-8g/100g), legumes (8-15g/100g)
+- Carbs: Estimate from bread/pasta (45-50g/100g), rice (25g/100g), vegetables (5-15g/100g)
+- Fat: Estimate from oils (100g/100g), cheese (20-30g/100g), nuts (50-70g/100g), meat (5-20g/100g)
+- Difficulty: Easy (basic cooking), Medium (some techniques), Hard (advanced skills required)
+
+DEFAULT VALUES IF UNCERTAIN:
+- prepTime: "15 minutes"
+- cookTime: "25 minutes" 
+- totalTime: "40 minutes"
+- servings: "4"
+- calories: "350"
+- protein: "20g"
+- carbs: "25g"
+- fat: "15g"
+- difficulty: "Medium"
 
 EXAMPLE - WRONG WAY:
-"ingredients": ["4", "flatbreads", "500g", "cooked chicken", "shredded or chopped"]
-"instructions": ["Mix", "the sweet chilli sauce", "ketchup"]
+"ingredients": ["2", "cups", "flour", "1", "tsp", "salt"]
+"instructions": ["Preheat", "oven", "to", "350°F", "Mix", "ingredients"]
 
-EXAMPLE - CORRECT WAY:
-"ingredients": ["4 flatbreads", "500g cooked chicken (shredded or chopped)", "4 tbsp sweet chilli sauce"]
-"instructions": ["Mix the sweet chilli sauce, ketchup, and sriracha together in a bowl. Stir through the cooked chicken.", "Warm the flatbreads slightly, then spread with Philadelphia."]
+EXAMPLE - CORRECT WAY (with proper formatting):
+"ingredients": ["2 cups all-purpose flour", "1 tsp salt", "1/2 cup butter, softened", "225g Greek-style yogurt", "2 teaspoons paprika", "4 chicken breasts, skinned and boned", "Coriander, to garnish (optional)"]
+"instructions": ["Preheat oven to 350°F and grease a 9-inch baking pan.", "Mix flour and salt in a large bowl, then cut in butter until mixture resembles coarse crumbs."]
+
+FORMATTING RULES:
+- Capitalize first letter of each ingredient
+- Use proper spacing: "2 teaspoons paprika" not "2teaspoonpaprika"
+- Use consistent units: "teaspoons" not "teaspoon" for plural
+- Add commas for clarity: "4 chicken breasts, skinned and boned"
+- Capitalize proper nouns: "Greek-style yogurt", "Coriander"
 
 Content to parse:
 ${content}

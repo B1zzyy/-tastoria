@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Search, Link2, Globe, Instagram } from 'lucide-react';
+import GradientText from './GradientText';
 
 // Custom Arrow Right component using the provided SVG
 const ArrowRight = ({ className }: { className?: string }) => (
@@ -187,10 +188,14 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
         )}
       >
         {loading ? (
-          <>
-            <div className="w-6 h-6 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+          <GradientText
+            colors={["#f97316", "#ffffff", "#6b7280", "#374151", "#f97316", "#6b7280"]}
+            animationSpeed={10}
+            showBorder={false}
+            className="text-lg font-semibold"
+          >
             Parsing Recipe...
-          </>
+          </GradientText>
         ) : (
           <>
             {sourceType === 'instagram' ? (

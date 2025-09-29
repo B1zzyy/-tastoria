@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { X, Clock, User, Trash2, Folder, ArrowLeft } from 'lucide-react';
+import { X, Clock, User, Trash2, Folder, ArrowLeft, Instagram, Edit2, Check, X as XIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { deleteSavedRecipe } from '@/lib/recipeService';
+import { deleteSavedRecipe, updateRecipeTitle } from '@/lib/recipeService';
 import { getUserCollections, getRecipesInCollection, ensureRecipesInAllCollection, cleanupDuplicateRecipes, deleteRecipeFromAllCollections, deleteCollection, type Collection, type SavedRecipeWithCollection } from '@/lib/collectionsService';
 import type { Recipe } from '@/lib/recipe-parser';
 
@@ -23,6 +23,8 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
   const [view, setView] = useState<'collections' | 'recipes'>('collections');
   const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [editingTitle, setEditingTitle] = useState<string | null>(null);
+  const [editTitleValue, setEditTitleValue] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -138,6 +140,44 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
     setShowDeleteConfirmation(true);
   };
 
+  const startEditingTitle = (recipeId: string, currentTitle: string) => {
+    setEditingTitle(recipeId);
+    setEditTitleValue(currentTitle);
+  };
+
+  const cancelEditingTitle = () => {
+    setEditingTitle(null);
+    setEditTitleValue('');
+  };
+
+  const saveTitleEdit = async (recipeId: string) => {
+    if (!editTitleValue.trim()) {
+      cancelEditingTitle();
+      return;
+    }
+
+    const { error } = await updateRecipeTitle(recipeId, editTitleValue.trim());
+    
+    if (error) {
+      setError('Failed to update recipe title');
+    } else {
+      // Update the local state
+      setCollectionRecipes(prev => 
+        prev.map(recipe => 
+          recipe.id === recipeId 
+            ? { 
+                ...recipe, 
+                title: editTitleValue.trim(),
+                recipe_data: { ...recipe.recipe_data, title: editTitleValue.trim() }
+              }
+            : recipe
+        )
+      );
+    }
+    
+    cancelEditingTitle();
+  };
+
   // Component for collection thumbnail grid
   const CollectionThumbnail = ({ collection }: { collection: Collection }) => {
     const [thumbnails, setThumbnails] = useState<string[]>([]);
@@ -247,12 +287,18 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
               {Array.from({ length: 4 }).map((_, index) => (
                 <div key={index} className="relative bg-accent aspect-square">
                   {thumbnails[index] ? (
-                    <Image
-                      src={thumbnails[index]}
-                      alt=""
-                      fill
-                      className="object-cover"
-                    />
+                    thumbnails[index] === 'instagram-video' ? (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-700 via-gray-800 to-black flex items-center justify-center">
+                        <Instagram className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                      </div>
+                    ) : (
+                      <Image
+                        src={thumbnails[index]}
+                        alt=""
+                        fill
+                        className="object-cover"
+                      />
+                    )
                   ) : (
                     <div className="w-full h-full bg-accent flex items-center justify-center">
                       <Folder className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
@@ -481,9 +527,53 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                         
                         <div className="p-4">
                           {/* Title */}
-                          <h3 className="font-semibold text-card-foreground mb-2 line-clamp-2">
-                            {savedRecipe.title}
-                          </h3>
+                          <div className="flex items-start gap-2 mb-2">
+                            {editingTitle === savedRecipe.id ? (
+                              <div className="flex-1 flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={editTitleValue}
+                                  onChange={(e) => setEditTitleValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      saveTitleEdit(savedRecipe.id);
+                                    } else if (e.key === 'Escape') {
+                                      cancelEditingTitle();
+                                    }
+                                  }}
+                                  className="flex-1 px-2 py-1 text-sm font-semibold text-card-foreground bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={() => saveTitleEdit(savedRecipe.id)}
+                                  className="p-1 text-green-600 hover:text-green-700 transition-colors"
+                                  title="Save"
+                                >
+                                  <Check className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={cancelEditingTitle}
+                                  className="p-1 text-red-600 hover:text-red-700 transition-colors"
+                                  title="Cancel"
+                                >
+                                  <XIcon className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <h3 className="font-semibold text-card-foreground line-clamp-2 flex-1">
+                                  {savedRecipe.title}
+                                </h3>
+                                <button
+                                  onClick={() => startEditingTitle(savedRecipe.id, savedRecipe.title)}
+                                  className="p-1 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                                  title="Edit title"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                           
                           {/* Meta info */}
                           <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">

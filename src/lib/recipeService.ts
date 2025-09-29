@@ -99,3 +99,45 @@ export async function isRecipeSaved(url: string): Promise<{ data: boolean, error
     return { data: false, error }
   }
 }
+
+export async function updateRecipeTitle(recipeId: string, newTitle: string): Promise<{ error: unknown }> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return { error: { message: 'User not authenticated' } }
+    }
+
+    // First get the current recipe data
+    const { data: currentRecipe, error: fetchError } = await supabase
+      .from('saved_recipes')
+      .select('recipe_data')
+      .eq('id', recipeId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (fetchError) {
+      return { error: fetchError }
+    }
+
+    // Update the title in recipe_data
+    const updatedRecipeData = {
+      ...currentRecipe.recipe_data,
+      title: newTitle
+    }
+
+    // Update both the title field and the title in recipe_data
+    const { error } = await supabase
+      .from('saved_recipes')
+      .update({ 
+        title: newTitle,
+        recipe_data: updatedRecipeData
+      })
+      .eq('id', recipeId)
+      .eq('user_id', user.id)
+
+    return { error }
+  } catch (error) {
+    return { error }
+  }
+}

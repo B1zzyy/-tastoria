@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Recipe } from '@/lib/recipe-parser';
 import { parseRecipeWithGemini } from '@/lib/geminiParser';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Decode HTML entities
 function decodeHtmlEntities(text: string): string {
@@ -46,6 +47,168 @@ function isValidInstagramUrl(url: string): boolean {
 function extractInstagramPostId(url: string): string | null {
   const match = url.match(/instagram\.com\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
   return match ? match[1] : null;
+}
+
+// Extract ingredients from caption using pattern matching
+async function extractIngredientsFromCaption(caption: string, url: string): Promise<Recipe | null> {
+  try {
+    console.log('🔍 Attempting fallback ingredient extraction from caption...');
+    
+    // Look for common ingredient patterns
+    const ingredientPatterns = [
+      // Pattern: "800g chicken breast" or "2 tbsp soy sauce"
+      /(\d+(?:\.\d+)?(?:g|kg|ml|l|tbsp|tsp|cups?|oz|lb|pounds?)?)\s+([^,\n]+?)(?=\s*[,\n-]|$)/gi,
+      // Pattern: "chicken breast" or "soy sauce" (without measurements)
+      /(?:^|\n|,|\s)([a-zA-Z][a-zA-Z\s]+(?:breast|thigh|wing|sauce|oil|flour|sugar|salt|pepper|garlic|onion|cheese|milk|cream|butter|egg|eggs|bread|pasta|rice|noodles|vegetables?|herbs?|spices?))(?=\s*[,\n-]|$)/gi
+    ];
+    
+    const ingredients: string[] = [];
+    const foundIngredients = new Set<string>();
+    
+    // Extract title from caption
+    let title = 'Instagram Recipe';
+    const titleMatch = caption.match(/([A-Z][^!?\n]*?(?:chicken|pasta|salad|soup|pizza|burger|sandwich|tacos?|curry|stir.?fry|noodles?|rice|bread|pancakes?|waffles?|muffins?|cookies?|cake|pie|smoothie|bowl|wrap|roll|dip|sauce|dressing))/i);
+    if (titleMatch) {
+      title = titleMatch[1].trim().replace(/[^\w\s-]/g, '').trim();
+    }
+    
+    // Try to extract ingredients using patterns
+    for (const pattern of ingredientPatterns) {
+      let match;
+      while ((match = pattern.exec(caption)) !== null) {
+        let ingredient = match[0].trim();
+        
+        // Clean up the ingredient
+        ingredient = ingredient
+          .replace(/^[,\n\s-]+/, '') // Remove leading punctuation
+          .replace(/[,\n\s-]+$/, '') // Remove trailing punctuation
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .trim();
+        
+        // Skip if too short or already found
+        if (ingredient.length < 3 || foundIngredients.has(ingredient.toLowerCase())) {
+          continue;
+        }
+        
+        // Skip common non-ingredient words
+        const skipWords = ['serves', 'calories', 'protein', 'carbs', 'fat', 'macros', 'meal', 'prep', 'cookbook', 'dm', 'link', 'recipe', 'like', 'comment', 'follow', 'subscribe'];
+        if (skipWords.some(word => ingredient.toLowerCase().includes(word))) {
+          continue;
+        }
+        
+        ingredients.push(ingredient);
+        foundIngredients.add(ingredient.toLowerCase());
+      }
+    }
+    
+    // If we found ingredients, create a basic recipe
+    if (ingredients.length > 0) {
+      console.log('✅ Fallback extraction found', ingredients.length, 'ingredients');
+      
+      const recipe: Recipe = {
+        title: title,
+        ingredients: ingredients,
+        instructions: [], // Will be generated later
+        image: 'instagram-video',
+        instagramUrl: url,
+        prepTime: '15 minutes',
+        cookTime: '20 minutes',
+        totalTime: '35 minutes',
+        servings: '4',
+        description: `Recipe extracted from Instagram caption`,
+        nutrition: {
+          calories: '400',
+          protein: '25g',
+          carbs: '30g',
+          fat: '15g'
+        },
+        difficulty: 'Medium'
+      };
+      
+      return recipe;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('❌ Error in fallback ingredient extraction:', error);
+    return null;
+  }
+}
+
+// Generate cooking instructions from ingredients and title
+async function generateInstructionsFromIngredients(recipe: Recipe, caption: string): Promise<Recipe | null> {
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error('❌ Cannot generate instructions: Gemini API key is missing');
+      return null;
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+    const prompt = `
+You are a professional chef. Generate logical cooking instructions for a recipe based on the ingredients and title.
+
+RECIPE INFO:
+Title: ${recipe.title}
+Ingredients: ${recipe.ingredients.join(', ')}
+
+ORIGINAL CAPTION CONTEXT:
+${caption.substring(0, 1000)}
+
+TASK: Create 4-8 logical cooking steps that would make sense for this dish.
+
+RULES:
+1. Use common cooking techniques appropriate for the ingredients
+2. Follow logical order: prep → cook → finish
+3. Include proper temperatures and times where appropriate
+4. Make instructions clear and actionable
+5. Consider the dish type (pasta, salad, baked, fried, etc.)
+6. Use professional cooking terminology
+
+Return ONLY a JSON array of instruction strings:
+["Step 1 instruction", "Step 2 instruction", "Step 3 instruction", ...]
+
+Example:
+["Preheat oven to 400°F (200°C)", "Season chicken with salt, pepper, and herbs", "Heat oil in a large skillet over medium-high heat", "Cook chicken for 6-8 minutes per side until golden", "Let rest for 5 minutes before serving"]`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim();
+    
+    console.log('🤖 Generated instructions response:', text.substring(0, 200) + '...');
+    
+    // Parse the JSON response
+    try {
+      let cleanJson = text.replace(/```json\n?|\n?```/g, '').trim();
+      cleanJson = cleanJson
+        .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+        .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // Quote unquoted keys
+        .replace(/:\s*'([^']*)'/g, ': "$1"') // Replace single quotes with double quotes
+        .replace(/,\s*,/g, ',') // Remove double commas
+        .replace(/\n\s*\n/g, ' '); // Remove extra newlines
+      
+      const instructions = JSON.parse(cleanJson);
+      
+      if (Array.isArray(instructions) && instructions.length > 0) {
+        const enhancedRecipe = { ...recipe };
+        enhancedRecipe.instructions = instructions.filter(inst => 
+          typeof inst === 'string' && inst.trim().length > 10
+        );
+        
+        console.log('✅ Generated', enhancedRecipe.instructions.length, 'cooking instructions');
+        return enhancedRecipe;
+      }
+    } catch (parseError) {
+      console.log('⚠️ Failed to parse generated instructions JSON:', parseError);
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('❌ Error generating instructions:', error);
+    return null;
+  }
 }
 
 // Extract caption and image from HTML using multiple methods
@@ -586,12 +749,50 @@ export async function POST(request: NextRequest) {
       const recipe = await parseRecipeWithGemini(postData.caption, cleanUrl);
       
       if (!recipe) {
-        console.log('❌ Gemini failed to parse recipe from caption');
+        console.log('❌ Gemini failed to parse recipe from caption - trying fallback extraction...');
+        
+        // Try to extract ingredients manually from the caption
+        const fallbackRecipe = await extractIngredientsFromCaption(postData.caption, cleanUrl);
+        
+        if (fallbackRecipe && fallbackRecipe.ingredients && fallbackRecipe.ingredients.length > 0) {
+          console.log('✅ Fallback extraction found ingredients, generating instructions...');
+          
+          // Generate instructions for the extracted ingredients
+          try {
+            const enhancedRecipe = await generateInstructionsFromIngredients(fallbackRecipe, postData.caption);
+            if (enhancedRecipe && enhancedRecipe.instructions && enhancedRecipe.instructions.length > 0) {
+              console.log('✅ Successfully generated complete recipe from fallback');
+              enhancedRecipe.instagramUrl = cleanUrl;
+              return { recipe: enhancedRecipe };
+            }
+          } catch (error) {
+            console.log('⚠️ Failed to generate instructions for fallback recipe:', error);
+          }
+        }
+        
         return {
           error: 'No recipe found in the Instagram caption. You can manually create a recipe while watching the video.',
           fallbackMode: true,
           caption: postData.caption.substring(0, 500) // Provide caption preview for manual entry
         };
+      }
+
+      // Check if we have ingredients but no/missing instructions
+      if (recipe.ingredients && recipe.ingredients.length > 0 && 
+          (!recipe.instructions || recipe.instructions.length === 0 || 
+           recipe.instructions.every(inst => inst.trim().length < 10))) {
+        
+        console.log('🔧 Recipe has ingredients but missing instructions - generating AI instructions...');
+        
+        try {
+          const enhancedRecipe = await generateInstructionsFromIngredients(recipe, postData.caption);
+          if (enhancedRecipe && enhancedRecipe.instructions && enhancedRecipe.instructions.length > 0) {
+            console.log('✅ Successfully generated instructions from ingredients');
+            recipe.instructions = enhancedRecipe.instructions;
+          }
+        } catch (error) {
+          console.log('⚠️ Failed to generate instructions:', error);
+        }
       }
 
       // Set the Instagram URL for video popup
