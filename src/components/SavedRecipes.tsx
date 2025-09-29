@@ -516,21 +516,12 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                         {/* Recipe Image */}
                         {savedRecipe.recipe_data.image && (
                           <div className="aspect-video relative overflow-hidden">
-                            {savedRecipe.recipe_data.image === 'instagram-video' ? (
-                              <div className="w-full h-full bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 flex items-center justify-center">
-                                <div className="text-center">
-                                  <Instagram className="w-8 h-8 text-white mb-2 mx-auto" />
-                                  <p className="text-white text-sm font-medium">Instagram Recipe</p>
-                                </div>
-                              </div>
-                            ) : (
-                              <Image
-                                src={savedRecipe.recipe_data.image}
-                                alt={savedRecipe.title}
-                                fill
-                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                            )}
+                            <Image
+                              src={savedRecipe.recipe_data.image}
+                              alt={savedRecipe.title}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
                           </div>
                         )}
                         
