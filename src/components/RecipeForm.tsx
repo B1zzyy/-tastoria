@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Search, Link2, Globe, Instagram } from 'lucide-react';
+import { motion } from 'framer-motion';
 import GradientText from './GradientText';
 
 // Custom Arrow Right component using the provided SVG
@@ -124,14 +125,29 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Source Type Selector */}
       <div className="flex justify-center">
-        <div className="inline-flex bg-muted rounded-lg p-1">
+        <div className="relative inline-flex bg-muted rounded-lg p-1">
+          {/* Sliding Background */}
+          <motion.div
+            className="absolute inset-y-1 bg-background rounded-md shadow-sm"
+            initial={false}
+            animate={{
+              x: sourceType === 'web' ? 0 : '93.5%',
+              width: '50%'
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 30
+            }}
+          />
+          
           <button
             type="button"
             onClick={() => setSourceType('web')}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
+              "relative flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 z-10",
               sourceType === 'web' 
-                ? "bg-background text-foreground shadow-sm" 
+                ? "text-foreground" 
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -142,9 +158,9 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
             type="button"
             onClick={() => setSourceType('instagram')}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
+              "relative flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 z-10",
               sourceType === 'instagram' 
-                ? "bg-background text-foreground shadow-sm" 
+                ? "text-foreground" 
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
