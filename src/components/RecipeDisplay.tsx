@@ -32,7 +32,7 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
         {/* Hero Section - Recipe Image/Video & Title */}
         <div className="lg:col-span-8 bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
           {recipe.image === 'instagram-video' && recipe.instagramUrl ? (
-            <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500">
+            <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-gray-800 via-gray-600 to-black">
               {/* Instagram-style pattern overlay */}
               <div className="absolute inset-0 opacity-10">
                 <div className="absolute inset-0" style={{

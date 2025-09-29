@@ -33,10 +33,11 @@ CRITICAL RULES:
 3. IGNORE all promotional text, ads, navigation menus, social media buttons, unrelated content
 4. ONLY extract actual recipe content
 5. Keep ingredients with their measurements together
-6. Keep instruction steps as complete sentences
+6. Keep instruction steps as complete sentences - NEVER break them into individual words or phrases
 7. ALWAYS PROVIDE ALL FIELDS - Never leave any field empty or null
 8. Handle both structured recipe data and free-form text content
 9. FORMAT INGREDIENTS PROFESSIONALLY: Capitalize first letter of each ingredient, proper spacing around measurements
+10. INSTRUCTIONS MUST BE COMPLETE SENTENCES: Each instruction should be a full, actionable step that makes sense on its own
 
 MANDATORY REQUIREMENTS:
 - ALWAYS estimate prepTime, cookTime, totalTime, servings, calories, protein, carbs, fat, difficulty
@@ -83,13 +84,13 @@ DEFAULT VALUES IF UNCERTAIN:
 - fat: "15g"
 - difficulty: "Medium"
 
-EXAMPLE - WRONG WAY:
+EXAMPLE - WRONG WAY (FRAGMENTED):
 "ingredients": ["2", "cups", "flour", "1", "tsp", "salt"]
-"instructions": ["Preheat", "oven", "to", "350°F", "Mix", "ingredients"]
+"instructions": ["Preheat", "oven", "to", "350°F", "Mix", "ingredients", "In", "a", "bowl", "combine", "chicken", "breast"]
 
-EXAMPLE - CORRECT WAY (with proper formatting):
+EXAMPLE - CORRECT WAY (COMPLETE SENTENCES):
 "ingredients": ["2 cups all-purpose flour", "1 tsp salt", "1/2 cup butter, softened", "225g Greek-style yogurt", "2 teaspoons paprika", "4 chicken breasts, skinned and boned", "Coriander, to garnish (optional)"]
-"instructions": ["Preheat oven to 350°F and grease a 9-inch baking pan.", "Mix flour and salt in a large bowl, then cut in butter until mixture resembles coarse crumbs."]
+"instructions": ["Preheat oven to 350°F and grease a 9-inch baking pan.", "Mix flour and salt in a large bowl, then cut in butter until mixture resembles coarse crumbs.", "In a separate bowl, combine chicken breast with yogurt and spices, mixing until fully coated."]
 
 FORMATTING RULES:
 - Capitalize first letter of each ingredient
@@ -97,6 +98,12 @@ FORMATTING RULES:
 - Use consistent units: "teaspoons" not "teaspoon" for plural
 - Add commas for clarity: "4 chicken breasts, skinned and boned"
 - Capitalize proper nouns: "Greek-style yogurt", "Coriander"
+
+INSTRUCTION PARSING RULES:
+- If you see fragmented text like "1. Prepare the popcorn chicken: In a bowl 2. combine the chicken breast 3. black pepper", combine them into: "1. Prepare the popcorn chicken: In a bowl, combine the chicken breast and black pepper."
+- NEVER create separate instruction steps for individual words or short phrases
+- ALWAYS combine related cooking actions into logical, complete steps
+- Each instruction should be a full sentence that makes sense on its own
 
 Content to parse:
 ${content}
