@@ -7,12 +7,13 @@ import { Recipe } from '@/lib/recipe-parser';
 import RecipeForm, { type SourceType } from '@/components/RecipeForm';
 import RecipeDisplay from '@/components/RecipeDisplay';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import ThemeToggle from '@/components/ThemeToggle';
 import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
 import { isRecipeSaved } from '@/lib/recipeService';
 import SavedRecipes from '@/components/SavedRecipes';
 import CollectionModal from '@/components/CollectionModal';
+import BlurText from '../components/BlurText';
+import LiquidEther from '../components/LiquidEther';
 import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck } from 'lucide-react';
 import '@/lib/keepAlive'; // Import to initialize keep-alive service
 
@@ -187,6 +188,20 @@ export default function Home() {
     }
   }, [recipe, handleParseRecipe]);
 
+  // Disable scroll on home page (when no recipe is displayed)
+  useEffect(() => {
+    if (!recipe) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [recipe]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Top Right Controls */}
@@ -270,10 +285,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* Bottom Right Theme Toggle - Desktop Only */}
-      <div className="hidden md:block fixed bottom-4 right-4 z-50">
-        <ThemeToggle />
-      </div>
       
       {/* Top Navigation Bar - Only show when recipe is displayed */}
       {recipe && (
@@ -298,23 +309,6 @@ export default function Home() {
 
               {/* Right - Action Icons */}
               <div className="flex items-center gap-1">
-                <button 
-                  onClick={() => {
-                    if (!user) {
-                      setAuthMode('signup');
-                      setShowAuthModal(true);
-                    } else {
-                      setShowSavedRecipes(true);
-                    }
-                  }}
-                  className="p-2 hover:bg-accent rounded-lg transition-colors" 
-                  aria-label="View saved recipes"
-                >
-                  <svg className="w-6 h-6 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                  </svg>
-                </button>
-                
                 <button 
                   onClick={() => window.print()} 
                   className="p-2 hover:bg-accent rounded-lg transition-colors" 
@@ -359,7 +353,7 @@ export default function Home() {
                   </svg>
                 </button>
               </div>
-            </div>
+        </div>
           </nav>
 
           {/* Desktop Navigation */}
@@ -375,7 +369,7 @@ export default function Home() {
                   className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                 >
                   <div className="p-1.5 bg-primary/10 rounded-lg">
-                    <Image 
+          <Image
                       src="/logo.png" 
                       alt="Tastoria Logo" 
                       width={32} 
@@ -386,30 +380,8 @@ export default function Home() {
                   <span className="font-bold text-lg text-foreground">Tastoria</span>
                 </button>
                 
-                <div className="flex-1 max-w-md mx-8">
-                  <RecipeForm onSubmit={handleParseRecipe} loading={loading} compact />
-        </div>
 
                 <div className="flex items-center gap-4">
-                  {/* Collection Button */}
-                  <button 
-                    onClick={() => {
-                      if (!user) {
-                        setAuthMode('signup');
-                        setShowAuthModal(true);
-                      } else {
-                        setShowSavedRecipes(true);
-                      }
-                    }}
-                    className="p-2 hover:bg-accent rounded-lg transition-colors" 
-                    aria-label="View saved recipes"
-                    title="View saved recipes"
-                  >
-                    <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
-                  </button>
-
                   {/* Print Button */}
                   <button 
                     onClick={() => window.print()} 
@@ -532,9 +504,29 @@ export default function Home() {
 
       {/* Hero Section - Only show when no recipe */}
       {!recipe && (
-        <div className="flex flex-col min-h-screen">
+        <div className="flex flex-col min-h-screen relative">
+          {/* LiquidEther Background */}
+          <div className="absolute inset-0 z-0">
+            <LiquidEther
+              colors={['#ffe0c2', '#393028', '#ffe0c2']}
+              mouseForce={20}
+              cursorSize={100}
+              isViscous={false}
+              viscous={30}
+              iterationsViscous={32}
+              iterationsPoisson={32}
+              resolution={0.5}
+              isBounce={false}
+              autoDemo={true}
+              autoSpeed={0.5}
+              autoIntensity={2.2}
+              takeoverDuration={0.25}
+              autoResumeDelay={3000}
+              autoRampDuration={0.6}
+            />
+          </div>
           {/* Mobile Layout */}
-          <div className="md:hidden flex flex-col min-h-screen">
+          <div className="md:hidden flex flex-col min-h-screen relative z-10 pointer-events-none">
             {/* Mobile Header */}
             <div className="flex items-center justify-between p-4 pt-6">
               <div className="flex items-center">
@@ -555,7 +547,7 @@ export default function Home() {
                 <div className="absolute -top-4 -right-4 w-20 h-20 bg-primary/5 rounded-full blur-3xl"></div>
                 <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-secondary/10 rounded-full blur-3xl"></div>
                 
-                <div className="relative bg-card rounded-2xl shadow-2xl border border-border overflow-hidden transform rotate-2 hover:rotate-0 transition-transform duration-500">
+                <div className="relative bg-card/20 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 overflow-hidden transform rotate-2 hover:rotate-0 transition-transform duration-500">
                   <div className="p-5">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-3.5 h-3.5 bg-red-400 rounded-full"></div>
@@ -604,7 +596,13 @@ export default function Home() {
                 <h1 className="text-4xl font-bold text-foreground mb-4 leading-tight">
                   Clear away the clutter
                   <br />
-                  <span className="text-primary">on any recipe site.</span>
+                  <BlurText 
+                    text="on any recipe site."
+                    className="text-primary"
+                    delay={100}
+                    animateBy="words"
+                    direction="top"
+                  />
                 </h1>
                 
                 <p className="text-lg text-muted-foreground leading-relaxed">
@@ -613,14 +611,14 @@ export default function Home() {
               </div>
 
               {/* Mobile Search Form */}
-              <div className="px-2">
+              <div className="px-2 pointer-events-auto">
                 <RecipeForm onSubmit={handleParseRecipe} loading={loading} />
               </div>
             </div>
           </div>
 
           {/* Desktop Layout */}
-          <div className="hidden md:flex flex-col items-center justify-center min-h-screen px-4 text-center">
+          <div className="hidden md:flex flex-col items-center justify-center min-h-screen px-4 text-center relative z-10 pointer-events-none">
             <div className="max-w-4xl mx-auto">
               {/* Main Heading */}
               <div className="mb-8">
@@ -639,7 +637,13 @@ export default function Home() {
                 <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6 tracking-tight">
                   Clear away the clutter
                   <br />
-                  <span className="text-primary">on any recipe site.</span>
+                  <BlurText 
+                    text="on any recipe site."
+                    className="text-primary"
+                    delay={150}
+                    animateBy="words"
+                    direction="top"
+                  />
                 </h1>
                 
                 <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed">
@@ -648,7 +652,7 @@ export default function Home() {
               </div>
 
               {/* Search Form */}
-              <div className="mb-16">
+              <div className="mb-16 pointer-events-auto">
                 <RecipeForm onSubmit={handleParseRecipe} loading={loading} />
               </div>
 
@@ -657,7 +661,7 @@ export default function Home() {
                 <div className="absolute -top-8 -right-8 w-32 h-32 bg-primary/5 rounded-full blur-3xl"></div>
                 <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-secondary/10 rounded-full blur-3xl"></div>
                 
-                <div className="relative bg-card rounded-2xl shadow-2xl border border-border overflow-hidden transform rotate-3 hover:rotate-0 transition-transform duration-500">
+                <div className="relative bg-card/20 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 overflow-hidden transform rotate-3 hover:rotate-0 transition-transform duration-500">
                   <div className="p-6">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-3 h-3 bg-red-400 rounded-full"></div>
