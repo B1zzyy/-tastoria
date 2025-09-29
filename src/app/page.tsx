@@ -509,7 +509,7 @@ export default function Home() {
       {!recipe && (
         <div className="flex flex-col min-h-screen relative">
           {/* LiquidEther Background */}
-          <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 z-0 md:pointer-events-auto pointer-events-none">
             <LiquidEther
               colors={['#ffe0c2', '#393028', '#ffe0c2']}
               mouseForce={20}
