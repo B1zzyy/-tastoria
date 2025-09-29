@@ -153,8 +153,8 @@ Return ONLY the complete JSON object with missing fields filled:`;
     }
 
     // Check if instructions were generated (not extracted from source)
-    const originalInstructions = extractedData.instructions || [];
-    const finalInstructions = finalRecipe.instructions || [];
+    const originalInstructions = Array.isArray(extractedData.instructions) ? extractedData.instructions as string[] : [];
+    const finalInstructions = Array.isArray(finalRecipe.instructions) ? finalRecipe.instructions as string[] : [];
     const instructionsWereGenerated = originalInstructions.length === 0 || 
       (originalInstructions.length < 3) ||
       (originalInstructions.some((inst: string) => 
@@ -165,22 +165,22 @@ Return ONLY the complete JSON object with missing fields filled:`;
 
     // Convert to our Recipe format
     const recipe: Recipe = {
-      title: finalRecipe.title || 'Untitled Recipe',
-      description: finalRecipe.description || '',
-      ingredients: finalRecipe.ingredients || [],
+      title: (finalRecipe.title as string) || 'Untitled Recipe',
+      description: (finalRecipe.description as string) || '',
+      ingredients: Array.isArray(finalRecipe.ingredients) ? finalRecipe.ingredients as string[] : [],
       instructions: finalInstructions,
-      prepTime: finalRecipe.prepTime || '',
-      cookTime: finalRecipe.cookTime || '',
-      totalTime: finalRecipe.totalTime || '',
-      servings: finalRecipe.servings || '',
-      difficulty: finalRecipe.difficulty || '',
+      prepTime: (finalRecipe.prepTime as string) || '',
+      cookTime: (finalRecipe.cookTime as string) || '',
+      totalTime: (finalRecipe.totalTime as string) || '',
+      servings: (finalRecipe.servings as string) || '',
+      difficulty: (finalRecipe.difficulty as string) || '',
       image: sourceUrl.includes('instagram.com') ? 'instagram-video' : '',
       instagramUrl: sourceUrl.includes('instagram.com') ? sourceUrl : '',
       nutrition: {
-        calories: finalRecipe.calories || '',
-        protein: finalRecipe.protein || '',
-        carbs: finalRecipe.carbs || '',
-        fat: finalRecipe.fat || ''
+        calories: (finalRecipe.calories as string) || '',
+        protein: (finalRecipe.protein as string) || '',
+        carbs: (finalRecipe.carbs as string) || '',
+        fat: (finalRecipe.fat as string) || ''
       },
       // Add metadata about AI generation
       metadata: {
