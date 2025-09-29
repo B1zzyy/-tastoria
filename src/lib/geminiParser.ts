@@ -73,7 +73,7 @@ Return ONLY the JSON object copying exactly what's written:`;
     console.log('📝 Step 1 response:', extractionText.substring(0, 200) + '...');
     
     // Parse the extraction result
-    let extractedData: any = {};
+    let extractedData: Record<string, unknown> = {};
     try {
       const cleanExtractionJson = extractionText.replace(/```json\n?|\n?```/g, '').trim();
       extractedData = JSON.parse(cleanExtractionJson);
@@ -142,7 +142,7 @@ Return ONLY the complete JSON object with missing fields filled:`;
     console.log('🧠 Step 2 response:', estimationText.substring(0, 200) + '...');
     
     // Parse the final result
-    let finalRecipe: any = {};
+    let finalRecipe: Record<string, unknown> = {};
     try {
       const cleanEstimationJson = estimationText.replace(/```json\n?|\n?```/g, '').trim();
       finalRecipe = JSON.parse(cleanEstimationJson);
