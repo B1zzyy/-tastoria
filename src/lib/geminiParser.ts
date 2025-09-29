@@ -121,16 +121,22 @@ Return ONLY the JSON object, no markdown, no extra text:`;
       // Remove any markdown formatting if present
       let cleanJson = text.replace(/```json\n?|\n?```/g, '').trim();
       
-      // Fix common JSON issues and remove garbage
+      // Fix common JSON issues and remove garbage - be more surgical
       cleanJson = cleanJson
         .replace(/Coh\],/g, '],') // Fix the specific error we saw
         .replace(/ventilador-de-techo-con-luz-y-mando-a-distancia-marrn-40w-dc-silencioso-efecto-madera-claraboya-con-3-colores-de-luz-natural-clido-fro-y-6-velocidades-para-dormitorio-salon-comedor-cocina-infantil-ninos/g, '') // Remove garbage text
+        .replace(/focused\s*,?/g, '') // Remove "focused" text
+        .replace(/部份\s*,?/g, '') // Remove Chinese characters
+        .replace(/bottlenecks, or points of friction in the user journey\.\*/g, '') // Remove random text
+        .replace(/\*   \*\*Visual Design:\*\* Ensure the chatbot's interface is clean.*$/g, '') // Remove long random text
         .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
         .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // Quote unquoted keys
         .replace(/:\s*'([^']*)'/g, ': "$1"') // Replace single quotes with double quotes
         .replace(/,\s*,/g, ',') // Remove double commas
         .replace(/"\s*,\s*"/g, '", "') // Fix spacing around commas in arrays
-        .replace(/\n\s*\n/g, ' '); // Remove extra newlines
+        .replace(/\n\s*\n/g, ' ') // Remove extra newlines
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim();
       
       console.log('🧹 Cleaned JSON preview:', cleanJson.substring(0, 300) + '...');
       
@@ -173,34 +179,67 @@ Return ONLY the JSON object, no markdown, no extra text:`;
       console.error('❌ Failed to parse Gemini JSON response:', parseError);
       console.log('Raw response:', text);
       
-      // Try to extract data manually as fallback
+      // Try to extract data manually as fallback - try to parse arrays too
       try {
-        console.log('🔧 Attempting manual extraction...');
-        const titleMatch = text.match(/"title":\s*"([^"]+)"/);
-        const ingredientsMatch = text.match(/"ingredients":\s*\[([\s\S]*?)\]/);
-        const instructionsMatch = text.match(/"instructions":\s*\[([\s\S]*?)\]/);
+        console.log('🔧 Attempting manual extraction with array parsing...');
         
-        if (titleMatch && ingredientsMatch && instructionsMatch) {
+        // Extract basic info
+        const titleMatch = text.match(/"title":\s*"([^"]+)"/);
+        const prepTimeMatch = text.match(/"prepTime":\s*"([^"]+)"/);
+        const cookTimeMatch = text.match(/"cookTime":\s*"([^"]+)"/);
+        const totalTimeMatch = text.match(/"totalTime":\s*"([^"]+)"/);
+        const servingsMatch = text.match(/"servings":\s*"([^"]+)"/);
+        const difficultyMatch = text.match(/"difficulty":\s*"([^"]+)"/);
+        const caloriesMatch = text.match(/"calories":\s*"([^"]+)"/);
+        const proteinMatch = text.match(/"protein":\s*"([^"]+)"/);
+        const carbsMatch = text.match(/"carbs":\s*"([^"]+)"/);
+        const fatMatch = text.match(/"fat":\s*"([^"]+)"/);
+        
+        // Try to extract ingredients array
+        let ingredients: string[] = [];
+        const ingredientsMatch = text.match(/"ingredients":\s*\[([\s\S]*?)\]/);
+        if (ingredientsMatch) {
+          const ingredientsText = ingredientsMatch[1];
+          // Split by quotes and clean up
+          const ingredientMatches = ingredientsText.match(/"([^"]+)"/g);
+          if (ingredientMatches) {
+            ingredients = ingredientMatches.map(match => match.replace(/"/g, '').trim()).filter(Boolean);
+          }
+        }
+        
+        // Try to extract instructions array
+        let instructions: string[] = [];
+        const instructionsMatch = text.match(/"instructions":\s*\[([\s\S]*?)\]/);
+        if (instructionsMatch) {
+          const instructionsText = instructionsMatch[1];
+          // Split by quotes and clean up
+          const instructionMatches = instructionsText.match(/"([^"]+)"/g);
+          if (instructionMatches) {
+            instructions = instructionMatches.map(match => match.replace(/"/g, '').trim()).filter(Boolean);
+          }
+        }
+        
+        if (titleMatch) {
           const fallbackRecipe: Recipe = {
             title: titleMatch[1],
             description: '',
-            ingredients: ingredientsMatch[1].split(',').map(i => i.replace(/"/g, '').trim()).filter(i => i),
-            instructions: instructionsMatch[1].split(',').map(i => i.replace(/"/g, '').trim()).filter(i => i),
-            prepTime: '',
-            cookTime: '',
-            totalTime: '',
-            servings: '',
-             difficulty: '',
-             image: 'instagram-video',
-             instagramUrl: '',
+            ingredients: ingredients,
+            instructions: instructions,
+            prepTime: prepTimeMatch ? prepTimeMatch[1] : '',
+            cookTime: cookTimeMatch ? cookTimeMatch[1] : '',
+            totalTime: totalTimeMatch ? totalTimeMatch[1] : '',
+            servings: servingsMatch ? servingsMatch[1] : '',
+            difficulty: difficultyMatch ? difficultyMatch[1] : '',
+            image: 'instagram-video',
+            instagramUrl: '',
             nutrition: {
-              calories: '',
-              protein: '',
-              carbs: '',
-              fat: ''
+              calories: caloriesMatch ? caloriesMatch[1] : '',
+              protein: proteinMatch ? proteinMatch[1] : '',
+              carbs: carbsMatch ? carbsMatch[1] : '',
+              fat: fatMatch ? fatMatch[1] : ''
             }
           };
-          console.log('✅ Manual extraction successful:', fallbackRecipe.title);
+          console.log(`✅ Manual extraction successful: ${fallbackRecipe.title} (${ingredients.length} ingredients, ${instructions.length} instructions)`);
           return fallbackRecipe;
         }
       } catch (manualError) {
