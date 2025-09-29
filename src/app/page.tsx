@@ -544,7 +544,7 @@ export default function Home() {
             </div>
 
             {/* Mobile Content */}
-            <div className="flex-1 flex flex-col justify-center px-4 pb-8">
+            <div className="flex-1 flex flex-col justify-center px-4">
               {/* Mobile Recipe Preview Mockup */}
               <div className="relative mx-4 mb-8">
                 <div className="absolute -top-4 -right-4 w-20 h-20 bg-primary/5 rounded-full blur-3xl"></div>

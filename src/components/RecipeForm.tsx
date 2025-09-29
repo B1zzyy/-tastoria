@@ -219,7 +219,7 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
             ) : (
               <Search className="w-6 h-6" />
             )}
-            {sourceType === 'instagram' ? 'Parse Instagram' : 'Get recipe'}
+            {sourceType === 'instagram' ? 'Get Recipe' : 'Get Recipe'}
           </>
         )}
       </button>
