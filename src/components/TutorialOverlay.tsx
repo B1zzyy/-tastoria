@@ -294,9 +294,9 @@ export default function TutorialOverlay({
         )}
 
         {/* Tutorial content - Smart positioning for mobile, fixed for desktop */}
-        <div 
+        <motion.div 
           className="fixed z-10"
-          style={{
+          animate={{
             // Smart positioning for mobile devices
             ...(windowSize.width > 0 && windowSize.width < 768 && highlightRect ? {
               // Position away from highlighted element on mobile
@@ -315,6 +315,12 @@ export default function TutorialOverlay({
               left: 'auto',
               top: 'auto'
             })
+          }}
+          transition={{
+            type: "spring",
+            stiffness: 300,
+            damping: 30,
+            duration: 0.4
           }}
         >
           <motion.div
@@ -448,7 +454,7 @@ export default function TutorialOverlay({
               </div>
             </div>
           </motion.div>
-        </div>
+        </motion.div>
 
       </motion.div>
     </AnimatePresence>
