@@ -16,13 +16,13 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome',
     title: 'Welcome to Tastoria!',
-    description: 'Your AI-powered recipe parser that works with any website or Instagram post. Let\'s take a quick tour!',
+    description: 'Extract any recipe with the power of AI. Works with any website or Instagram post. Let\'s take a quick tour!',
     position: 'center',
     skipable: true
   },
   {
     id: 'web-parsing',
-    title: 'Parse Any Recipe Website',
+    title: 'Grab the link',
     description: 'Paste any recipe URL from websites like AllRecipes, Food Network, or any cooking blog. Our AI will extract all the details!',
     targetElement: '[data-tutorial="url-input"]',
     position: 'bottom',
@@ -31,8 +31,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: 'instagram-toggle',
-    title: 'Instagram Recipe Parsing',
-    description: 'Toggle to Instagram mode to parse recipes from Instagram posts and reels. Works great with food content creators!',
+    title: 'Reels? We got you.',
+    description: 'Toggle to Instagram mode to extract recipes from Instagram posts and reels. Just make sure the caption includes at least the ingredients, you can leave the rest to us.',
     targetElement: '[data-tutorial="source-toggle"]',
     position: 'bottom',
     arrowDirection: 'up',
@@ -40,8 +40,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: 'parse-button',
-    title: 'Parse Your Recipe',
-    description: 'Click this button to start parsing. Our AI will extract ingredients, instructions, nutrition facts, and more!',
+    title: 'Get Your Recipe',
+    description: 'Click this button to start extracting. Our AI will obtain all the details you need to cook the recipe!',
     targetElement: '[data-tutorial="parse-button"]',
     position: 'top',
     arrowDirection: 'down',
@@ -50,7 +50,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'save-recipe',
     title: 'Save to Collections',
-    description: 'Once you parse a recipe, you\'ll see a save button appear. Save your favorite recipes to collections for easy access!',
+    description: 'Once you extract a recipe, you\'ll see a save button appear. Save your favorite recipes to collections for easy access!',
     position: 'center'
   },
   {
