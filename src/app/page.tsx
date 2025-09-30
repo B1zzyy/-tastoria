@@ -28,18 +28,20 @@ function MaintenancePopup() {
         className="bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8 max-w-md w-full text-center"
       >
         <div className="mb-6">
-          <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
           <h2 className="text-2xl font-bold text-white mb-2">Maintenance in Progress</h2>
           <p className="text-white/80 text-sm leading-relaxed">
-            We&apos;re currently performing maintenance on our AI parsing service. 
-            Recipe parsing may be temporarily unavailable. Please try again in a few minutes.
+            We&apos;re currently performing maintenance on your favourite app. 
+            Let the little chef do the work for now. Check back in a couple of hours.
           </p>
         </div>
         
+        <div className="w-20 h-20 mx-auto mb-6 rounded-lg overflow-hidden">
+          <img 
+            src="https://media1.tenor.com/m/CgGUXc-LDc4AAAAd/hacker-pc.gif" 
+            alt="Chef working hard" 
+            className="w-full h-full object-cover"
+          />
+        </div>
         
         <div className="text-white/60 text-xs">
           Thank you for your patience while we resolve this issue.
