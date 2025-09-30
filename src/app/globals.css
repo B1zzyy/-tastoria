@@ -107,3 +107,18 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* Extend background to cover status bar area on mobile */
+html {
+  background: var(--background);
+}
+
+/* Ensure full viewport coverage including status bar area */
+@supports (padding: max(0px)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
