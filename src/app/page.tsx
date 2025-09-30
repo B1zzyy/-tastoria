@@ -564,7 +564,7 @@ export default function Home() {
             />
           </div>
           {/* Mobile Layout */}
-          <div className="md:hidden flex flex-col min-h-screen relative z-10 pointer-events-none">
+          <div className="md:hidden flex flex-col min-h-screen relative z-10 pointer-events-none" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
             {/* Mobile Header */}
             <div className="flex items-center justify-between p-4 pt-6">
               <div className="flex items-center">
@@ -656,7 +656,7 @@ export default function Home() {
           </div>
 
           {/* Desktop Layout */}
-          <div className="hidden md:flex flex-col items-center justify-center min-h-screen px-4 text-center relative z-10 pointer-events-none">
+          <div className="hidden md:flex flex-col items-center justify-center min-h-screen px-4 text-center relative z-10 pointer-events-none" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
             <div className="max-w-4xl mx-auto">
               {/* Main Heading */}
               <div className="mb-8">

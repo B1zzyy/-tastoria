@@ -54,7 +54,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="theme-color" content="#0a0a0a" />
+        <meta name="theme-color" content="#191919" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="icon" href="/logo.png" type="image/png" sizes="32x32" />
         <link rel="shortcut icon" href="/logo.png" type="image/png" />
