@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Recipe } from '@/lib/recipe-parser';
 import RecipeForm, { type SourceType } from '@/components/RecipeForm';
 import RecipeDisplay from '@/components/RecipeDisplay';
-import LoadingSpinner from '@/components/LoadingSpinner';
 import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
 import { isRecipeSaved } from '@/lib/recipeService';
@@ -78,7 +77,7 @@ export default function Home() {
     setShowCollectionModal(true);
   };
 
-  const checkIfRecipeSaved = async (url: string) => {
+  const checkIfRecipeSaved = useCallback(async (url: string) => {
     if (!user) return;
     
     const { data } = await isRecipeSaved(url);
@@ -86,7 +85,7 @@ export default function Home() {
     
     // If recipe is already saved, keep the button visible but show "Saved" state
     // Don't animate it out since user might want to see the saved status
-  };
+  }, [user]);
 
   const handleSelectSavedRecipe = (savedRecipe: Recipe, url: string) => {
     setRecipe(savedRecipe);

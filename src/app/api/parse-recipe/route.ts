@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     console.log('🌐 Fetching webpage content for Gemini parsing:', url);
 
     // Try multiple approaches to fetch the webpage content
-    let response: any = null;
+    let response: { data: string } | null = null;
 
     // Approach 1: Enhanced headers to bypass bot detection
     try {
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         },
       });
       console.log('✅ Successfully fetched with enhanced headers');
-    } catch (error) {
+    } catch {
       console.log('❌ Enhanced headers failed, trying fallback approach...');
     }
 
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
           timeout: 15000,
         });
         console.log('✅ Successfully fetched with fallback headers');
-      } catch (error) {
+      } catch {
         console.log('❌ Fallback headers also failed');
       }
     }
