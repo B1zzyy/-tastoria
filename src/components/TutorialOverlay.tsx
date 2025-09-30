@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTutorial, type TutorialStep } from '@/hooks/useTutorial';
+import { type TutorialStep } from '@/hooks/useTutorial';
 import { X, ChevronLeft, ChevronRight, SkipForward, ChefHat } from 'lucide-react';
 import './TutorialOverlay.css';
 

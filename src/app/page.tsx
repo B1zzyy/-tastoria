@@ -35,7 +35,7 @@ function MaintenancePopup() {
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">Maintenance in Progress</h2>
           <p className="text-white/80 text-sm leading-relaxed">
-            We're currently performing maintenance on our AI parsing service. 
+            We&apos;re currently performing maintenance on our AI parsing service. 
             Recipe parsing may be temporarily unavailable. Please try again in a few minutes.
           </p>
         </div>
