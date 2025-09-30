@@ -577,7 +577,7 @@ export async function POST(request: NextRequest) {
       console.log('📝 Caption length:', postData.caption.length);
       console.log('📝 Caption preview:', postData.caption.substring(0, 200));
       
-      const recipe = await parseRecipeWithGemini(postData.caption, cleanUrl);
+      const recipe = await parseRecipeWithGemini(postData.caption, 'instagram');
       
       if (!recipe) {
         console.log('❌ Gemini failed to parse recipe from caption - trying fallback extraction...');
@@ -626,8 +626,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Set the Instagram URL for video popup
-      recipe.instagramUrl = cleanUrl;
+      // Note: Instagram URL is handled separately in the frontend
 
       console.log('✅ Gemini successfully parsed Instagram recipe:', recipe.title);
       return { recipe };

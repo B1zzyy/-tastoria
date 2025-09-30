@@ -18,6 +18,42 @@ import '@/lib/keepAlive'; // Import to initialize keep-alive service
 import TutorialOverlay from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 
+// Maintenance Popup Component
+function MaintenancePopup() {
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8 max-w-md w-full text-center"
+      >
+        <div className="mb-6">
+          <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Maintenance in Progress</h2>
+          <p className="text-white/80 text-sm leading-relaxed">
+            We're currently performing maintenance on our AI parsing service. 
+            Recipe parsing may be temporarily unavailable. Please try again in a few minutes.
+          </p>
+        </div>
+        
+        <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 mb-6">
+          <p className="text-orange-300 text-sm">
+            <strong>Status:</strong> OpenAI quota exceeded - working on resolution
+          </p>
+        </div>
+        
+        <div className="text-white/60 text-xs">
+          Thank you for your patience while we resolve this issue.
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(false);
@@ -229,6 +265,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Maintenance Popup - Unremovable */}
+      <MaintenancePopup />
+      
       {/* Top Right Controls */}
       <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
         {/* Saved Recipes Button - Only show when user is logged in and not viewing a recipe */}
