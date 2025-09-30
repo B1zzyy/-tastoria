@@ -1,0 +1,52 @@
+/* Tutorial Overlay Styles */
+.tutorial-highlight {
+  position: relative;
+  z-index: 60;
+}
+
+.tutorial-highlight::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  right: -12px;
+  bottom: -12px;
+  border: 2px solid #ffe0c2;
+  border-radius: 12px;
+  box-shadow: 
+    0 0 0 9999px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(255, 224, 194, 0.6),
+    inset 0 0 20px rgba(255, 224, 194, 0.2);
+  pointer-events: none;
+  z-index: 61;
+}
+
+.tutorial-arrow {
+  position: absolute;
+  z-index: 62;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+/* Glassmorphism styles */
+.tutorial-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.25), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Ensure tutorial elements are above everything */
+.tutorial-overlay {
+  z-index: 50;
+}
+
+.tutorial-content {
+  z-index: 51;
+}
+
+.tutorial-backdrop {
+  z-index: 49;
+}

@@ -98,6 +98,7 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
             )}
             disabled={loading}
             required
+            data-tutorial="url-input"
           />
         </div>
         
@@ -110,6 +111,7 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
             "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary",
             "min-w-[40px] h-[40px]"
           )}
+          data-tutorial="parse-button"
         >
           {loading ? (
             <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
@@ -125,7 +127,7 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Source Type Selector */}
       <div className="flex justify-center">
-        <div className="relative inline-flex bg-muted rounded-lg p-1">
+        <div className="relative inline-flex bg-muted rounded-lg p-1" data-tutorial="source-toggle">
           {/* Sliding Background */}
           <motion.div
             className="absolute inset-y-1 bg-background rounded-md shadow-sm"
@@ -190,6 +192,7 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
           )}
           disabled={loading}
           required
+          data-tutorial="url-input"
         />
       </div>
       
@@ -202,6 +205,7 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
           "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary",
           "shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
         )}
+        data-tutorial="parse-button"
       >
         {loading ? (
           <GradientText

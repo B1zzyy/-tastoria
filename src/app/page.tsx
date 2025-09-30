@@ -15,11 +15,17 @@ import BlurText from '../components/BlurText';
 import LiquidEther from '../components/LiquidEther';
 import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck } from 'lucide-react';
 import '@/lib/keepAlive'; // Import to initialize keep-alive service
+import TutorialOverlay from '@/components/TutorialOverlay';
+import TutorialTrigger from '@/components/TutorialTrigger';
+import { useTutorial } from '@/hooks/useTutorial';
 
 export default function Home() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Tutorial system
+  const tutorial = useTutorial();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -38,6 +44,18 @@ export default function Home() {
   useEffect(() => {
     console.log('User state changed:', user);
   }, [user]);
+
+  // Show welcome message for new users
+  useEffect(() => {
+    if (user && !tutorial.isCompleted && !tutorial.isActive) {
+      // Auto-start tutorial for new users after a short delay
+      const timer = setTimeout(() => {
+        tutorial.startTutorial();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [user, tutorial.isCompleted, tutorial.isActive, tutorial.startTutorial]);
 
   
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -214,6 +232,7 @@ export default function Home() {
             onClick={() => setShowSavedRecipes(true)}
             className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg shadow-sm hover:bg-accent transition-colors"
             title="Saved Recipes"
+            data-tutorial="collections-button"
           >
             <Bookmark className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium text-card-foreground">Saved</span>
@@ -741,6 +760,7 @@ export default function Home() {
                 ? 'bg-green-600 text-green-50 cursor-default' 
                 : 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-xl hover:scale-105'
             }`}
+            data-tutorial="save-button"
           >
             {isRecipeCurrentlySaved ? (
               <BookmarkCheck className="w-5 h-5" />
@@ -812,6 +832,27 @@ export default function Home() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Tutorial System */}
+      <TutorialOverlay
+        isActive={tutorial.isActive}
+        currentStep={tutorial.currentStep}
+        currentStepIndex={tutorial.currentStepIndex}
+        progress={tutorial.progress}
+        onNext={tutorial.nextStep}
+        onPrevious={tutorial.previousStep}
+        onSkip={tutorial.skipTutorial}
+        onComplete={tutorial.completeTutorial}
+        totalSteps={tutorial.totalSteps}
+      />
+
+      {/* Tutorial Trigger Button - Only show on home screen when not in tutorial and user is logged in */}
+      {user && !tutorial.isActive && !recipe && (
+        <TutorialTrigger
+          onStartTutorial={tutorial.startTutorial}
+          isCompleted={tutorial.isCompleted}
+        />
       )}
     </div>
   );

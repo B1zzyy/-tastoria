@@ -292,7 +292,7 @@ Please return a COMPLETE recipe JSON with this structure:
 {
   "title": "Improved title",
   "ingredients": ["complete ingredient list"],
-  "instructions": ["complete, clear cooking steps"],
+  "instructions": ["complete, clear cooking steps without numbers (e.g., 'Heat oil in pan' not '1. Heat oil in pan')"],
   "prepTime": "estimated prep time",
   "cookTime": "estimated cook time", 
   "totalTime": "total time",
@@ -306,6 +306,7 @@ Rules:
 3. Improve ingredient descriptions with proper measurements
 4. Remove any promotional or non-cooking text
 5. Make instructions actionable and clear
+6. Do NOT include numbers in instruction text (e.g., "Heat oil" not "1. Heat oil")
 
 Return ONLY the JSON object:`;
 
