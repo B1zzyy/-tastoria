@@ -142,7 +142,7 @@ export default function Home() {
     // Set timeout to cancel request after 30 seconds
     const timeoutId = setTimeout(() => {
       abortController.abort();
-    }, 30000);
+    }, 45000);
 
     try {
       // Route to appropriate API endpoint based on source type
