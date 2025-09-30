@@ -114,6 +114,12 @@ export default function Home() {
   };
 
   const handleParseRecipe = useCallback(async (url: string, sourceType: SourceType = 'web') => {
+    // Check if user is logged in
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setRecipe(null);
@@ -188,7 +194,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [checkIfRecipeSaved, user]);
+  }, [checkIfRecipeSaved, user, setShowAuthModal]);
 
   // Handle shared recipe URLs
   useEffect(() => {
