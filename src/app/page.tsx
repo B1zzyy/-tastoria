@@ -13,10 +13,9 @@ import SavedRecipes from '@/components/SavedRecipes';
 import CollectionModal from '@/components/CollectionModal';
 import BlurText from '../components/BlurText';
 import LiquidEther from '../components/LiquidEther';
-import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck } from 'lucide-react';
+import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck, HelpCircle } from 'lucide-react';
 import '@/lib/keepAlive'; // Import to initialize keep-alive service
 import TutorialOverlay from '@/components/TutorialOverlay';
-import TutorialTrigger from '@/components/TutorialTrigger';
 import { useTutorial } from '@/hooks/useTutorial';
 
 export default function Home() {
@@ -283,6 +282,18 @@ export default function Home() {
                     <p className="text-sm font-medium text-card-foreground">{user.name}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                   </motion.div>
+                  <motion.button
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 }}
+                    whileHover={{ backgroundColor: "hsl(var(--accent))" }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={tutorial.startTutorial}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-card-foreground transition-colors"
+                  >
+                    <HelpCircle className="w-4 h-4" />
+                    {tutorial.isCompleted ? 'Help' : 'Start Tutorial'}
+                  </motion.button>
                   <motion.button
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -853,13 +864,6 @@ export default function Home() {
         totalSteps={tutorial.totalSteps}
       />
 
-      {/* Tutorial Trigger Button - Only show on home screen when not in tutorial and user is logged in */}
-      {user && !tutorial.isActive && !recipe && (
-        <TutorialTrigger
-          onStartTutorial={tutorial.startTutorial}
-          isCompleted={tutorial.isCompleted}
-        />
-      )}
     </div>
   );
 }
