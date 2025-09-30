@@ -558,7 +558,7 @@ export async function POST(request: NextRequest) {
 
     // Add timeout wrapper
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Instagram parsing timeout')), 25000);
+      setTimeout(() => reject(new Error('Instagram parsing timeout')), 45000);
     });
 
     const parsePromise = async () => {

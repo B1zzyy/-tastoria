@@ -26,17 +26,75 @@ export async function POST(request: NextRequest) {
 
     console.log('🌐 Fetching webpage content for Gemini parsing:', url);
 
-    // Fetch the webpage content
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate',
-        'Connection': 'keep-alive',
-      },
-      timeout: 15000,
-    });
+    // Try multiple approaches to fetch the webpage content
+    let response: any = null;
+
+    // Approach 1: Enhanced headers to bypass bot detection
+    try {
+      response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'max-age=0',
+          'DNT': '1',
+          'Referer': 'https://www.google.com/',
+        },
+        timeout: 15000,
+        maxRedirects: 5,
+        validateStatus: function (status) {
+          return status >= 200 && status < 400; // Accept redirects
+        },
+      });
+      console.log('✅ Successfully fetched with enhanced headers');
+    } catch (error) {
+      console.log('❌ Enhanced headers failed, trying fallback approach...');
+    }
+
+    // Approach 2: Fallback with different headers
+    if (!response) {
+      try {
+        response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Referer': 'https://www.bing.com/',
+          },
+          timeout: 15000,
+        });
+        console.log('✅ Successfully fetched with fallback headers');
+      } catch (error) {
+        console.log('❌ Fallback headers also failed');
+      }
+    }
+
+    // Approach 3: Simple request as last resort
+    if (!response) {
+      try {
+        response = await axios.get(url, {
+          timeout: 15000,
+        });
+        console.log('✅ Successfully fetched with simple request');
+      } catch (error) {
+        console.log('❌ All fetch attempts failed');
+        throw new Error(`Failed to fetch webpage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    // Ensure we have a response
+    if (!response) {
+      throw new Error('Failed to fetch webpage: No response received');
+    }
 
     console.log('✅ Got webpage content, length:', response.data.length);
 

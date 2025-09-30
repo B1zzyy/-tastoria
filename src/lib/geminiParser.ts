@@ -126,10 +126,16 @@ ESTIMATION GUIDELINES:
 - Servings: Based on ingredient quantities (2-8 servings typical)
 - Difficulty: Easy (basic cooking), Medium (some techniques), Hard (advanced skills required)
 
+TIME FORMATTING RULES:
+- If extracted time already includes "minutes", "hours", or "hrs" → keep it exactly as extracted
+- If extracted time is just a number → add appropriate unit (e.g., "20" → "20 min")
+- For estimates, use format: "X min" or "X hr Y min" (never duplicate units)
+- Always use short forms: "min" instead of "minutes", "hr" instead of "hour/hours"
+
 DEFAULT VALUES FOR MISSING FIELDS:
-- prepTime: "15 minutes"
-- cookTime: "25 minutes" 
-- totalTime: "40 minutes"
+- prepTime: "15 min"
+- cookTime: "25 min" 
+- totalTime: "40 min"
 - servings: "4"
 - difficulty: "Medium"
 
@@ -155,13 +161,79 @@ Return ONLY the complete JSON object with missing fields filled:`;
     // Check if instructions were generated (not extracted from source)
     const originalInstructions = Array.isArray(extractedData.instructions) ? extractedData.instructions as string[] : [];
     const finalInstructions = Array.isArray(finalRecipe.instructions) ? finalRecipe.instructions as string[] : [];
-    const instructionsWereGenerated = originalInstructions.length === 0 || 
-      (originalInstructions.length < 3) ||
-      (originalInstructions.some((inst: string) => 
-        inst.toLowerCase().includes('note') || 
-        inst.toLowerCase().includes('tip') || 
-        inst.toLowerCase().includes('additional')
-      ));
+    
+    // More precise logic: check if we had proper instructions originally OR if they were replaced
+    let instructionsWereGenerated = false;
+    
+    if (originalInstructions.length === 0) {
+      // No instructions found at all
+      instructionsWereGenerated = true;
+    } else if (originalInstructions.length === 1) {
+      // Only one instruction - check if it's just a note/tip
+      const singleInstruction = originalInstructions[0].toLowerCase();
+      if (singleInstruction.includes('note') || 
+          singleInstruction.includes('tip') || 
+          singleInstruction.includes('additional') ||
+          singleInstruction.length < 20) { // Very short instructions are likely just notes
+        instructionsWereGenerated = true;
+      }
+    } else if (originalInstructions.length < 3) {
+      // Less than 3 instructions - check if they're all just notes/tips
+      const allNotesOrTips = originalInstructions.every(inst => {
+        const lowerInst = inst.toLowerCase();
+        return lowerInst.includes('note') || 
+               lowerInst.includes('tip') || 
+               lowerInst.includes('additional') ||
+               inst.length < 20;
+      });
+      instructionsWereGenerated = allNotesOrTips;
+    }
+    
+    // Additional check: if final instructions are significantly different from original, they were likely generated
+    if (!instructionsWereGenerated && originalInstructions.length > 0 && finalInstructions.length > 0) {
+      // Check if the instructions were completely replaced (different content)
+      const originalText = originalInstructions.join(' ').toLowerCase();
+      const finalText = finalInstructions.join(' ').toLowerCase();
+      
+      // If the final instructions are much longer and don't contain the original text, they were generated
+      if (finalText.length > originalText.length * 2 && !finalText.includes(originalText.substring(0, 50))) {
+        instructionsWereGenerated = true;
+        console.log('🔄 Instructions were replaced with generated ones');
+      }
+    }
+    
+    console.log('🔍 Instruction generation check:', {
+      originalCount: originalInstructions.length,
+      finalCount: finalInstructions.length,
+      originalInstructions: originalInstructions.slice(0, 2), // Show first 2 for debugging
+      finalInstructions: finalInstructions.slice(0, 2), // Show first 2 for debugging
+      instructionsWereGenerated,
+      originalText: originalInstructions.join(' ').substring(0, 100),
+      finalText: finalInstructions.join(' ').substring(0, 100)
+    });
+
+    // Helper function to clean up duplicate time units and convert to shorter forms
+    const cleanTimeUnit = (timeStr: string): string => {
+      if (!timeStr) return timeStr;
+      
+      // Remove duplicate "minutes" (e.g., "20 minutes minutes" → "20 minutes")
+      timeStr = timeStr.replace(/\bminutes\s+minutes\b/gi, 'minutes');
+      timeStr = timeStr.replace(/\bmin\s+minutes\b/gi, 'minutes');
+      timeStr = timeStr.replace(/\bminutes\s+min\b/gi, 'minutes');
+      
+      // Remove duplicate "hours" (e.g., "1 hour hour" → "1 hour")
+      timeStr = timeStr.replace(/\bhour\s+hour\b/gi, 'hour');
+      timeStr = timeStr.replace(/\bhours\s+hours\b/gi, 'hours');
+      timeStr = timeStr.replace(/\bhr\s+hour\b/gi, 'hour');
+      timeStr = timeStr.replace(/\bhour\s+hr\b/gi, 'hour');
+      
+      // Convert to shorter forms
+      timeStr = timeStr.replace(/\bminutes\b/gi, 'min');
+      timeStr = timeStr.replace(/\bhour\b/gi, 'hr');
+      timeStr = timeStr.replace(/\bhours\b/gi, 'hr');
+      
+      return timeStr.trim();
+    };
 
     // Convert to our Recipe format
     const recipe: Recipe = {
@@ -169,9 +241,9 @@ Return ONLY the complete JSON object with missing fields filled:`;
       description: (finalRecipe.description as string) || '',
       ingredients: Array.isArray(finalRecipe.ingredients) ? finalRecipe.ingredients as string[] : [],
       instructions: finalInstructions,
-      prepTime: (finalRecipe.prepTime as string) || '',
-      cookTime: (finalRecipe.cookTime as string) || '',
-      totalTime: (finalRecipe.totalTime as string) || '',
+      prepTime: cleanTimeUnit((finalRecipe.prepTime as string) || ''),
+      cookTime: cleanTimeUnit((finalRecipe.cookTime as string) || ''),
+      totalTime: cleanTimeUnit((finalRecipe.totalTime as string) || ''),
       servings: (finalRecipe.servings as string) || '',
       difficulty: (finalRecipe.difficulty as string) || '',
       image: sourceUrl.includes('instagram.com') ? 'instagram-video' : '',
