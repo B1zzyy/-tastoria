@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@gsap/react": "^2.1.2",
     "@supabase/supabase-js": "^2.57.4",
     "@types/cheerio": "^0.22.35",
     "axios": "^1.12.2",

@@ -8,6 +8,8 @@ import UnitToggle from './UnitToggle';
 import { Clock, Users, Star, ChefHat, List, BookOpen, Check, Play, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import Confetti from './Confetti';
+import RecipeAIChat from './RecipeAIChat';
+import AIChatButton from './AIChatButton';
 
 interface RecipeDisplayProps {
   recipe: Recipe;
@@ -18,6 +20,7 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
   const [showInstagramPopup, setShowInstagramPopup] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [unitSystem, setUnitSystem] = useState<UnitSystem>('metric');
+  const [showAIChat, setShowAIChat] = useState(false);
 
   // Trigger confetti when all steps are completed
   useEffect(() => {
@@ -399,6 +402,16 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
       <Confetti 
         fire={showConfetti} 
         onComplete={() => setShowConfetti(false)} 
+      />
+
+      {/* AI Chat Button */}
+      <AIChatButton onClick={() => setShowAIChat(true)} />
+
+      {/* AI Chat Panel */}
+      <RecipeAIChat
+        isOpen={showAIChat}
+        onClose={() => setShowAIChat(false)}
+        recipe={recipe}
       />
     </div>
   );

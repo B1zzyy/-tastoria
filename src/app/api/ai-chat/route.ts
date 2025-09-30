@@ -1,0 +1,69 @@
+import { NextRequest, NextResponse } from 'next/server';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+export async function POST(request: NextRequest) {
+  try {
+    const { message, recipeContext } = await request.json();
+
+    if (!message || !recipeContext) {
+      return NextResponse.json(
+        { error: 'Message and recipe context are required' },
+        { status: 400 }
+      );
+    }
+
+    const systemPrompt = `You are Tasty, a friendly and knowledgeable AI cooking assistant. You have access to the following recipe information:
+
+${recipeContext}
+
+Your personality:
+- You're enthusiastic about cooking and food
+- You're helpful, encouraging, and supportive
+- You use emojis occasionally to make responses more engaging
+- You're practical and give actionable advice
+- You're honest when you're unsure about something
+
+You can help with:
+- Ingredient substitutions
+- Cooking tips and techniques
+- Recipe modifications
+- Nutritional advice
+- Troubleshooting cooking issues
+- Making recipes healthier or more flavorful
+
+Keep your responses concise but informative. Always sign off as "Tasty" at the end of your responses. If you're unsure about something, say so rather than guessing.`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message }
+      ],
+      max_tokens: 500,
+      temperature: 0.7,
+    });
+
+    const response = completion.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
+
+    return NextResponse.json({ response });
+
+  } catch (error) {
+    console.error('AI Chat API Error:', error);
+    
+    if (error instanceof Error && error.message.includes('insufficient_quota')) {
+      return NextResponse.json(
+        { error: 'AI service quota exceeded. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to get AI response' },
+      { status: 500 }
+    );
+  }
+}
