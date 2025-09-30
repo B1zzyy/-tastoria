@@ -40,11 +40,6 @@ function MaintenancePopup() {
           </p>
         </div>
         
-        <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 mb-6">
-          <p className="text-orange-300 text-sm">
-            <strong>Status:</strong> OpenAI quota exceeded - working on resolution
-          </p>
-        </div>
         
         <div className="text-white/60 text-xs">
           Thank you for your patience while we resolve this issue.
