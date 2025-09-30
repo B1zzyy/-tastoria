@@ -107,6 +107,19 @@ export default function TutorialOverlay({
         if (isVisible) {
           // Add a small delay to ensure animation triggers
           setTimeout(() => {
+            // Scroll to element on mobile devices only
+            if (windowSize.width > 0 && windowSize.width < 768) {
+              try {
+                el.scrollIntoView({ 
+                  block: 'center', 
+                  inline: 'center', 
+                  behavior: 'smooth' 
+                });
+              } catch (error) {
+                console.warn('Failed to scroll to element:', error);
+              }
+            }
+            
             setHighlightedElement(el);
             setHighlightRect(rect);
             console.log('✅ Found tutorial element:', currentStep.targetElement);
@@ -125,6 +138,19 @@ export default function TutorialOverlay({
         if (rect.width > 0 && rect.height > 0) {
           // Add a small delay to ensure animation triggers
           setTimeout(() => {
+            // Scroll to element on mobile devices only (additional scroll for fallback case)
+            if (windowSize.width > 0 && windowSize.width < 768) {
+              try {
+                el.scrollIntoView({ 
+                  block: 'center', 
+                  inline: 'center', 
+                  behavior: 'smooth' 
+                });
+              } catch (error) {
+                console.warn('Failed to scroll to element in fallback:', error);
+              }
+            }
+            
             setHighlightedElement(el);
             setHighlightRect(rect);
             console.log('✅ Found tutorial element after scroll');
