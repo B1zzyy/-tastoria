@@ -55,6 +55,11 @@ export interface Recipe {
   reviewCount?: string;
   metadata?: {
     instructionsGenerated?: boolean; // True if instructions were AI-generated
+    customPreview?: {
+      type: 'emoji' | 'image';
+      value: string; // emoji string or image URL
+      gradient?: string; // gradient class for emoji background
+    };
   };
 }
 

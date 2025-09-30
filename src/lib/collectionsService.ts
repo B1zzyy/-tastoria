@@ -191,16 +191,25 @@ export async function saveRecipeToCollection(recipe: Recipe, recipeUrl: string, 
     // Check if recipe already exists in any collection
     const { data: existingRecipe } = await supabase
       .from('saved_recipes')
-      .select('id')
+      .select('id, recipe_data')
       .eq('user_id', user.id)
       .eq('recipe_url', recipeUrl)
       .single();
 
     if (existingRecipe) {
+      // Preserve custom preview metadata from existing recipe
+      const recipeDataToSave = {
+        ...recipe,
+        metadata: existingRecipe.recipe_data.metadata || recipe.metadata
+      };
+
       // Update existing recipe's collection
       const { error } = await supabase
         .from('saved_recipes')
-        .update({ collection_id: collectionId })
+        .update({ 
+          collection_id: collectionId,
+          recipe_data: recipeDataToSave
+        })
         .eq('id', existingRecipe.id);
 
       if (error) {
@@ -219,14 +228,14 @@ export async function saveRecipeToCollection(recipe: Recipe, recipeUrl: string, 
           .single();
 
         if (!existingInAllRecipes) {
-          // Create a duplicate entry in "All Recipes"
+          // Create a duplicate entry in "All Recipes" with preserved metadata
           await supabase
             .from('saved_recipes')
             .insert({
               user_id: user.id,
               title: recipe.title,
               recipe_url: recipeUrl,
-              recipe_data: recipe,
+              recipe_data: recipeDataToSave,
               collection_id: allRecipesCollection.id
             });
         }

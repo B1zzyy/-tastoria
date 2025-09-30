@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Recipe } from '@/lib/recipe-parser';
+import { convertIngredients, convertTemperature, type UnitSystem } from '@/lib/unitConverter';
+import UnitToggle from './UnitToggle';
 
 import { Clock, Users, Star, ChefHat, List, BookOpen, Check, Play, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
@@ -15,6 +17,7 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [showInstagramPopup, setShowInstagramPopup] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>('metric');
 
   // Trigger confetti when all steps are completed
   useEffect(() => {
@@ -42,10 +45,8 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
 
   return (
     <div className="space-y-6">
-      {/* Bento Grid Container */}
+      {/* Hero Section - Recipe Image/Video & Title */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Hero Section - Recipe Image/Video & Title */}
         <div className="lg:col-span-8 bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
           {recipe.image === 'instagram-video' && recipe.instagramUrl ? (
             <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-gray-800 via-gray-600 to-black">
@@ -115,12 +116,12 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
         </div>
 
         {/* Quick Info Bento */}
-        <div className="lg:col-span-4 space-y-4">
+        <div className="lg:col-span-4 space-y-4 flex flex-col">
           {/* Time & Servings Card */}
-          <div className="bg-card rounded-2xl shadow-sm border border-border p-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="bg-card rounded-2xl shadow-sm border border-border p-4 flex-grow">
+            <div className="grid grid-cols-2 gap-4 h-full">
               {recipe.prepTime && (
-                <div className="text-center">
+                <div className="text-center flex flex-col justify-center h-full">
                   <Clock className="w-5 h-5 text-primary mx-auto mb-1" />
                   <div className="text-xs text-muted-foreground">Prep</div>
                   <div className="font-semibold text-card-foreground">{recipe.prepTime}</div>
@@ -128,23 +129,15 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
               )}
               
               {recipe.cookTime && (
-                <div className="text-center">
+                <div className="text-center flex flex-col justify-center h-full">
                   <ChefHat className="w-5 h-5 text-primary mx-auto mb-1" />
                   <div className="text-xs text-muted-foreground">Cook</div>
                   <div className="font-semibold text-card-foreground">{recipe.cookTime}</div>
                 </div>
               )}
               
-              {recipe.totalTime && (
-                <div className="text-center">
-                  <Clock className="w-5 h-5 text-primary mx-auto mb-1" />
-                  <div className="text-xs text-muted-foreground">Total</div>
-                  <div className="font-semibold text-card-foreground">{recipe.totalTime}</div>
-                </div>
-              )}
-              
               {recipe.servings && (
-                <div className="text-center">
+                <div className="text-center flex flex-col justify-center h-full">
                   <Users className="w-5 h-5 text-primary mx-auto mb-1" />
                   <div className="text-xs text-muted-foreground">Serves</div>
                   <div className="font-semibold text-card-foreground">{recipe.servings}</div>
@@ -152,7 +145,7 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
               )}
               
               {recipe.difficulty && (
-                <div className="text-center">
+                <div className="text-center flex flex-col justify-center h-full">
                   <ChefHat className="w-5 h-5 text-primary mx-auto mb-1" />
                   <div className="text-xs text-muted-foreground">Difficulty</div>
                   <div className="font-semibold text-card-foreground">{recipe.difficulty}</div>
@@ -190,21 +183,26 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
         
         {/* Ingredients Bento Box */}
         <div className="bg-card rounded-2xl shadow-sm border border-border p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <List className="w-5 h-5 text-primary" />
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <List className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-xl font-bold text-card-foreground">Ingredients</h2>
             </div>
-            <h2 className="text-xl font-bold text-card-foreground">Ingredients</h2>
+            <UnitToggle onUnitChange={setUnitSystem} />
           </div>
           
           {recipe.ingredients.length > 0 ? (
             <div className="space-y-3">
-              {recipe.ingredients.map((ingredient, index) => (
+              {convertIngredients(recipe.ingredients, unitSystem).map((convertedIngredient, index) => (
                  <div
                    key={index}
                    className="p-3 rounded-xl bg-accent/30 hover:bg-accent/50 transition-colors group"
                  >
-                   <span className="text-card-foreground leading-relaxed font-medium">{ingredient}</span>
+                   <span className="text-card-foreground leading-relaxed font-medium">
+                     {convertedIngredient.converted}
+                   </span>
                  </div>
               ))}
             </div>
@@ -265,6 +263,11 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
             <div className="space-y-4">
               {recipe.instructions.map((instruction, index) => {
                 const isCompleted = completedSteps.has(index);
+                // Convert temperatures in instructions
+                const convertedInstruction = instruction.replace(/\d+°[CF]/gi, (match) => 
+                  convertTemperature(match, unitSystem)
+                );
+                
                 return (
                   <div 
                     key={index} 
@@ -290,7 +293,7 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
                           ? 'text-muted-foreground' 
                           : 'text-card-foreground'
                       }`}>
-                        {instruction}
+                        {convertedInstruction}
                       </p>
                     </div>
                   </div>
@@ -306,6 +309,7 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
             </div>
           )}
         </div>
+
       </div>
 
       {/* Nutrition Bento Box */}

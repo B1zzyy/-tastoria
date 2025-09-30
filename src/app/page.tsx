@@ -263,7 +263,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       {/* Maintenance Popup - Unremovable */}
-      <MaintenancePopup />
+      {/* <MaintenancePopup /> */}
       
       {/* Top Right Controls */}
       <div className="absolute top-4 right-4 z-50 flex items-center gap-3">

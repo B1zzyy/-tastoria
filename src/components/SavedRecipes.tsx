@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { X, Clock, User, Trash2, Folder, ArrowLeft, Instagram, Edit2, Check, X as XIcon } from 'lucide-react';
+import { X, Clock, User, Folder, ArrowLeft, Instagram, Edit2, Check, X as XIcon, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { deleteSavedRecipe, updateRecipeTitle } from '@/lib/recipeService';
+import { deleteSavedRecipe, updateRecipeTitle, updateRecipeCustomPreview } from '@/lib/recipeService';
 import { getUserCollections, getRecipesInCollection, ensureRecipesInAllCollection, cleanupDuplicateRecipes, deleteRecipeFromAllCollections, deleteCollection, type Collection, type SavedRecipeWithCollection } from '@/lib/collectionsService';
+import { convertIngredients, convertTemperature, type UnitSystem } from '@/lib/unitConverter';
+import EditRecipeModal from './EditRecipeModal';
 import type { Recipe } from '@/lib/recipe-parser';
 
 interface SavedRecipesProps {
@@ -18,13 +20,14 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
   const [collectionRecipes, setCollectionRecipes] = useState<SavedRecipeWithCollection[]>([]);
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>('metric');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedRecipeForEdit, setSelectedRecipeForEdit] = useState<SavedRecipeWithCollection | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<'collections' | 'recipes'>('collections');
   const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [editingTitle, setEditingTitle] = useState<string | null>(null);
-  const [editTitleValue, setEditTitleValue] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -135,52 +138,114 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
     setCollectionToDelete(null);
   };
 
+  const handleEditRecipe = (recipe: SavedRecipeWithCollection) => {
+    setSelectedRecipeForEdit(recipe);
+    setShowEditModal(true);
+  };
+
+  const handleSaveRecipeEdit = async (updates: {
+    title: string;
+    customPreview: { type: 'emoji' | 'image'; value: string; gradient?: string } | null;
+  }) => {
+    if (!selectedRecipeForEdit) return;
+    
+    try {
+      setLoading(true);
+      
+      // Update title if changed
+      if (updates.title !== selectedRecipeForEdit.title) {
+        const { error: titleError } = await updateRecipeTitle(selectedRecipeForEdit.id, updates.title);
+        if (titleError) {
+          setError('Failed to update title');
+          return;
+        }
+      }
+      
+      // Update custom preview if changed
+      const currentPreview = selectedRecipeForEdit.recipe_data.metadata?.customPreview;
+      const newPreview = updates.customPreview;
+      
+      if (JSON.stringify(currentPreview) !== JSON.stringify(newPreview)) {
+        const { error: previewError } = await updateRecipeCustomPreview(selectedRecipeForEdit.id, newPreview);
+        if (previewError) {
+          setError('Failed to update preview');
+          return;
+        }
+      }
+      
+      // Refresh the recipes to show the updated data
+      if (selectedCollection) {
+        const { data } = await getRecipesInCollection(selectedCollection.id);
+        if (data) {
+          setCollectionRecipes(data);
+        }
+      }
+      
+      setShowEditModal(false);
+      setSelectedRecipeForEdit(null);
+    } catch (error) {
+      setError('Failed to update recipe');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderCustomPreview = (recipe: SavedRecipeWithCollection, isThumbnail = false) => {
+    const customPreview = recipe.recipe_data.metadata?.customPreview;
+    
+    if (customPreview?.type === 'emoji') {
+      const gradient = customPreview.gradient || 'from-yellow-400 to-orange-500';
+      const emojiSize = isThumbnail ? 'text-2xl' : 'text-7xl';
+      return (
+        <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center ${emojiSize} shadow-lg`}>
+          {customPreview.value}
+        </div>
+      );
+    } else if (customPreview?.type === 'image') {
+      return (
+        <img
+          src={customPreview.value}
+          alt="Custom preview"
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            // Fallback to Instagram logo if image fails to load
+            e.currentTarget.style.display = 'none';
+            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+          }}
+        />
+      );
+    }
+    
+    // Default case: show original recipe image if available, otherwise Instagram logo
+    if (recipe.recipe_data.image && recipe.recipe_data.image !== 'instagram-video') {
+      return (
+        <Image
+          src={recipe.recipe_data.image}
+          alt={recipe.title}
+          fill
+          className="object-cover group-hover:scale-105 transition-transform duration-300"
+        />
+      );
+    }
+    
+    // Fallback to Instagram logo
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-gray-700 via-gray-800 to-black flex items-center justify-center">
+        <Instagram className="w-8 h-8 text-white" />
+      </div>
+    );
+  };
+
   const confirmDeleteCollection = (collection: Collection) => {
     setCollectionToDelete(collection);
     setShowDeleteConfirmation(true);
   };
 
-  const startEditingTitle = (recipeId: string, currentTitle: string) => {
-    setEditingTitle(recipeId);
-    setEditTitleValue(currentTitle);
-  };
-
-  const cancelEditingTitle = () => {
-    setEditingTitle(null);
-    setEditTitleValue('');
-  };
-
-  const saveTitleEdit = async (recipeId: string) => {
-    if (!editTitleValue.trim()) {
-      cancelEditingTitle();
-      return;
-    }
-
-    const { error } = await updateRecipeTitle(recipeId, editTitleValue.trim());
-    
-    if (error) {
-      setError('Failed to update recipe title');
-    } else {
-      // Update the local state
-      setCollectionRecipes(prev => 
-        prev.map(recipe => 
-          recipe.id === recipeId 
-            ? { 
-                ...recipe, 
-                title: editTitleValue.trim(),
-                recipe_data: { ...recipe.recipe_data, title: editTitleValue.trim() }
-              }
-            : recipe
-        )
-      );
-    }
-    
-    cancelEditingTitle();
-  };
 
   // Component for collection thumbnail grid
   const CollectionThumbnail = ({ collection }: { collection: Collection }) => {
     const [thumbnails, setThumbnails] = useState<string[]>([]);
+    const [recipeData, setRecipeData] = useState<SavedRecipeWithCollection[]>([]);
     const [showDeleteButton, setShowDeleteButton] = useState(false);
     const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
     const [isLongPressing, setIsLongPressing] = useState(false);
@@ -194,6 +259,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
             .slice(0, 4)
             .map(recipe => recipe.recipe_data.image!);
           setThumbnails(images);
+          setRecipeData(data.slice(0, 4));
         }
       };
       
@@ -288,16 +354,24 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                 <div key={index} className="relative bg-accent aspect-square">
                   {thumbnails[index] ? (
                     thumbnails[index] === 'instagram-video' ? (
-                      <div className="w-full h-full bg-gradient-to-br from-gray-700 via-gray-800 to-black flex items-center justify-center">
-                        <Instagram className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                      <div className="w-full h-full">
+                        {recipeData[index] ? renderCustomPreview(recipeData[index], true) : (
+                          <div className="w-full h-full bg-gradient-to-br from-gray-700 via-gray-800 to-black flex items-center justify-center">
+                            <Instagram className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                          </div>
+                        )}
                       </div>
                     ) : (
-                      <Image
-                        src={thumbnails[index]}
-                        alt=""
-                        fill
-                        className="object-cover"
-                      />
+                      <div className="w-full h-full">
+                        {recipeData[index] ? renderCustomPreview(recipeData[index], true) : (
+                          <Image
+                            src={thumbnails[index]}
+                            alt=""
+                            fill
+                            className="object-cover"
+                          />
+                        )}
+                      </div>
                     )
                   ) : (
                     <div className="w-full h-full bg-accent flex items-center justify-center">
@@ -396,21 +470,21 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
               transition={{ delay: 0.1 }}
               className="flex items-center justify-between p-6 border-b border-border"
             >
-              <div className="flex items-center gap-3">
-                {view === 'recipes' && (
-                  <motion.button
-                    onClick={goBackToCollections}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className="p-2 text-muted-foreground hover:text-card-foreground rounded-lg hover:bg-accent transition-colors"
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                  </motion.button>
-                )}
-                <h2 className="text-2xl font-bold text-card-foreground">
-                  {view === 'collections' ? 'Collections' : selectedCollection?.name}
-                </h2>
-              </div>
+                <div className="flex items-center gap-3">
+                  {view === 'recipes' && (
+                    <motion.button
+                      onClick={goBackToCollections}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      className="p-2 text-muted-foreground hover:text-card-foreground rounded-lg hover:bg-accent transition-colors"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                    </motion.button>
+                  )}
+                  <h2 className="text-2xl font-bold text-card-foreground">
+                    {view === 'collections' ? 'Collections' : selectedCollection?.name}
+                  </h2>
+                </div>
               <motion.button
                 onClick={onClose}
                 whileHover={{ scale: 1.1 }}
@@ -517,112 +591,75 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                         {savedRecipe.recipe_data.image && (
                           <div className="aspect-video relative overflow-hidden">
                             {savedRecipe.recipe_data.image === 'instagram-video' ? (
-                              <div className="w-full h-full bg-gradient-to-br from-gray-700 via-gray-800 to-black flex items-center justify-center">
-                                <Instagram className="w-8 h-8 text-white" />
+                              <div className="relative w-full h-full">
+                                {renderCustomPreview(savedRecipe)}
+                                {/* Customize button for Instagram recipes */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditRecipe(savedRecipe);
+                                  }}
+                                  className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                                  title="Edit recipe"
+                                >
+                                  <Edit2 className="w-3 h-3 text-white" />
+                                </button>
                               </div>
                             ) : (
-                              <Image
-                                src={savedRecipe.recipe_data.image}
-                                alt={savedRecipe.title}
-                                fill
-                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
+                              <div className="relative w-full h-full">
+                                {renderCustomPreview(savedRecipe)}
+                                {/* Edit button for non-Instagram recipes */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditRecipe(savedRecipe);
+                                  }}
+                                  className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                                  title="Edit recipe"
+                                >
+                                  <Edit2 className="w-3 h-3 text-white" />
+                                </button>
+                              </div>
                             )}
                           </div>
                         )}
                         
                         <div className="p-4">
-                          {/* Title */}
-                          <div className="flex items-start gap-2 mb-2">
-                            {editingTitle === savedRecipe.id ? (
-                              <div className="flex-1 flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  value={editTitleValue}
-                                  onChange={(e) => setEditTitleValue(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      saveTitleEdit(savedRecipe.id);
-                                    } else if (e.key === 'Escape') {
-                                      cancelEditingTitle();
-                                    }
-                                  }}
-                                  className="flex-1 px-2 py-1 text-sm font-semibold text-card-foreground bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                                  autoFocus
-                                />
-                                <button
-                                  onClick={() => saveTitleEdit(savedRecipe.id)}
-                                  className="p-1 text-green-600 hover:text-green-700 transition-colors"
-                                  title="Save"
-                                >
-                                  <Check className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={cancelEditingTitle}
-                                  className="p-1 text-red-600 hover:text-red-700 transition-colors"
-                                  title="Cancel"
-                                >
-                                  <XIcon className="w-4 h-4" />
-                                </button>
+                          <div className="flex items-stretch justify-between gap-3 min-h-[60px]">
+                            {/* Left side - Title and meta info */}
+                            <div className="flex-1 min-w-0 flex flex-col justify-between">
+                              {/* Title */}
+                              <h3 className="font-semibold text-card-foreground line-clamp-2">
+                                {savedRecipe.title}
+                              </h3>
+                              
+                              {/* Meta info */}
+                              <div className="flex items-center gap-3 text-xs md:text-[11px] text-muted-foreground whitespace-nowrap">
+                                {savedRecipe.recipe_data.totalTime && (
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {savedRecipe.recipe_data.totalTime}
+                                  </div>
+                                )}
+                                {savedRecipe.recipe_data.servings && (
+                                  <div className="flex items-center gap-1">
+                                    <User className="w-3 h-3" />
+                                    {savedRecipe.recipe_data.servings}
+                                  </div>
+                                )}
                               </div>
-                            ) : (
-                              <>
-                                <h3 className="font-semibold text-card-foreground line-clamp-2 flex-1">
-                                  {savedRecipe.title}
-                                </h3>
-                                <button
-                                  onClick={() => startEditingTitle(savedRecipe.id, savedRecipe.title)}
-                                  className="p-1 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
-                                  title="Edit title"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                          
-                          {/* Meta info */}
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
-                            {savedRecipe.recipe_data.totalTime && (
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {savedRecipe.recipe_data.totalTime}
-                              </div>
-                            )}
-                            {savedRecipe.recipe_data.servings && (
-                              <div className="flex items-center gap-1">
-                                <User className="w-3 h-3" />
-                                {savedRecipe.recipe_data.servings} servings
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Actions */}
-                          <div className="flex items-center justify-between">
+                            </div>
+                            
+                            {/* Right side - View button (full height) */}
                             <motion.button
                               onClick={() => handleSelectRecipe(savedRecipe)}
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
-                              className="px-3 py-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+                              className="flex-shrink-0 px-6 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center self-stretch"
                             >
-                              View Recipe
-                            </motion.button>
-                            
-                            <motion.button
-                              onClick={() => handleDeleteRecipe(savedRecipe.id)}
-                              whileHover={{ scale: 1.1, rotate: 5 }}
-                              whileTap={{ scale: 0.9 }}
-                              className="p-1.5 text-muted-foreground hover:text-destructive rounded-lg hover:bg-destructive/10 transition-colors"
-                              title="Delete recipe"
-                            >
-                              <Trash2 className="w-4 h-4" />
+                              View
                             </motion.button>
                           </div>
-                          
-                          {/* Saved date */}
-                          <p className="text-xs text-muted-foreground mt-2">
-                            Saved {new Date(savedRecipe.created_at).toLocaleDateString()}
-                          </p>
                         </div>
                       </motion.div>
                     ))}
@@ -692,6 +729,29 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
           </motion.div>
         </motion.div>
       )}
+
+        {/* Edit Recipe Modal */}
+        {selectedRecipeForEdit && (
+          <EditRecipeModal
+            isOpen={showEditModal}
+            onClose={() => {
+              setShowEditModal(false);
+              setSelectedRecipeForEdit(null);
+            }}
+            recipe={{
+              id: selectedRecipeForEdit.id,
+              title: selectedRecipeForEdit.title,
+              image: selectedRecipeForEdit.recipe_data.image || '',
+              metadata: selectedRecipeForEdit.recipe_data.metadata
+            }}
+            onSave={handleSaveRecipeEdit}
+            onDelete={() => {
+              handleDeleteRecipe(selectedRecipeForEdit.id);
+              setShowEditModal(false);
+              setSelectedRecipeForEdit(null);
+            }}
+          />
+        )}
     </AnimatePresence>
 );
 }
