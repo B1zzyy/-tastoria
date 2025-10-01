@@ -79,12 +79,12 @@ export async function deleteSavedRecipe(recipeId: string): Promise<{ error: unkn
   }
 }
 
-export async function isRecipeSaved(url: string): Promise<{ data: boolean, error: unknown }> {
+export async function isRecipeSaved(url: string): Promise<{ data: boolean, recipeId: string | null, error: unknown }> {
   try {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
-      return { data: false, error: null }
+      return { data: false, recipeId: null, error: null }
     }
 
     const { data, error } = await supabase
@@ -94,9 +94,13 @@ export async function isRecipeSaved(url: string): Promise<{ data: boolean, error
       .eq('recipe_url', url)
       .single()
 
-    return { data: !!data, error: error?.code === 'PGRST116' ? null : error }
+    return { 
+      data: !!data, 
+      recipeId: data?.id || null, 
+      error: error?.code === 'PGRST116' ? null : error 
+    }
   } catch (error) {
-    return { data: false, error }
+    return { data: false, recipeId: null, error }
   }
 }
 

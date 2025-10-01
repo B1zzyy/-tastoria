@@ -8,7 +8,8 @@ import RecipeForm, { type SourceType } from '@/components/RecipeForm';
 import RecipeDisplay from '@/components/RecipeDisplay';
 import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
-import { isRecipeSaved } from '@/lib/recipeService';
+import { isRecipeSaved, deleteSavedRecipe } from '@/lib/recipeService';
+import { deleteRecipeFromAllCollections } from '@/lib/collectionsService';
 import SavedRecipes from '@/components/SavedRecipes';
 import CollectionModal from '@/components/CollectionModal';
 import BlurText from '../components/BlurText';
@@ -17,6 +18,8 @@ import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck, HelpCircle } from '
 import '@/lib/keepAlive'; // Import to initialize keep-alive service
 import TutorialOverlay from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
+import AIChatButton from '@/components/AIChatButton';
+import RecipeAIChat from '@/components/RecipeAIChat';
 
 
 export default function Home() {
@@ -33,9 +36,12 @@ export default function Home() {
   const [showSavedRecipes, setShowSavedRecipes] = useState(false);
   const [currentRecipeUrl, setCurrentRecipeUrl] = useState<string>('');
   const [isRecipeCurrentlySaved, setIsRecipeCurrentlySaved] = useState(false);
+  const [currentSavedRecipeId, setCurrentSavedRecipeId] = useState<string | null>(null);
   const [showConstructionAlert, setShowConstructionAlert] = useState(false);
   const [isViewingFromSavedRecipes, setIsViewingFromSavedRecipes] = useState(false);
   const [showCollectionModal, setShowCollectionModal] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
   
   // Use real authentication
   const { user, signOut } = useAuth();
@@ -95,20 +101,55 @@ export default function Home() {
     setShowCollectionModal(true);
   };
 
+  const handleDeleteRecipe = () => {
+    setShowDeleteConfirmModal(true);
+  };
+
+  const confirmDeleteRecipe = async () => {
+    console.log('Delete attempt - currentRecipeUrl:', currentRecipeUrl, 'currentSavedRecipeId:', currentSavedRecipeId);
+    
+    if (!currentRecipeUrl) {
+      console.error('No recipe URL found for deletion');
+      setShowDeleteConfirmModal(false);
+      return;
+    }
+
+    try {
+      // Use cascading delete to remove from all collections (same as bin icon)
+      const { error } = await deleteRecipeFromAllCollections(currentRecipeUrl);
+      
+      if (error) {
+        console.error('Failed to delete recipe:', error);
+        // You could show an error toast here
+      } else {
+        // Successfully deleted
+        setIsRecipeCurrentlySaved(false);
+        setCurrentSavedRecipeId(null);
+        console.log('Recipe deleted successfully from all collections');
+      }
+    } catch (error) {
+      console.error('Error deleting recipe:', error);
+    } finally {
+      setShowDeleteConfirmModal(false);
+    }
+  };
+
   const checkIfRecipeSaved = useCallback(async (url: string) => {
     if (!user) return;
     
-    const { data } = await isRecipeSaved(url);
+    const { data, recipeId } = await isRecipeSaved(url);
     setIsRecipeCurrentlySaved(data);
+    setCurrentSavedRecipeId(recipeId);
     
     // If recipe is already saved, keep the button visible but show "Saved" state
     // Don't animate it out since user might want to see the saved status
   }, [user]);
 
-  const handleSelectSavedRecipe = (savedRecipe: Recipe, url: string) => {
+  const handleSelectSavedRecipe = (savedRecipe: Recipe, url: string, recipeId?: string) => {
     setRecipe(savedRecipe);
     setCurrentRecipeUrl(url);
     setIsRecipeCurrentlySaved(true);
+    setCurrentSavedRecipeId(recipeId || null);
     setIsViewingFromSavedRecipes(true); // Mark as viewing from saved recipes
     setError(null);
   };
@@ -328,8 +369,8 @@ export default function Home() {
       </div>
 
       
-      {/* Top Navigation Bar - Only show when recipe is displayed */}
-      {recipe && (
+      {/* Top Navigation Bar - Only show when recipe is displayed or during tutorial */}
+      {(recipe || (tutorial.isActive && tutorial.currentStep?.id === 'save-recipe')) && (
         <>
           {/* Mobile Navigation */}
           <nav className="md:hidden sticky top-0 z-50 bg-background border-b border-border">
@@ -351,6 +392,28 @@ export default function Home() {
 
               {/* Right - Action Icons */}
               <div className="flex items-center gap-1">
+                {/* Save Button - Only show when user is logged in */}
+                {user && (
+                  <button
+                    onClick={isRecipeCurrentlySaved ? handleDeleteRecipe : handleSaveRecipe}
+                    disabled={tutorial.isActive && tutorial.currentStep?.id === 'save-recipe'}
+                    className={`p-2 rounded-lg transition-colors ${
+                      isRecipeCurrentlySaved 
+                        ? 'text-white hover:bg-white/10' 
+                        : 'text-foreground hover:bg-accent'
+                    }`}
+                    aria-label={isRecipeCurrentlySaved ? "Remove from collections" : "Save recipe"}
+                    title={isRecipeCurrentlySaved ? "Remove from collections" : "Save recipe"}
+                    data-tutorial="save-button"
+                  >
+                    {isRecipeCurrentlySaved ? (
+                      <BookmarkCheck className="w-6 h-6" fill="currentColor" />
+                    ) : (
+                      <Bookmark className="w-6 h-6" />
+                    )}
+                  </button>
+                )}
+
                 <button 
                   onClick={() => window.print()} 
                   className="p-2 hover:bg-accent rounded-lg transition-colors" 
@@ -424,6 +487,28 @@ export default function Home() {
                 
 
                 <div className="flex items-center gap-4">
+                  {/* Save Button - Only show when user is logged in and not viewing from saved recipes */}
+                  {user && (
+                    <button
+                      onClick={isRecipeCurrentlySaved ? handleDeleteRecipe : handleSaveRecipe}
+                      disabled={tutorial.isActive && tutorial.currentStep?.id === 'save-recipe'}
+                      className={`p-2 rounded-lg transition-colors ${
+                        isRecipeCurrentlySaved 
+                          ? 'text-white hover:bg-white/10' 
+                          : 'text-foreground hover:bg-accent'
+                      }`}
+                      aria-label={isRecipeCurrentlySaved ? "Remove from collections" : "Save recipe"}
+                      title={isRecipeCurrentlySaved ? "Remove from collections" : "Save recipe"}
+                      data-tutorial="save-button"
+                    >
+                      {isRecipeCurrentlySaved ? (
+                        <BookmarkCheck className="w-5 h-5" fill="currentColor" />
+                      ) : (
+                        <Bookmark className="w-5 h-5" />
+                      )}
+                    </button>
+                  )}
+
                   {/* Print Button */}
                   <button 
                     onClick={() => window.print()} 
@@ -471,6 +556,7 @@ export default function Home() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
                     </svg>
                   </button>
+
 
                   {/* Auth Section */}
                   {user ? (
@@ -770,30 +856,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Floating Save Recipe Button - Only show when not viewing from saved recipes */}
-      {recipe && user && !isViewingFromSavedRecipes && (
-        <div className="fixed bottom-4 right-4 z-50">
-          <button
-            onClick={isRecipeCurrentlySaved ? undefined : handleSaveRecipe}
-            disabled={isRecipeCurrentlySaved}
-            className={`flex items-center gap-2 px-4 py-3 rounded-xl font-medium shadow-lg transition-all duration-200 ${
-              isRecipeCurrentlySaved 
-                ? 'bg-green-600 text-green-50 cursor-default' 
-                : 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-xl hover:scale-105'
-            }`}
-            data-tutorial="save-button"
-          >
-            {isRecipeCurrentlySaved ? (
-              <BookmarkCheck className="w-5 h-5" />
-            ) : (
-              <Bookmark className="w-5 h-5" />
-            )}
-            <span className="font-semibold">
-              {isRecipeCurrentlySaved ? 'Saved' : 'Save'}
-            </span>
-          </button>
-        </div>
-      )}
 
       {/* Collection Modal */}
       {recipe && (
@@ -867,6 +929,88 @@ export default function Home() {
         onComplete={tutorial.completeTutorial}
         totalSteps={tutorial.totalSteps}
       />
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirmModal && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+              onClick={() => setShowDeleteConfirmModal(false)}
+            />
+            
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div 
+                className="bg-card border border-border rounded-2xl shadow-2xl max-w-md w-full mx-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="p-6 pb-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-card-foreground">Remove Recipe</h3>
+                  </div>
+                  <p className="text-muted-foreground">
+                    Are you sure you want to remove this recipe from your collections? This action cannot be undone.
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 p-6 pt-4">
+                  <button
+                    onClick={() => setShowDeleteConfirmModal(false)}
+                    className="flex-1 h-10 px-4 bg-background border border-border text-foreground rounded-lg hover:bg-accent transition-colors font-medium text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteRecipe}
+                    className="flex-1 h-10 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* AI Chat Button - Only show when viewing a recipe or during tutorial */}
+      {(recipe || (tutorial.isActive && tutorial.currentStep?.id === 'ai-chat')) && (
+        <AIChatButton 
+          onClick={() => {
+            // Don't open chat during tutorial
+            if (tutorial.isActive && tutorial.currentStep?.id === 'ai-chat') {
+              return;
+            }
+            setShowAIChat(true);
+          }}
+        />
+      )}
+
+      {/* AI Chat Modal */}
+      {recipe && (
+        <RecipeAIChat
+          isOpen={showAIChat}
+          onClose={() => setShowAIChat(false)}
+          recipe={recipe}
+        />
+      )}
 
     </div>
   );

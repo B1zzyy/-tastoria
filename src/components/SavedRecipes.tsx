@@ -13,7 +13,7 @@ import type { Recipe } from '@/lib/recipe-parser';
 interface SavedRecipesProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectRecipe: (recipe: Recipe, url: string) => void;
+  onSelectRecipe: (recipe: Recipe, url: string, recipeId?: string) => void;
 }
 
 export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedRecipesProps) {
@@ -111,7 +111,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
   };
 
   const handleSelectRecipe = (savedRecipe: SavedRecipeWithCollection) => {
-    onSelectRecipe(savedRecipe.recipe_data, savedRecipe.recipe_url);
+    onSelectRecipe(savedRecipe.recipe_data, savedRecipe.recipe_url, savedRecipe.id);
     onClose();
   };
 

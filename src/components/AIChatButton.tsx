@@ -19,6 +19,7 @@ export default function AIChatButton({ onClick }: AIChatButtonProps) {
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       className="fixed bottom-6 right-6 z-30 w-14 h-14 bg-gradient-to-br from-primary to-primary/80 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group"
+      data-tutorial="ai-chat-button"
     >
       <motion.div
         animate={{ rotate: isHovered ? 360 : 0 }}

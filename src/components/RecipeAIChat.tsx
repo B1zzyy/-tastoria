@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Bot, User, Sparkles } from 'lucide-react';
 import { Recipe } from '@/lib/recipe-parser';
 import SplitText from './SplitText';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   id: string;
@@ -89,6 +90,12 @@ ${recipe.servings ? `Servings: ${recipe.servings}` : ''}
 ${recipe.difficulty ? `Difficulty: ${recipe.difficulty}` : ''}
       `.trim();
 
+      // Prepare conversation history for context
+      const conversationHistory = messages.map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      }));
+
       const response = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: {
@@ -97,6 +104,7 @@ ${recipe.difficulty ? `Difficulty: ${recipe.difficulty}` : ''}
         body: JSON.stringify({
           message: inputValue.trim(),
           recipeContext,
+          conversationHistory,
         }),
       });
 
@@ -118,7 +126,7 @@ ${recipe.difficulty ? `Difficulty: ${recipe.difficulty}` : ''}
       console.error('Error sending message:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: "Oops! It looks like the kitches is catching on fire! Give me a few hours to restore this mishap. 🥹",
+        content: "Oops! It looks like the kitchen is catching on fire! Give me a few hours to restore this mishap. 🥹 (Tasty is currently undergoing maintenance. Please try again later.)",
         sender: 'ai',
         timestamp: new Date()
       };
@@ -208,7 +216,7 @@ ${recipe.difficulty ? `Difficulty: ${recipe.difficulty}` : ''}
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
               {messages.map((message) => (
                 <motion.div
                   key={message.id}
@@ -230,25 +238,46 @@ ${recipe.difficulty ? `Difficulty: ${recipe.difficulty}` : ''}
                     }`}
                   >
                     {message.sender === 'ai' ? (
-                      <SplitText
-                        key={`${message.id}-${message.content.slice(0, 20)}`}
-                        text={message.content}
-                        className="text-sm whitespace-pre-wrap"
-                        delay={15}
-                        duration={0.2}
-                        ease="power2.out"
-                        splitType="chars"
-                        from={{ opacity: 0, y: 20 }}
-                        to={{ opacity: 1, y: 0 }}
-                        threshold={0.1}
-                        rootMargin="0px"
-                        textAlign="left"
-                        tag="p"
-                        shouldAnimate={!animatedMessages.has(message.id)}
-                        onLetterAnimationComplete={() => {
-                          setAnimatedMessages(prev => new Set(prev).add(message.id));
-                        }}
-                      />
+                      message.id === 'welcome' ? (
+                        <SplitText
+                          key={`${message.id}-${message.content.slice(0, 20)}`}
+                          text={message.content}
+                          className="text-sm whitespace-pre-wrap"
+                          delay={15}
+                          duration={0.2}
+                          ease="power2.out"
+                          splitType="chars"
+                          from={{ opacity: 0, y: 20 }}
+                          to={{ opacity: 1, y: 0 }}
+                          threshold={0.1}
+                          rootMargin="0px"
+                          textAlign="left"
+                          tag="p"
+                          shouldAnimate={!animatedMessages.has(message.id)}
+                          onLetterAnimationComplete={() => {
+                            setAnimatedMessages(prev => new Set(prev).add(message.id));
+                          }}
+                        />
+                      ) : (
+                        <div className="text-sm prose prose-sm prose-invert max-w-none">
+                          <ReactMarkdown 
+                            components={{
+                              p: ({ children }) => <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>,
+                              ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-2 ml-4">{children}</ul>,
+                              ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-2 ml-4">{children}</ol>,
+                              li: ({ children }) => <li className="text-sm leading-relaxed mb-1">{children}</li>,
+                              strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                              em: ({ children }) => <em className="italic">{children}</em>,
+                              h1: ({ children }) => <h1 className="text-lg font-semibold mb-2 mt-4 first:mt-0">{children}</h1>,
+                              h2: ({ children }) => <h2 className="text-base font-semibold mb-2 mt-3 first:mt-0">{children}</h2>,
+                              h3: ({ children }) => <h3 className="text-sm font-semibold mb-1 mt-2 first:mt-0">{children}</h3>,
+                              blockquote: ({ children }) => <blockquote className="border-l-2 border-gray-300 pl-3 italic my-2">{children}</blockquote>,
+                            }}
+                          >
+                            {message.content}
+                          </ReactMarkdown>
+                        </div>
+                      )
                     ) : (
                       <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                     )}
@@ -323,20 +352,20 @@ ${recipe.difficulty ? `Difficulty: ${recipe.difficulty}` : ''}
                 </motion.div>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <input
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Ask Tasty about this recipe..."
-                  className="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-card-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="flex-1 px-3 py-2 h-10 bg-background border border-border rounded-lg text-card-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   disabled={isLoading}
                 />
                 <button
                   onClick={handleSendMessage}
                   disabled={!inputValue.trim() || isLoading}
-                  className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-3 h-10 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center justify-center"
                 >
                   <Send className="w-4 h-4" />
                 </button>

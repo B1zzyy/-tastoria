@@ -51,7 +51,19 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     id: 'save-recipe',
     title: 'Save to Collections',
     description: 'Once you extract a recipe, you\'ll see a save button appear. Save your favorite recipes to collections for easy access!',
-    position: 'center'
+    targetElement: '[data-tutorial="save-button"]',
+    position: 'top',
+    arrowDirection: 'down',
+    action: 'click',
+  },
+  {
+    id: 'ai-chat',
+    title: 'AI Cooking Assistant',
+    description: 'Get instant help with your recipes! Ask about substitutions, cooking tips, or any questions you have about the recipe.',
+    targetElement: '[data-tutorial="ai-chat-button"]',
+    position: 'top',
+    arrowDirection: 'down',
+    action: 'click',
   },
   {
     id: 'collections',
