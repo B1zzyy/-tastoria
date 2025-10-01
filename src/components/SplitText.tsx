@@ -4,6 +4,13 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText as GSAPSplitText } from 'gsap/SplitText';
 import { useGSAP } from '@gsap/react';
 
+// Interface for GSAP SplitText instance
+interface GSAPElement extends HTMLElement {
+  _rbsplitInstance?: {
+    revert: () => void;
+  } | null;
+}
+
 gsap.registerPlugin(ScrollTrigger, GSAPSplitText, useGSAP);
 
 const SplitText = ({
@@ -72,13 +79,13 @@ const SplitText = ({
         return;
       }
 
-      if ((el as HTMLElement & { _rbsplitInstance?: any })._rbsplitInstance) {
+      if ((el as GSAPElement)._rbsplitInstance) {
         try {
-          (el as HTMLElement & { _rbsplitInstance?: any })._rbsplitInstance.revert();
+          (el as GSAPElement)._rbsplitInstance?.revert();
         } catch {
           /* noop */
         }
-        (el as HTMLElement & { _rbsplitInstance?: any })._rbsplitInstance = null;
+        (el as GSAPElement)._rbsplitInstance = null;
       }
 
       const startPct = (1 - threshold) * 100;
@@ -140,7 +147,7 @@ const SplitText = ({
         }
       });
 
-      (el as HTMLElement & { _rbsplitInstance?: any })._rbsplitInstance = splitInstance;
+      (el as GSAPElement)._rbsplitInstance = splitInstance;
 
       return () => {
         ScrollTrigger.getAll().forEach(st => {
@@ -151,7 +158,7 @@ const SplitText = ({
         } catch {
           /* noop */
         }
-        (el as HTMLElement & { _rbsplitInstance?: any })._rbsplitInstance = null;
+        (el as GSAPElement)._rbsplitInstance = null;
       };
     },
     {

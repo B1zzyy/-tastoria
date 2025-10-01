@@ -183,7 +183,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
       
       setShowEditModal(false);
       setSelectedRecipeForEdit(null);
-    } catch (error) {
+    } catch (_error) {
       setError('Failed to update recipe');
     } finally {
       setLoading(false);
