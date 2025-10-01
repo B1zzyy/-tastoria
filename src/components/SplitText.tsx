@@ -72,13 +72,13 @@ const SplitText = ({
         return;
       }
 
-      if ((el as any)._rbsplitInstance) {
+      if ((el as HTMLElement & { _rbsplitInstance?: any })._rbsplitInstance) {
         try {
-          (el as any)._rbsplitInstance.revert();
+          (el as HTMLElement & { _rbsplitInstance?: any })._rbsplitInstance.revert();
         } catch {
           /* noop */
         }
-        (el as any)._rbsplitInstance = null;
+        (el as HTMLElement & { _rbsplitInstance?: any })._rbsplitInstance = null;
       }
 
       const startPct = (1 - threshold) * 100;
@@ -140,7 +140,7 @@ const SplitText = ({
         }
       });
 
-      (el as any)._rbsplitInstance = splitInstance;
+      (el as HTMLElement & { _rbsplitInstance?: any })._rbsplitInstance = splitInstance;
 
       return () => {
         ScrollTrigger.getAll().forEach(st => {
@@ -151,7 +151,7 @@ const SplitText = ({
         } catch {
           /* noop */
         }
-        (el as any)._rbsplitInstance = null;
+        (el as HTMLElement & { _rbsplitInstance?: any })._rbsplitInstance = null;
       };
     },
     {

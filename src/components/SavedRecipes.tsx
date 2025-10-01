@@ -6,7 +6,7 @@ import { X, Clock, User, Folder, ArrowLeft, Instagram, Edit2, Trash2 } from 'luc
 import { motion, AnimatePresence } from 'framer-motion';
 import { deleteSavedRecipe, updateRecipeTitle, updateRecipeCustomPreview } from '@/lib/recipeService';
 import { getUserCollections, getRecipesInCollection, ensureRecipesInAllCollection, cleanupDuplicateRecipes, deleteRecipeFromAllCollections, deleteCollection, type Collection, type SavedRecipeWithCollection } from '@/lib/collectionsService';
-import { type UnitSystem } from '@/lib/unitConverter';
+// import { type UnitSystem } from '@/lib/unitConverter';
 import EditRecipeModal from './EditRecipeModal';
 import type { Recipe } from '@/lib/recipe-parser';
 
