@@ -160,14 +160,15 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
         return;
       }
       
-      // Create a data URL for preview
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        setPreviewUrl(dataUrl);
-        setImageUrl(dataUrl); // Store the data URL
-      };
-      reader.readAsDataURL(file);
+      // Clean up previous object URL to prevent memory leaks
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      
+      // Create object URL for preview (much more performant)
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
+      setImageUrl(objectUrl); // Store the object URL
     }
   };
 
@@ -222,6 +223,15 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
       };
     }
   }, []);
+
+  // Cleanup object URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
 
   return (

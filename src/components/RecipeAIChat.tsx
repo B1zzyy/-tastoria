@@ -36,6 +36,28 @@ export default function RecipeAIChat({ isOpen, onClose, recipe }: RecipeAIChatPr
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Prevent background scrolling when chat is open on mobile
+  useEffect(() => {
+    if (isOpen) {
+      // Prevent background scroll
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+    } else {
+      // Restore background scroll
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, [isOpen]);
+
   // Initialize with welcome message
   useEffect(() => {
     if (isOpen && messages.length === 0) {

@@ -5,8 +5,9 @@ import { Recipe } from '@/lib/recipe-parser';
 import { convertIngredients, convertTemperature, type UnitSystem } from '@/lib/unitConverter';
 import UnitToggle from './UnitToggle';
 
-import { Clock, Users, Star, ChefHat, List, BookOpen, Check, Play, ExternalLink, Edit2 } from 'lucide-react';
+import { Clock, Users, Star, ChefHat, List, BookOpen, Check, Play, ExternalLink, Edit2, X, GripVertical, Plus } from 'lucide-react';
 import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 import Confetti from './Confetti';
 import RecipeAIChat from './RecipeAIChat';
 import AIChatButton from './AIChatButton';
@@ -15,15 +16,18 @@ import EditRecipeModal from './EditRecipeModal';
 interface RecipeDisplayProps {
   recipe: Recipe;
   onEditRecipe?: (recipe: Recipe) => void;
+  onUpdateRecipe?: (recipe: Recipe) => void;
   isEditable?: boolean;
 }
 
-export default function RecipeDisplay({ recipe, onEditRecipe, isEditable = false }: RecipeDisplayProps) {
+export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, isEditable = false }: RecipeDisplayProps) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [showInstagramPopup, setShowInstagramPopup] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [unitSystem, setUnitSystem] = useState<UnitSystem>('metric');
   const [showAIChat, setShowAIChat] = useState(false);
+  const [showEditInstructionsModal, setShowEditInstructionsModal] = useState(false);
+  const [editableInstructions, setEditableInstructions] = useState<string[]>([]);
 
   // Trigger confetti when all steps are completed
   useEffect(() => {
@@ -47,6 +51,76 @@ export default function RecipeDisplay({ recipe, onEditRecipe, isEditable = false
       newCompletedSteps.add(stepIndex);
     }
     setCompletedSteps(newCompletedSteps);
+  };
+
+  // Initialize editable instructions when modal opens
+  const openEditInstructionsModal = () => {
+    setEditableInstructions([...recipe.instructions]);
+    setShowEditInstructionsModal(true);
+  };
+
+  // Auto-resize textareas when modal opens
+  useEffect(() => {
+    if (showEditInstructionsModal) {
+      // Small delay to ensure DOM is rendered
+      setTimeout(() => {
+        const textareas = document.querySelectorAll('.instruction-textarea');
+        textareas.forEach((textarea) => {
+          const element = textarea as HTMLTextAreaElement;
+          element.style.height = 'auto';
+          element.style.height = element.scrollHeight + 'px';
+        });
+      }, 100);
+    }
+  }, [showEditInstructionsModal, editableInstructions]);
+
+  // Handle instruction text changes
+  const updateInstruction = (index: number, text: string) => {
+    const newInstructions = [...editableInstructions];
+    
+    // Auto-delete step if text is empty and there's more than one step
+    if (text.trim() === '' && newInstructions.length > 1) {
+      newInstructions.splice(index, 1);
+    } else {
+      newInstructions[index] = text;
+    }
+    
+    setEditableInstructions(newInstructions);
+  };
+
+  // Handle instruction reordering
+  const moveInstruction = (fromIndex: number, toIndex: number) => {
+    const newInstructions = [...editableInstructions];
+    const [movedInstruction] = newInstructions.splice(fromIndex, 1);
+    newInstructions.splice(toIndex, 0, movedInstruction);
+    setEditableInstructions(newInstructions);
+  };
+
+  // Handle adding new instruction
+  const addInstruction = (index: number) => {
+    const newInstructions = [...editableInstructions];
+    newInstructions.splice(index + 1, 0, '');
+    setEditableInstructions(newInstructions);
+  };
+
+  // Handle saving instructions
+  const saveInstructions = () => {
+    // Filter out empty instructions and update the recipe
+    const filteredInstructions = editableInstructions.filter(instruction => instruction.trim() !== '');
+    
+    // Create updated recipe with new instructions
+    const updatedRecipe = {
+      ...recipe,
+      instructions: filteredInstructions
+    };
+    
+    // Call the onUpdateRecipe callback to update the parent component
+    if (onUpdateRecipe) {
+      onUpdateRecipe(updatedRecipe);
+    }
+    
+    // Close the modal
+    setShowEditInstructionsModal(false);
   };
 
   return (
@@ -234,11 +308,11 @@ export default function RecipeDisplay({ recipe, onEditRecipe, isEditable = false
           {/* Time & Servings Card */}
           <div className="bg-card rounded-2xl shadow-sm border border-border p-4 flex-grow">
             <div className="grid grid-cols-2 gap-4 h-full">
-              {recipe.prepTime && (
+              {recipe.totalTime && (
                 <div className="text-center flex flex-col justify-center h-full">
                   <Clock className="w-5 h-5 text-primary mx-auto mb-1" />
-                  <div className="text-xs text-muted-foreground">Prep</div>
-                  <div className="font-semibold text-card-foreground">{recipe.prepTime}</div>
+                  <div className="text-xs text-muted-foreground">Total</div>
+                  <div className="font-semibold text-card-foreground">{recipe.totalTime}</div>
                 </div>
               )}
               
@@ -347,6 +421,17 @@ export default function RecipeDisplay({ recipe, onEditRecipe, isEditable = false
                 </div>
               )}
             </div>
+            
+            {/* Edit Instructions Button */}
+            {isEditable && onEditRecipe && (
+              <button
+                onClick={openEditInstructionsModal}
+                className="p-2 hover:bg-accent rounded-lg transition-colors"
+                title="Edit instructions"
+              >
+                <Edit2 className="w-4 h-4 text-muted-foreground" />
+              </button>
+            )}
             
             {recipe.instructions.length > 0 && completedSteps.size > 0 && (
               <div className="flex flex-col items-end gap-2">
@@ -524,6 +609,106 @@ export default function RecipeDisplay({ recipe, onEditRecipe, isEditable = false
         onClose={() => setShowAIChat(false)}
         recipe={recipe}
       />
+
+      {/* Edit Instructions Modal */}
+      <AnimatePresence>
+        {showEditInstructionsModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto scrollbar-hide"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-card-foreground">Edit Instructions</h2>
+                <button
+                  onClick={() => setShowEditInstructionsModal(false)}
+                  className="p-2 hover:bg-accent rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+
+              {/* Instructions List */}
+              <div className="space-y-4 mb-6">
+                <AnimatePresence mode="popLayout">
+                  {editableInstructions.map((instruction, index) => (
+                    <motion.div
+                      key={`instruction-${index}-${instruction.slice(0, 20)}`}
+                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                      transition={{ 
+                        type: "spring", 
+                        stiffness: 300, 
+                        damping: 30,
+                        opacity: { duration: 0.2 },
+                        scale: { duration: 0.2 }
+                      }}
+                      layout
+                      className="flex items-start gap-3 p-4 bg-background border border-border rounded-xl"
+                    >
+                    {/* Drag Handle */}
+                    <div className="flex flex-col items-center gap-2 mt-1">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm font-semibold text-primary">
+                        {index + 1}
+                      </div>
+                      <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
+                    </div>
+
+                    {/* Instruction Input */}
+                    <div className="flex-1">
+                      <textarea
+                        value={instruction}
+                        onChange={(e) => {
+                          updateInstruction(index, e.target.value);
+                          // Auto-resize textarea
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        className="instruction-textarea w-full p-3 bg-background border border-border rounded-lg text-card-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none overflow-hidden"
+                        placeholder="Enter instruction..."
+                        style={{ minHeight: '60px' }}
+                      />
+                    </div>
+
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+
+              {/* Add New Instruction Button */}
+              <div className="mb-6">
+                <button
+                  onClick={() => addInstruction(editableInstructions.length - 1)}
+                  className="w-full p-4 border-2 border-dashed border-border rounded-xl hover:border-primary/50 transition-colors flex items-center justify-center gap-2 text-muted-foreground hover:text-primary"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add New Instruction
+                </button>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowEditInstructionsModal(false)}
+                  className="flex-1 px-4 py-2 text-muted-foreground hover:text-card-foreground border border-border rounded-xl hover:bg-accent transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveInstructions}
+                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

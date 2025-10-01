@@ -140,6 +140,14 @@ export default function Home() {
     setShowEditModal(true);
   };
 
+  const handleUpdateRecipe = (updatedRecipe: Recipe) => {
+    // Update the current recipe with the edited data
+    setRecipe(updatedRecipe);
+    
+    // If this is a saved recipe, we might want to update it in the database
+    // For now, we'll just update the local state
+  };
+
   const checkIfRecipeSaved = useCallback(async (url: string) => {
     if (!user) return;
     
@@ -243,13 +251,44 @@ export default function Home() {
     }
   }, [checkIfRecipeSaved, user, setShowAuthModal]);
 
+  // Recipe storage functions
+  const storeRecipe = (recipe: Recipe) => {
+    const id = `recipe_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const recipeData = { ...recipe, id, url: currentRecipeUrl };
+    sessionStorage.setItem(`recipe_${id}`, JSON.stringify(recipeData));
+    return id;
+  };
+
+  const getStoredRecipe = (id: string): Recipe | null => {
+    try {
+      const stored = sessionStorage.getItem(`recipe_${id}`);
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  };
+
   // Handle shared recipe URLs
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const sharedRecipeUrl = urlParams.get('recipe');
+    const sharedRecipeId = urlParams.get('id');
+    
+    if (sharedRecipeId && !recipe) {
+      // Load pre-parsed recipe from storage
+      const storedRecipe = getStoredRecipe(sharedRecipeId);
+      if (storedRecipe) {
+        setRecipe(storedRecipe);
+        setCurrentRecipeUrl((storedRecipe as any).url || '');
+        setError(null);
+        // Clean up the URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+      }
+    }
     
     if (sharedRecipeUrl && !recipe) {
-      // Auto-parse the shared recipe
+      // Auto-parse the shared recipe (fallback for old links)
       const decodedUrl = decodeURIComponent(sharedRecipeUrl);
       const isInstagram = decodedUrl.includes('instagram.com/');
       handleParseRecipe(decodedUrl, isInstagram ? 'instagram' : 'web');
@@ -433,24 +472,32 @@ export default function Home() {
                 <button 
                   onClick={async () => {
                     try {
-                      const shareUrl = `${window.location.origin}?recipe=${encodeURIComponent(currentRecipeUrl)}`;
-                      if (navigator.share && recipe) {
-                        await navigator.share({
-                          title: `${recipe.title} - Tastoria`,
-                          text: `Check out this clean, easy-to-follow recipe: ${recipe.title}`,
-                          url: shareUrl
-                        });
-                      } else {
-                        // Fallback: copy to clipboard
-                        await navigator.clipboard.writeText(shareUrl);
-                        // Could show a toast notification here
+                      if (recipe) {
+                        // Store the recipe and get a shareable ID
+                        const recipeId = storeRecipe(recipe);
+                        const shareUrl = `${window.location.origin}?id=${recipeId}`;
+                        
+                        if (navigator.share) {
+                          await navigator.share({
+                            title: `${recipe.title} - Tastoria`,
+                            text: `Check out this clean, easy-to-follow recipe: ${recipe.title}`,
+                            url: shareUrl
+                          });
+                        } else {
+                          // Fallback: copy to clipboard
+                          await navigator.clipboard.writeText(shareUrl);
+                          // Could show a toast notification here
+                        }
                       }
                     } catch (error) {
                       console.log('Share failed:', error);
                       // Fallback: try to copy to clipboard
                       try {
-                        const shareUrl = `${window.location.origin}?recipe=${encodeURIComponent(currentRecipeUrl)}`;
-                        await navigator.clipboard.writeText(shareUrl);
+                        if (recipe) {
+                          const recipeId = storeRecipe(recipe);
+                          const shareUrl = `${window.location.origin}?id=${recipeId}`;
+                          await navigator.clipboard.writeText(shareUrl);
+                        }
                       } catch (clipboardError) {
                         console.log('Clipboard fallback failed:', clipboardError);
                       }
@@ -531,24 +578,32 @@ export default function Home() {
                   <button 
                     onClick={async () => {
                       try {
-                        const shareUrl = `${window.location.origin}?recipe=${encodeURIComponent(currentRecipeUrl)}`;
-                        if (navigator.share && recipe) {
-                          await navigator.share({
-                            title: `${recipe.title} - Tastoria`,
-                            text: `Check out this clean, easy-to-follow recipe: ${recipe.title}`,
-                            url: shareUrl
-                          });
-                        } else {
-                          // Fallback: copy to clipboard
-                          await navigator.clipboard.writeText(shareUrl);
-                          // Could show a toast notification here
+                        if (recipe) {
+                          // Store the recipe and get a shareable ID
+                          const recipeId = storeRecipe(recipe);
+                          const shareUrl = `${window.location.origin}?id=${recipeId}`;
+                          
+                          if (navigator.share) {
+                            await navigator.share({
+                              title: `${recipe.title} - Tastoria`,
+                              text: `Check out this clean, easy-to-follow recipe: ${recipe.title}`,
+                              url: shareUrl
+                            });
+                          } else {
+                            // Fallback: copy to clipboard
+                            await navigator.clipboard.writeText(shareUrl);
+                            // Could show a toast notification here
+                          }
                         }
                       } catch (error) {
                         console.log('Share failed:', error);
                         // Fallback: try to copy to clipboard
                         try {
-                          const shareUrl = `${window.location.origin}?recipe=${encodeURIComponent(currentRecipeUrl)}`;
-                          await navigator.clipboard.writeText(shareUrl);
+                          if (recipe) {
+                            const recipeId = storeRecipe(recipe);
+                            const shareUrl = `${window.location.origin}?id=${recipeId}`;
+                            await navigator.clipboard.writeText(shareUrl);
+                          }
                         } catch (clipboardError) {
                           console.log('Clipboard fallback failed:', clipboardError);
                         }
@@ -860,6 +915,7 @@ export default function Home() {
             <RecipeDisplay 
               recipe={recipe} 
               onEditRecipe={handleEditRecipe}
+              onUpdateRecipe={handleUpdateRecipe}
               isEditable={isViewingFromSavedRecipes}
             />
           </div>
