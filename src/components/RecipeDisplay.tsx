@@ -27,6 +27,7 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
   const [showAIChat, setShowAIChat] = useState(false);
   const [showEditInstructionsModal, setShowEditInstructionsModal] = useState(false);
   const [editableInstructions, setEditableInstructions] = useState<string[]>([]);
+  const [instructionKeys, setInstructionKeys] = useState<string[]>([]);
 
   // Trigger confetti when all steps are completed
   useEffect(() => {
@@ -54,7 +55,10 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
 
   // Initialize editable instructions when modal opens
   const openEditInstructionsModal = () => {
-    setEditableInstructions([...recipe.instructions]);
+    const instructions = [...recipe.instructions];
+    setEditableInstructions(instructions);
+    // Generate stable keys for each instruction
+    setInstructionKeys(instructions.map((_, index) => `instruction-${index}-${Date.now()}`));
     setShowEditInstructionsModal(true);
   };
 
@@ -76,23 +80,32 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
   // Handle instruction text changes
   const updateInstruction = (index: number, text: string) => {
     const newInstructions = [...editableInstructions];
+    const newKeys = [...instructionKeys];
     
     // Auto-delete step if text is empty and there's more than one step
     if (text.trim() === '' && newInstructions.length > 1) {
       newInstructions.splice(index, 1);
+      newKeys.splice(index, 1);
     } else {
       newInstructions[index] = text;
     }
     
     setEditableInstructions(newInstructions);
+    setInstructionKeys(newKeys);
   };
 
 
   // Handle adding new instruction
   const addInstruction = (index: number) => {
     const newInstructions = [...editableInstructions];
+    const newKeys = [...instructionKeys];
+    const newKey = `instruction-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     newInstructions.splice(index + 1, 0, '');
+    newKeys.splice(index + 1, 0, newKey);
+    
     setEditableInstructions(newInstructions);
+    setInstructionKeys(newKeys);
   };
 
   // Handle saving instructions
@@ -628,7 +641,7 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
                 <AnimatePresence mode="popLayout">
                   {editableInstructions.map((instruction, index) => (
                     <motion.div
-                      key={`instruction-${index}-${instruction.slice(0, 20)}`}
+                      key={instructionKeys[index] || `instruction-${index}`}
                       initial={{ opacity: 0, y: 20, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -20, scale: 0.95 }}
