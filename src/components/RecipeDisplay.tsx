@@ -62,9 +62,23 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
     setShowEditInstructionsModal(true);
   };
 
-  // Auto-resize textareas when modal opens
+  // Auto-resize textareas when modal opens and prevent mobile keyboard issues
   useEffect(() => {
     if (showEditInstructionsModal) {
+      // Prevent background scroll
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      
+      // Prevent mobile viewport issues
+      const originalViewport = document.querySelector('meta[name="viewport"]');
+      const originalContent = originalViewport?.getAttribute('content');
+      
+      // Set viewport to prevent zoom and movement (Safari-friendly)
+      if (originalViewport) {
+        originalViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+      }
+      
       // Small delay to ensure DOM is rendered
       setTimeout(() => {
         const textareas = document.querySelectorAll('.instruction-textarea');
@@ -74,8 +88,29 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
           element.style.height = element.scrollHeight + 'px';
         });
       }, 100);
+      
+      // Cleanup function to restore original viewport and scroll
+      return () => {
+        // Restore background scroll
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+        
+        if (originalViewport && originalContent) {
+          originalViewport.setAttribute('content', originalContent);
+        }
+      };
     }
   }, [showEditInstructionsModal, editableInstructions]);
+
+  // Cleanup on unmount to ensure scroll is restored
+  useEffect(() => {
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, []);
 
   // Handle instruction text changes
   const updateInstruction = (index: number, text: string) => {
@@ -623,7 +658,12 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto scrollbar-hide"
+              className="bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto scrollbar-hide mx-auto"
+              style={{
+                maxHeight: '80vh',
+                width: 'calc(100vw - 2rem)',
+                maxWidth: '32rem'
+              }}
             >
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
@@ -674,8 +714,13 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
                           e.target.style.height = e.target.scrollHeight + 'px';
                         }}
                         className="instruction-textarea w-full p-3 bg-background border border-border rounded-lg text-card-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none overflow-hidden"
+                        style={{
+                          fontSize: '16px', // Prevents zoom on iOS
+                          transform: 'translateZ(0)', // Hardware acceleration
+                          backfaceVisibility: 'hidden', // Prevents flickering
+                          minHeight: '60px'
+                        }}
                         placeholder="Enter instruction..."
-                        style={{ minHeight: '60px' }}
                       />
                     </div>
 
