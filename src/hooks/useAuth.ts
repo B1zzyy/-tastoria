@@ -27,6 +27,14 @@ export function useAuth() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state change:', { event, hasUser: !!session?.user });
+      
+      // Handle sign out events specifically
+      if (event === 'SIGNED_OUT') {
+        setUser(null)
+        setLoading(false)
+        return
+      }
+      
       if (session?.user) {
         await fetchUserProfile(session.user)
       } else {
@@ -117,29 +125,22 @@ export function useAuth() {
 
   const signOut = async () => {
     try {
-      // Try global signout first
-      const { error } = await supabase.auth.signOut({ scope: 'global' })
+      // Clear user state immediately
+      setUser(null)
+      
+      // Try to sign out from Supabase
+      const { error } = await supabase.auth.signOut()
       
       if (error) {
-        console.warn('Global signout failed, trying local signout:', error)
-        // Fallback to local signout
-        const { error: localError } = await supabase.auth.signOut({ scope: 'local' })
-        
-        if (localError) {
-          console.warn('Local signout also failed:', localError)
-          // Even if signout fails, clear local state
-          setUser(null)
-          return { error: localError }
-        }
+        console.warn('Signout error (but user state cleared):', error)
+        // Even if signout fails, we've already cleared the local state
+        return { error }
       }
       
-      // Clear user state regardless of signout result
-      setUser(null)
       return { error: null }
     } catch (error) {
       console.error('Signout error:', error)
-      // Clear user state even on error
-      setUser(null)
+      // User state is already cleared
       return { error }
     }
   }
