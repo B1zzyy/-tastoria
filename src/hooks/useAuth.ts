@@ -116,11 +116,32 @@ export function useAuth() {
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (!error) {
+    try {
+      // Try global signout first
+      const { error } = await supabase.auth.signOut({ scope: 'global' })
+      
+      if (error) {
+        console.warn('Global signout failed, trying local signout:', error)
+        // Fallback to local signout
+        const { error: localError } = await supabase.auth.signOut({ scope: 'local' })
+        
+        if (localError) {
+          console.warn('Local signout also failed:', localError)
+          // Even if signout fails, clear local state
+          setUser(null)
+          return { error: localError }
+        }
+      }
+      
+      // Clear user state regardless of signout result
       setUser(null)
+      return { error: null }
+    } catch (error) {
+      console.error('Signout error:', error)
+      // Clear user state even on error
+      setUser(null)
+      return { error }
     }
-    return { error }
   }
 
   return {

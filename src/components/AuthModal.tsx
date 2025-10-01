@@ -22,6 +22,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmationMessage, setShowConfirmationMessage] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState<string>('');
   
   const { signUp, signIn } = useAuth();
 
@@ -32,13 +33,27 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
     
     try {
       if (mode === 'signup') {
-        const { error } = await signUp(formData.email, formData.password, formData.name);
+        const { data, error } = await signUp(formData.email, formData.password, formData.name);
+        
+        // Debug: Log the response to understand the structure
+        console.log('Signup response:', { data, error });
         
         if (error) {
           setError(error.message);
           return;
         }
-        // Show confirmation message for signup
+        
+        // Check if this is a duplicate signup (Supabase behavior)
+        // If user exists but email is not confirmed, Supabase will still send confirmation
+        // We need to detect this case
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+          // This indicates the user already exists
+          setError('An account with this email already exists. Please try signing in instead.');
+          return;
+        }
+        
+        // Show confirmation message for new signup
+        setConfirmationEmail(formData.email); // Store email before clearing form
         setShowConfirmationMessage(true);
         setFormData({ name: '', email: '', password: '' });
         setError(null);
@@ -124,7 +139,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
                 Check your email!
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                We&apos;ve sent you a confirmation link at <strong>{formData.email}</strong>. 
+                We&apos;ve sent you a confirmation link at <strong>{confirmationEmail}</strong>. 
                 Please click the link in your email to verify your account.
               </p>
               <p className="text-xs text-muted-foreground">
