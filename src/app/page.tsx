@@ -917,6 +917,7 @@ export default function Home() {
               onEditRecipe={handleEditRecipe}
               onUpdateRecipe={handleUpdateRecipe}
               isEditable={isViewingFromSavedRecipes}
+              savedRecipeId={currentSavedRecipeId}
             />
           </div>
         </div>

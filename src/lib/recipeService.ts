@@ -196,3 +196,55 @@ export async function updateRecipeCustomPreview(
     return { data: null, error }
   }
 }
+
+export async function updateRecipeInstructions(
+  recipeId: string, 
+  instructions: string[]
+): Promise<{ data: SavedRecipe | null, error: unknown }> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return { data: null, error: { message: 'User not authenticated' } }
+    }
+
+    // First get the current recipe data
+    const { data: currentRecipe, error: fetchError } = await supabase
+      .from('saved_recipes')
+      .select('recipe_data')
+      .eq('id', recipeId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (fetchError) {
+      return { data: null, error: fetchError }
+    }
+
+    if (!currentRecipe) {
+      return { data: null, error: { message: 'Recipe not found' } }
+    }
+
+    // Update the instructions in the recipe data
+    const updatedRecipeData = {
+      ...currentRecipe.recipe_data,
+      instructions: instructions
+    }
+
+    // Update the recipe in the database
+    const { data, error } = await supabase
+      .from('saved_recipes')
+      .update({ recipe_data: updatedRecipeData })
+      .eq('id', recipeId)
+      .eq('user_id', user.id)
+      .select()
+      .single()
+
+    if (error) {
+      return { data: null, error }
+    }
+
+    return { data, error: null }
+  } catch (error) {
+    return { data: null, error }
+  }
+}

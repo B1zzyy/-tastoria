@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Recipe } from '@/lib/recipe-parser';
 import { convertIngredients, convertTemperature, type UnitSystem } from '@/lib/unitConverter';
+import { updateRecipeInstructions } from '@/lib/recipeService';
 import UnitToggle from './UnitToggle';
 
 import { Clock, Users, Star, ChefHat, List, BookOpen, Check, Play, ExternalLink, Edit2, X, GripVertical, Plus } from 'lucide-react';
@@ -17,9 +18,10 @@ interface RecipeDisplayProps {
   onEditRecipe?: (recipe: Recipe) => void;
   onUpdateRecipe?: (recipe: Recipe) => void;
   isEditable?: boolean;
+  savedRecipeId?: string | null;
 }
 
-export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, isEditable = false }: RecipeDisplayProps) {
+export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, isEditable = false, savedRecipeId }: RecipeDisplayProps) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [showInstagramPopup, setShowInstagramPopup] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -144,7 +146,7 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
   };
 
   // Handle saving instructions
-  const saveInstructions = () => {
+  const saveInstructions = async () => {
     // Filter out empty instructions and update the recipe
     const filteredInstructions = editableInstructions.filter(instruction => instruction.trim() !== '');
     
@@ -157,6 +159,19 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
     // Call the onUpdateRecipe callback to update the parent component
     if (onUpdateRecipe) {
       onUpdateRecipe(updatedRecipe);
+    }
+    
+    // Save to database if this is a saved recipe
+    if (savedRecipeId && isEditable) {
+      try {
+        const { error } = await updateRecipeInstructions(savedRecipeId, filteredInstructions);
+        if (error) {
+          console.error('Failed to save instructions:', error);
+          // You could show a toast notification here
+        }
+      } catch (error) {
+        console.error('Error saving instructions:', error);
+      }
     }
     
     // Close the modal
