@@ -11,7 +11,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Confetti from './Confetti';
 import RecipeAIChat from './RecipeAIChat';
 import AIChatButton from './AIChatButton';
-import EditRecipeModal from './EditRecipeModal';
 
 interface RecipeDisplayProps {
   recipe: Recipe;
@@ -88,13 +87,6 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
     setEditableInstructions(newInstructions);
   };
 
-  // Handle instruction reordering
-  const moveInstruction = (fromIndex: number, toIndex: number) => {
-    const newInstructions = [...editableInstructions];
-    const [movedInstruction] = newInstructions.splice(fromIndex, 1);
-    newInstructions.splice(toIndex, 0, movedInstruction);
-    setEditableInstructions(newInstructions);
-  };
 
   // Handle adding new instruction
   const addInstruction = (index: number) => {

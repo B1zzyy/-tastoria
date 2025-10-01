@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { X, Clock, User, Folder, ArrowLeft, Instagram, Edit2, Trash2, Pen, Plus } from 'lucide-react';
+import { Clock, User, Folder, ArrowLeft, Instagram, Trash2, Pen, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { deleteSavedRecipe, updateRecipeTitle, updateRecipeCustomPreview } from '@/lib/recipeService';
 import { getUserCollections, getRecipesInCollection, ensureRecipesInAllCollection, cleanupDuplicateRecipes, deleteRecipeFromAllCollections, deleteCollection, updateCollection, createCollection, type Collection, type SavedRecipeWithCollection } from '@/lib/collectionsService';
@@ -390,7 +390,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
     setCreateCollectionName('');
   };
 
-  const handleEditRecipe = (recipe: SavedRecipeWithCollection) => {
+  const _handleEditRecipe = (recipe: SavedRecipeWithCollection) => {
     setSelectedRecipeForEdit(recipe);
     setShowEditModal(true);
   };
@@ -435,7 +435,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
       
       setShowEditModal(false);
       setSelectedRecipeForEdit(null);
-    } catch (_error) {
+    } catch {
       setError('Failed to update recipe');
     } finally {
       setLoading(false);

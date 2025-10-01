@@ -8,7 +8,7 @@ import RecipeForm, { type SourceType } from '@/components/RecipeForm';
 import RecipeDisplay from '@/components/RecipeDisplay';
 import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
-import { isRecipeSaved, deleteSavedRecipe, updateRecipeTitle, updateRecipeCustomPreview } from '@/lib/recipeService';
+import { isRecipeSaved, updateRecipeTitle, updateRecipeCustomPreview } from '@/lib/recipeService';
 import { deleteRecipeFromAllCollections } from '@/lib/collectionsService';
 import SavedRecipes from '@/components/SavedRecipes';
 import CollectionModal from '@/components/CollectionModal';
@@ -136,7 +136,7 @@ export default function Home() {
     }
   };
 
-  const handleEditRecipe = (recipeToEdit: Recipe) => {
+  const handleEditRecipe = (_recipeToEdit: Recipe) => {
     setShowEditModal(true);
   };
 
@@ -279,7 +279,7 @@ export default function Home() {
       const storedRecipe = getStoredRecipe(sharedRecipeId);
       if (storedRecipe) {
         setRecipe(storedRecipe);
-        setCurrentRecipeUrl((storedRecipe as any).url || '');
+        setCurrentRecipeUrl((storedRecipe as Recipe & { url?: string }).url || '');
         setError(null);
         // Clean up the URL
         window.history.replaceState({}, document.title, window.location.pathname);
