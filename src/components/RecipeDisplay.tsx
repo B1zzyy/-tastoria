@@ -91,25 +91,67 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
                 </h1>
               </div>
             </div>
-          ) : recipe.image && recipe.image !== 'instagram-video' ? (
-            <div className="relative aspect-video overflow-hidden">
-              <Image
-                src={recipe.image}
-                alt={recipe.title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 66vw, 66vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-               <div className="absolute bottom-0 left-0 right-0 p-6">
-                 <h1 className="text-2xl md:text-3xl font-bold text-white">
-                   {recipe.title}
-                 </h1>
-               </div>
-            </div>
-          ) : null}
+          ) : (() => {
+            // Check for custom preview first
+            const customPreview = recipe.metadata?.customPreview;
+            
+            if (customPreview?.type === 'emoji') {
+              const gradient = customPreview.gradient || 'from-yellow-400 to-orange-500';
+              return (
+                <div className={`relative aspect-video overflow-hidden bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+                  <div className="text-8xl md:text-9xl">
+                    {customPreview.value}
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <h1 className="text-2xl md:text-3xl font-bold text-white">
+                      {recipe.title}
+                    </h1>
+                  </div>
+                </div>
+              );
+            } else if (customPreview?.type === 'image') {
+              return (
+                <div className="relative aspect-video overflow-hidden">
+                  <Image
+                    src={customPreview.value}
+                    alt={recipe.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 66vw, 66vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <h1 className="text-2xl md:text-3xl font-bold text-white">
+                      {recipe.title}
+                    </h1>
+                  </div>
+                </div>
+              );
+            } else if (recipe.image && recipe.image !== 'instagram-video') {
+              // Fall back to original image
+              return (
+                <div className="relative aspect-video overflow-hidden">
+                  <Image
+                    src={recipe.image}
+                    alt={recipe.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 66vw, 66vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <h1 className="text-2xl md:text-3xl font-bold text-white">
+                      {recipe.title}
+                    </h1>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
           
-          {!recipe.image && (
+          {!recipe.image && !recipe.metadata?.customPreview && (
             <div className="p-6">
               <h1 className="text-2xl md:text-3xl font-bold text-card-foreground">
                 {recipe.title}
