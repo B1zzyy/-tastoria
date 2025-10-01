@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Image as ImageIcon, Smile, Instagram } from 'lucide-react';
+import { X, Image as ImageIcon, Instagram } from 'lucide-react';
 
 interface CustomizePreviewProps {
   isOpen: boolean;

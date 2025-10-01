@@ -27,7 +27,7 @@ export interface Recipe {
   };
 }
 
-export async function parseRecipeWithGemini(content: string, _sourceType: 'web' | 'instagram' = 'web'): Promise<Recipe> {
+export async function parseRecipeWithGemini(content: string, sourceType: 'web' | 'instagram' = 'web'): Promise<Recipe> {
   console.log('🚀 Parsing recipe with single optimized call...');
   
   const combinedPrompt = `You are a recipe extraction and enhancement expert. Extract information from this content and fill in missing fields intelligently.

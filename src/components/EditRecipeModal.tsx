@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Edit2, Image as ImageIcon, Smile, Instagram, Trash2 } from 'lucide-react';
+import { X, Image as ImageIcon, Instagram, Trash2 } from 'lucide-react';
 
 interface EditRecipeModalProps {
   isOpen: boolean;
@@ -178,32 +178,6 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
     }
   }, []);
 
-  const renderPreviewExample = () => {
-    if (selectedPreviewType === 'emoji') {
-      return (
-        <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center text-3xl shadow-lg">
-          {selectedEmoji}
-        </div>
-      );
-    } else if (selectedPreviewType === 'image' && previewUrl) {
-      return (
-        <div className="w-16 h-16 rounded-xl overflow-hidden border border-border">
-          <img
-            src={previewUrl}
-            alt="Preview"
-            className="w-full h-full object-cover"
-            onError={() => setPreviewUrl('')}
-          />
-        </div>
-      );
-    } else {
-      return (
-        <div className="w-16 h-16 bg-gradient-to-br from-gray-700 via-gray-800 to-black rounded-xl flex items-center justify-center">
-          <Instagram className="w-6 h-6 text-white" />
-        </div>
-      );
-    }
-  };
 
   return (
     <AnimatePresence>

@@ -37,7 +37,7 @@ const SplitText = ({
   onLetterAnimationComplete?: () => void;
   shouldAnimate?: boolean;
 }) => {
-  const ref = useRef<any>(null);
+  const ref = useRef<HTMLElement>(null);
   const animationCompletedRef = useRef(false);
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const hasAnimatedRef = useRef(false);
@@ -62,7 +62,7 @@ const SplitText = ({
         // Set all characters to final state immediately
         const chars = el.querySelectorAll('.split-char');
         if (chars.length > 0) {
-          chars.forEach((char: any) => {
+          chars.forEach((char: Element) => {
             gsap.set(char, { opacity: 1, y: 0 });
           });
         } else {
@@ -72,13 +72,13 @@ const SplitText = ({
         return;
       }
 
-      if (el._rbsplitInstance) {
+      if ((el as any)._rbsplitInstance) {
         try {
-          el._rbsplitInstance.revert();
-        } catch (_) {
+          (el as any)._rbsplitInstance.revert();
+        } catch {
           /* noop */
         }
-        el._rbsplitInstance = null;
+        (el as any)._rbsplitInstance = null;
       }
 
       const startPct = (1 - threshold) * 100;
@@ -93,8 +93,8 @@ const SplitText = ({
             : `+=${marginValue}${marginUnit}`;
       const start = `top ${startPct}%${sign}`;
 
-      let targets: any;
-      const assignTargets = (self: any) => {
+      let targets: Element[];
+      const assignTargets = (self: { chars: Element[]; words: Element[]; lines: Element[] }) => {
         if (splitType.includes('chars') && self.chars.length) targets = self.chars;
         if (!targets && splitType.includes('words') && self.words.length) targets = self.words;
         if (!targets && splitType.includes('lines') && self.lines.length) targets = self.lines;
@@ -110,7 +110,7 @@ const SplitText = ({
         charsClass: 'split-char',
         reduceWhiteSpace: false,
         preserveSpaces: true,
-        onSplit: self => {
+        onSplit: (self: { chars: Element[]; words: Element[]; lines: Element[] }) => {
           assignTargets(self);
           const tween = gsap.fromTo(
             targets,
@@ -140,7 +140,7 @@ const SplitText = ({
         }
       });
 
-      el._rbsplitInstance = splitInstance;
+      (el as any)._rbsplitInstance = splitInstance;
 
       return () => {
         ScrollTrigger.getAll().forEach(st => {
@@ -148,10 +148,10 @@ const SplitText = ({
         });
         try {
           splitInstance.revert();
-        } catch (_) {
+        } catch {
           /* noop */
         }
-        el._rbsplitInstance = null;
+        (el as any)._rbsplitInstance = null;
       };
     },
     {
@@ -186,43 +186,43 @@ const SplitText = ({
     switch (tag) {
       case 'h1':
         return (
-          <h1 ref={ref} style={style} className={classes}>
+          <h1 ref={ref as React.RefObject<HTMLHeadingElement>} style={style} className={classes}>
             {text}
           </h1>
         );
       case 'h2':
         return (
-          <h2 ref={ref} style={style} className={classes}>
+          <h2 ref={ref as React.RefObject<HTMLHeadingElement>} style={style} className={classes}>
             {text}
           </h2>
         );
       case 'h3':
         return (
-          <h3 ref={ref} style={style} className={classes}>
+          <h3 ref={ref as React.RefObject<HTMLHeadingElement>} style={style} className={classes}>
             {text}
           </h3>
         );
       case 'h4':
         return (
-          <h4 ref={ref} style={style} className={classes}>
+          <h4 ref={ref as React.RefObject<HTMLHeadingElement>} style={style} className={classes}>
             {text}
           </h4>
         );
       case 'h5':
         return (
-          <h5 ref={ref} style={style} className={classes}>
+          <h5 ref={ref as React.RefObject<HTMLHeadingElement>} style={style} className={classes}>
             {text}
           </h5>
         );
       case 'h6':
         return (
-          <h6 ref={ref} style={style} className={classes}>
+          <h6 ref={ref as React.RefObject<HTMLHeadingElement>} style={style} className={classes}>
             {text}
           </h6>
         );
       default:
         return (
-          <p ref={ref} style={style} className={classes}>
+          <p ref={ref as React.RefObject<HTMLParagraphElement>} style={style} className={classes}>
             {text}
           </p>
         );

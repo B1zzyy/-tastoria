@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { X, Clock, User, Folder, ArrowLeft, Instagram, Edit2, Check, X as XIcon, Trash2 } from 'lucide-react';
+import { X, Clock, User, Folder, ArrowLeft, Instagram, Edit2, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { deleteSavedRecipe, updateRecipeTitle, updateRecipeCustomPreview } from '@/lib/recipeService';
 import { getUserCollections, getRecipesInCollection, ensureRecipesInAllCollection, cleanupDuplicateRecipes, deleteRecipeFromAllCollections, deleteCollection, type Collection, type SavedRecipeWithCollection } from '@/lib/collectionsService';
-import { convertIngredients, convertTemperature, type UnitSystem } from '@/lib/unitConverter';
+import { type UnitSystem } from '@/lib/unitConverter';
 import EditRecipeModal from './EditRecipeModal';
 import type { Recipe } from '@/lib/recipe-parser';
 
@@ -20,7 +20,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
   const [collectionRecipes, setCollectionRecipes] = useState<SavedRecipeWithCollection[]>([]);
-  const [unitSystem, setUnitSystem] = useState<UnitSystem>('metric');
+  // const [unitSystem, setUnitSystem] = useState<UnitSystem>('metric');
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedRecipeForEdit, setSelectedRecipeForEdit] = useState<SavedRecipeWithCollection | null>(null);
   const [loading, setLoading] = useState(false);

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 interface AIChatButtonProps {
   onClick: () => void;

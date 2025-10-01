@@ -18,38 +18,6 @@ import '@/lib/keepAlive'; // Import to initialize keep-alive service
 import TutorialOverlay from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 
-// Maintenance Popup Component
-function MaintenancePopup() {
-  return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8 max-w-md w-full text-center"
-      >
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-white mb-2">Maintenance in Progress</h2>
-          <p className="text-white/80 text-sm leading-relaxed">
-            We&apos;re currently performing maintenance on your favourite app. 
-            Let the little chef do the work for now. Check back in a couple of hours.
-          </p>
-        </div>
-        
-        <div className="w-20 h-20 mx-auto mb-6 rounded-lg overflow-hidden">
-          <img 
-            src="https://media1.tenor.com/m/CgGUXc-LDc4AAAAd/hacker-pc.gif" 
-            alt="Chef working hard" 
-            className="w-full h-full object-cover"
-          />
-        </div>
-        
-        <div className="text-white/60 text-xs">
-          Thank you for your patience while we resolve this issue.
-        </div>
-      </motion.div>
-    </div>
-  );
-}
 
 export default function Home() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
