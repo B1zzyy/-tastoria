@@ -28,6 +28,7 @@ export default function RecipeAIChat({ isOpen, onClose, recipe }: RecipeAIChatPr
   const [isQuickQuestionsDragging, setIsQuickQuestionsDragging] = useState(false);
   const [quickQuestionsStartX, setQuickQuestionsStartX] = useState(0);
   const [quickQuestionsScrollLeft, setQuickQuestionsScrollLeft] = useState(0);
+  const [welcomeAnimationComplete, setWelcomeAnimationComplete] = useState(false);
   const quickQuestionsRef = useRef<HTMLDivElement>(null);
   const [animatedMessages, setAnimatedMessages] = useState<Set<string>>(new Set());
 
@@ -262,7 +263,7 @@ ${recipe.difficulty ? `Difficulty: ${recipe.difficulty}` : ''}
                     {message.sender === 'ai' ? (
                       message.id === 'welcome' ? (
                         <SplitText
-                          key={`${message.id}-${message.content.slice(0, 20)}`}
+                          key="welcome-message"
                           text={message.content}
                           className="text-sm whitespace-pre-wrap"
                           delay={15}
@@ -278,6 +279,7 @@ ${recipe.difficulty ? `Difficulty: ${recipe.difficulty}` : ''}
                           shouldAnimate={!animatedMessages.has(message.id)}
                           onLetterAnimationComplete={() => {
                             setAnimatedMessages(prev => new Set(prev).add(message.id));
+                            setWelcomeAnimationComplete(true);
                           }}
                         />
                       ) : (
@@ -339,59 +341,69 @@ ${recipe.difficulty ? `Difficulty: ${recipe.difficulty}` : ''}
 
             {/* Input */}
             <div className="p-4 border-t border-border bg-card/50 backdrop-blur-md">
-              {/* Quick Questions Pills */}
-              {messages.length === 1 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className="mb-3"
-                >
-                  <div className="relative">
-                    <div 
-                      ref={quickQuestionsRef}
-                      className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 select-none" 
-                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                      onMouseDown={handleQuickQuestionsMouseDown}
-                      onMouseLeave={handleQuickQuestionsMouseLeave}
-                      onMouseUp={handleQuickQuestionsMouseUp}
-                      onMouseMove={handleQuickQuestionsMouseMove}
+              {/* Show input and questions only after welcome animation completes */}
+              {welcomeAnimationComplete && (
+                <>
+                  {/* Quick Questions Pills */}
+                  {messages.length === 1 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="mb-3"
                     >
-                      {quickQuestions.map((question, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setInputValue(question)}
-                          className="flex-shrink-0 px-3 py-1.5 text-xs bg-accent/20 hover:bg-accent/40 text-card-foreground rounded-full border border-white/10 hover:border-primary/30 transition-all duration-200 whitespace-nowrap"
+                      <div className="relative">
+                        <div 
+                          ref={quickQuestionsRef}
+                          className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 select-none" 
+                          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                          onMouseDown={handleQuickQuestionsMouseDown}
+                          onMouseLeave={handleQuickQuestionsMouseLeave}
+                          onMouseUp={handleQuickQuestionsMouseUp}
+                          onMouseMove={handleQuickQuestionsMouseMove}
                         >
-                          {question}
-                        </button>
-                      ))}
-                    </div>
-                    {/* Gradient fade edges */}
-                    <div className="absolute left-0 top-0 bottom-1 w-4 bg-gradient-to-r from-card/50 to-transparent pointer-events-none"></div>
-                    <div className="absolute right-0 top-0 bottom-1 w-4 bg-gradient-to-l from-card/50 to-transparent pointer-events-none"></div>
-                  </div>
-                </motion.div>
-              )}
+                          {quickQuestions.map((question, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setInputValue(question)}
+                              className="flex-shrink-0 px-3 py-1.5 text-xs bg-accent/20 hover:bg-accent/40 text-card-foreground rounded-full border border-white/10 hover:border-primary/30 transition-all duration-200 whitespace-nowrap"
+                            >
+                              {question}
+                            </button>
+                          ))}
+                        </div>
+                        {/* Gradient fade edges */}
+                        <div className="absolute left-0 top-0 bottom-1 w-4 bg-gradient-to-r from-card/50 to-transparent pointer-events-none"></div>
+                        <div className="absolute right-0 top-0 bottom-1 w-4 bg-gradient-to-l from-card/50 to-transparent pointer-events-none"></div>
+                      </div>
+                    </motion.div>
+                  )}
 
-              <div className="flex gap-2 items-center">
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Ask Tasty about this recipe..."
-                  className="flex-1 px-3 py-2 h-10 bg-background border border-border rounded-lg text-card-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  disabled={isLoading}
-                />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={!inputValue.trim() || isLoading}
-                  className="px-3 h-10 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center justify-center"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="flex gap-2 items-center"
+                  >
+                    <input
+                      type="text"
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Ask Tasty about this recipe..."
+                      className="flex-1 px-3 py-2 h-10 bg-background border border-border rounded-lg text-card-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      disabled={isLoading}
+                    />
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={!inputValue.trim() || isLoading}
+                      className="px-3 h-10 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center justify-center"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </motion.div>
+                </>
+              )}
             </div>
           </motion.div>
         </>

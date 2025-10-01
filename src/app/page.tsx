@@ -165,6 +165,7 @@ export default function Home() {
     setIsRecipeCurrentlySaved(true);
     setCurrentSavedRecipeId(recipeId || null);
     setIsViewingFromSavedRecipes(true); // Mark as viewing from saved recipes
+    setShowAIChat(false); // Always close AI chat when opening a saved recipe
     setError(null);
   };
 
