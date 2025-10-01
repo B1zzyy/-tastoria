@@ -448,6 +448,24 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
     if (customPreview?.type === 'emoji') {
       const gradient = customPreview.gradient || 'from-yellow-400 to-orange-500';
       const emojiSize = isThumbnail ? 'text-2xl' : 'text-7xl';
+      
+      // Check if it's a custom gradient (starts with #)
+      if (gradient.startsWith('#')) {
+        const colors = gradient.split('-');
+        if (colors.length === 2) {
+          return (
+            <div 
+              className={`w-full h-full flex items-center justify-center ${emojiSize} shadow-lg`}
+              style={{
+                background: `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`
+              }}
+            >
+              {customPreview.value}
+            </div>
+          );
+        }
+      }
+      
       return (
         <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center ${emojiSize} shadow-lg`}>
           {customPreview.value}
@@ -578,7 +596,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="p-6 overflow-y-auto max-h-[60vh]"
+              className="p-6 overflow-y-auto max-h-[60vh] scrollbar-hide"
             >
               {loading ? (
                 <motion.div 

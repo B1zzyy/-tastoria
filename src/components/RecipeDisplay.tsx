@@ -100,6 +100,42 @@ export default function RecipeDisplay({ recipe, onEditRecipe, isEditable = false
             
             if (customPreview?.type === 'emoji') {
               const gradient = customPreview.gradient || 'from-yellow-400 to-orange-500';
+              
+              // Check if it's a custom gradient (starts with #)
+              if (gradient.startsWith('#')) {
+                const colors = gradient.split('-');
+                if (colors.length === 2) {
+                  return (
+                    <div 
+                      className="relative aspect-video overflow-hidden flex items-center justify-center"
+                      style={{
+                        background: `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`
+                      }}
+                    >
+                      <div className="text-8xl md:text-9xl">
+                        {customPreview.value}
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-6">
+                        <h1 className="text-2xl md:text-3xl font-bold text-white">
+                          {recipe.title}
+                        </h1>
+                      </div>
+                      {/* Edit Button */}
+                      {isEditable && onEditRecipe && (
+                        <button
+                          onClick={() => onEditRecipe(recipe)}
+                          className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
+                          title="Edit recipe"
+                        >
+                          <Edit2 className="w-4 h-4 text-white" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                }
+              }
+              
               return (
                 <div className={`relative aspect-video overflow-hidden bg-gradient-to-br ${gradient} flex items-center justify-center`}>
                   <div className="text-8xl md:text-9xl">
