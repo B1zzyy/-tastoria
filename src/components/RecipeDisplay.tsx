@@ -5,17 +5,20 @@ import { Recipe } from '@/lib/recipe-parser';
 import { convertIngredients, convertTemperature, type UnitSystem } from '@/lib/unitConverter';
 import UnitToggle from './UnitToggle';
 
-import { Clock, Users, Star, ChefHat, List, BookOpen, Check, Play, ExternalLink } from 'lucide-react';
+import { Clock, Users, Star, ChefHat, List, BookOpen, Check, Play, ExternalLink, Edit2 } from 'lucide-react';
 import Image from 'next/image';
 import Confetti from './Confetti';
 import RecipeAIChat from './RecipeAIChat';
 import AIChatButton from './AIChatButton';
+import EditRecipeModal from './EditRecipeModal';
 
 interface RecipeDisplayProps {
   recipe: Recipe;
+  onEditRecipe?: (recipe: Recipe) => void;
+  isEditable?: boolean;
 }
 
-export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
+export default function RecipeDisplay({ recipe, onEditRecipe, isEditable = false }: RecipeDisplayProps) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [showInstagramPopup, setShowInstagramPopup] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -108,6 +111,16 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
                       {recipe.title}
                     </h1>
                   </div>
+                  {/* Edit Button */}
+                  {isEditable && onEditRecipe && (
+                    <button
+                      onClick={() => onEditRecipe(recipe)}
+                      className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
+                      title="Edit recipe"
+                    >
+                      <Edit2 className="w-4 h-4 text-white" />
+                    </button>
+                  )}
                 </div>
               );
             } else if (customPreview?.type === 'image') {
@@ -126,6 +139,16 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
                       {recipe.title}
                     </h1>
                   </div>
+                  {/* Edit Button */}
+                  {isEditable && onEditRecipe && (
+                    <button
+                      onClick={() => onEditRecipe(recipe)}
+                      className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
+                      title="Edit recipe"
+                    >
+                      <Edit2 className="w-4 h-4 text-white" />
+                    </button>
+                  )}
                 </div>
               );
             } else if (recipe.image && recipe.image !== 'instagram-video') {
@@ -145,6 +168,16 @@ export default function RecipeDisplay({ recipe }: RecipeDisplayProps) {
                       {recipe.title}
                     </h1>
                   </div>
+                  {/* Edit Button */}
+                  {isEditable && onEditRecipe && (
+                    <button
+                      onClick={() => onEditRecipe(recipe)}
+                      className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
+                      title="Edit recipe"
+                    >
+                      <Edit2 className="w-4 h-4 text-white" />
+                    </button>
+                  )}
                 </div>
               );
             }

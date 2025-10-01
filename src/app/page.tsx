@@ -8,10 +8,11 @@ import RecipeForm, { type SourceType } from '@/components/RecipeForm';
 import RecipeDisplay from '@/components/RecipeDisplay';
 import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
-import { isRecipeSaved, deleteSavedRecipe } from '@/lib/recipeService';
+import { isRecipeSaved, deleteSavedRecipe, updateRecipeTitle, updateRecipeCustomPreview } from '@/lib/recipeService';
 import { deleteRecipeFromAllCollections } from '@/lib/collectionsService';
 import SavedRecipes from '@/components/SavedRecipes';
 import CollectionModal from '@/components/CollectionModal';
+import EditRecipeModal from '@/components/EditRecipeModal';
 import BlurText from '../components/BlurText';
 import LiquidEther from '../components/LiquidEther';
 import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck, HelpCircle } from 'lucide-react';
@@ -42,6 +43,7 @@ export default function Home() {
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   
   // Use real authentication
   const { user, signOut } = useAuth();
@@ -132,6 +134,10 @@ export default function Home() {
     } finally {
       setShowDeleteConfirmModal(false);
     }
+  };
+
+  const handleEditRecipe = (recipeToEdit: Recipe) => {
+    setShowEditModal(true);
   };
 
   const checkIfRecipeSaved = useCallback(async (url: string) => {
@@ -851,7 +857,11 @@ export default function Home() {
       {recipe && !loading && (
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-6xl mx-auto">
-            <RecipeDisplay recipe={recipe} />
+            <RecipeDisplay 
+              recipe={recipe} 
+              onEditRecipe={handleEditRecipe}
+              isEditable={isViewingFromSavedRecipes}
+            />
           </div>
         </div>
       )}
@@ -880,6 +890,60 @@ export default function Home() {
         onClose={() => setShowSavedRecipes(false)}
         onSelectRecipe={handleSelectSavedRecipe}
       />
+
+      {/* Edit Recipe Modal */}
+      {recipe && (
+        <EditRecipeModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          recipe={{
+            id: currentSavedRecipeId || '',
+            title: recipe.title,
+            image: recipe.image || '',
+            metadata: recipe.metadata
+          }}
+          onSave={async (updates) => {
+            if (!currentSavedRecipeId) return;
+            
+            try {
+              // Update title if changed
+              if (updates.title !== recipe.title) {
+                const { error: titleError } = await updateRecipeTitle(currentSavedRecipeId, updates.title);
+                if (titleError) {
+                  console.error('Failed to update title:', titleError);
+                  return;
+                }
+                // Update local recipe state
+                setRecipe(prev => prev ? { ...prev, title: updates.title } : null);
+              }
+              
+              // Update custom preview if changed
+              const currentPreview = recipe.metadata?.customPreview;
+              const newPreview = updates.customPreview;
+              
+              if (JSON.stringify(currentPreview) !== JSON.stringify(newPreview)) {
+                const { error: previewError } = await updateRecipeCustomPreview(currentSavedRecipeId, newPreview);
+                if (previewError) {
+                  console.error('Failed to update preview:', previewError);
+                  return;
+                }
+                // Update local recipe state
+                setRecipe(prev => prev ? { 
+                  ...prev, 
+                  metadata: { 
+                    ...prev.metadata, 
+                    customPreview: newPreview || undefined
+                  } 
+                } : null);
+              }
+              
+              setShowEditModal(false);
+            } catch (error) {
+              console.error('Error updating recipe:', error);
+            }
+          }}
+        />
+      )}
 
       {/* Auth Modal */}
       <AuthModal

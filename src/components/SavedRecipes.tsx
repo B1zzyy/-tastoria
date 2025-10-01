@@ -239,6 +239,8 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
   useEffect(() => {
     if (isOpen) {
       loadCollections();
+      setView('collections'); // Always start with collections view
+      setSelectedCollection(null); // Reset selected collection
     }
   }, [isOpen]);
 
@@ -671,32 +673,10 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                             {savedRecipe.recipe_data.image === 'instagram-video' ? (
                               <div className="relative w-full h-full">
                                 {renderCustomPreview(savedRecipe)}
-                                {/* Customize button for Instagram recipes */}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditRecipe(savedRecipe);
-                                  }}
-                                  className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                                  title="Edit recipe"
-                                >
-                                  <Edit2 className="w-3 h-3 text-white" />
-                                </button>
                               </div>
                             ) : (
                               <div className="relative w-full h-full">
                                 {renderCustomPreview(savedRecipe)}
-                                {/* Edit button for non-Instagram recipes */}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditRecipe(savedRecipe);
-                                  }}
-                                  className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                                  title="Edit recipe"
-                                >
-                                  <Edit2 className="w-3 h-3 text-white" />
-                                </button>
                               </div>
                             )}
                           </div>

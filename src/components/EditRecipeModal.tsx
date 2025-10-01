@@ -292,13 +292,15 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                 </div>
 
                 {/* Emoji Picker */}
-                {selectedPreviewType === 'emoji' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-4 space-y-4"
-                  >
+                <AnimatePresence>
+                  {selectedPreviewType === 'emoji' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      className="mt-4 space-y-4"
+                    >
                      {/* Emoji Selection */}
                      <div className="p-4 bg-accent/20 rounded-xl border border-white/10">
                        <h4 className="font-medium text-card-foreground mb-3">Choose an emoji:</h4>
@@ -360,17 +362,20 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                         ))}
                       </div>
                     </div>
-                  </motion.div>
-                )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Image Upload */}
-                {selectedPreviewType === 'image' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-4 p-4 bg-accent/20 rounded-xl border border-white/10 space-y-3"
-                  >
+                <AnimatePresence>
+                  {selectedPreviewType === 'image' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      className="mt-4 p-4 bg-accent/20 rounded-xl border border-white/10 space-y-3"
+                    >
                     <div>
                       <label className="block text-sm font-medium text-card-foreground mb-2">
                         Upload Image:
@@ -403,8 +408,9 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                         </div>
                       </div>
                     )}
-                  </motion.div>
-                )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
               </div>
             </div>
