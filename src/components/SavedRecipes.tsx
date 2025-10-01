@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { X, Clock, User, Folder, ArrowLeft, Instagram, Edit2, Trash2 } from 'lucide-react';
+import { X, Clock, User, Folder, ArrowLeft, Instagram, Edit2, Trash2, Pen, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { deleteSavedRecipe, updateRecipeTitle, updateRecipeCustomPreview } from '@/lib/recipeService';
-import { getUserCollections, getRecipesInCollection, ensureRecipesInAllCollection, cleanupDuplicateRecipes, deleteRecipeFromAllCollections, deleteCollection, type Collection, type SavedRecipeWithCollection } from '@/lib/collectionsService';
+import { getUserCollections, getRecipesInCollection, ensureRecipesInAllCollection, cleanupDuplicateRecipes, deleteRecipeFromAllCollections, deleteCollection, updateCollection, createCollection, type Collection, type SavedRecipeWithCollection } from '@/lib/collectionsService';
 // import { type UnitSystem } from '@/lib/unitConverter';
 import EditRecipeModal from './EditRecipeModal';
 import type { Recipe } from '@/lib/recipe-parser';
@@ -15,6 +15,209 @@ interface SavedRecipesProps {
   onClose: () => void;
   onSelectRecipe: (recipe: Recipe, url: string, recipeId?: string) => void;
 }
+
+// Component for collection thumbnail grid
+const CollectionThumbnail = ({ 
+  collection, 
+  onLoadCollectionRecipes, 
+  onConfirmDeleteCollection,
+  renderCustomPreview 
+}: { 
+  collection: Collection;
+  onLoadCollectionRecipes: (collection: Collection) => void;
+  onConfirmDeleteCollection: (collection: Collection) => void;
+  renderCustomPreview: (recipe: SavedRecipeWithCollection, isThumbnail?: boolean) => React.ReactElement;
+}) => {
+  const [thumbnails, setThumbnails] = useState<string[]>([]);
+  const [recipeData, setRecipeData] = useState<SavedRecipeWithCollection[]>([]);
+  const [showDeleteButton, setShowDeleteButton] = useState(false);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [isLongPressing, setIsLongPressing] = useState(false);
+  
+  useEffect(() => {
+    const loadThumbnails = async () => {
+      const { data } = await getRecipesInCollection(collection.id);
+      if (data) {
+        const images = data
+          .filter(recipe => recipe.recipe_data.image)
+          .slice(0, 4)
+          .map(recipe => recipe.recipe_data.image!);
+        setThumbnails(images);
+        setRecipeData(data.slice(0, 4));
+      }
+    };
+    
+    loadThumbnails();
+  }, [collection.id]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+      }
+    };
+  }, [longPressTimer]);
+
+  const handleTouchStart = () => {
+    if (collection.name === 'All Recipes') return; // Don't allow delete for All Recipes
+    
+    setIsLongPressing(true);
+    const timer = setTimeout(() => {
+      setShowDeleteButton(true);
+      setIsLongPressing(false);
+      // Add haptic feedback if available
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 500); // 500ms long press
+    
+    setLongPressTimer(timer);
+  };
+
+  const handleTouchEnd = () => {
+    setIsLongPressing(false);
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const handleMouseDown = () => {
+    if (collection.name === 'All Recipes') return;
+    
+    setIsLongPressing(true);
+    const timer = setTimeout(() => {
+      setShowDeleteButton(true);
+      setIsLongPressing(false);
+    }, 500);
+    
+    setLongPressTimer(timer);
+  };
+
+  const handleMouseUp = () => {
+    setIsLongPressing(false);
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsLongPressing(false);
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  return (
+    <div className="relative group select-none" style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none', WebkitTapHighlightColor: 'transparent' }}>
+      <motion.button
+        onClick={() => {
+          if (!showDeleteButton) {
+            onLoadCollectionRecipes(collection);
+          }
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onContextMenu={(e) => e.preventDefault()}
+        whileTap={{ scale: 0.98 }}
+        className={`group relative bg-background border border-border rounded-2xl overflow-hidden hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30 transition-all duration-300 w-full select-none touch-none ${
+          isLongPressing ? 'scale-95 shadow-lg' : ''
+        }`}
+      >
+        {/* Thumbnail Grid - Fixed aspect ratio */}
+        <div className="aspect-square relative w-full">
+          <div className="grid grid-cols-2 gap-0.5 h-full w-full">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="relative bg-accent aspect-square">
+                {thumbnails[index] ? (
+                  thumbnails[index] === 'instagram-video' ? (
+                    <div className="w-full h-full">
+                      {recipeData[index] ? renderCustomPreview(recipeData[index], true) : (
+                        <div className="w-full h-full bg-gradient-to-br from-gray-700 via-gray-800 to-black flex items-center justify-center">
+                          <Instagram className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-full h-full">
+                      {recipeData[index] ? renderCustomPreview(recipeData[index], true) : (
+                        <Image
+                          src={thumbnails[index]}
+                          alt=""
+                          fill
+                          className="object-cover"
+                        />
+                      )}
+                    </div>
+                  )
+                ) : (
+                  <div className="w-full h-full bg-accent flex items-center justify-center">
+                    <Folder className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Collection Info - Fixed height */}
+        <div className="p-3 sm:p-4 h-20 flex flex-col justify-center select-none">
+          <h3 className="font-semibold text-card-foreground text-left mb-1 group-hover:text-primary transition-colors text-sm sm:text-base line-clamp-1 select-none">
+            {collection.name}
+          </h3>
+          <p className="text-xs sm:text-sm text-muted-foreground text-left select-none">
+            {collection.recipe_count || 0} recipe{(collection.recipe_count || 0) !== 1 ? 's' : ''}
+          </p>
+        </div>
+      </motion.button>
+
+      {/* Tap outside to dismiss delete button (mobile) */}
+      {showDeleteButton && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-10"
+          onClick={() => setShowDeleteButton(false)}
+        />
+      )}
+
+      {/* Delete Button - Show on hover (desktop) or after long press (mobile) */}
+      {collection.name !== 'All Recipes' && (
+        <motion.button
+          onClick={(e) => {
+            e.stopPropagation();
+            onConfirmDeleteCollection(collection);
+          }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          className={`absolute -top-2 -right-2 w-8 h-8 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center shadow-lg transition-opacity duration-200 hover:bg-destructive/90 z-20 ${
+            showDeleteButton ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          }`}
+          title="Delete collection"
+        >
+          <Trash2 className="w-4 h-4" />
+        </motion.button>
+      )}
+
+      {/* Small instruction text for mobile users */}
+      {showDeleteButton && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-black/80 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap z-30 md:hidden"
+        >
+          Tap outside to cancel
+        </motion.div>
+      )}
+    </div>
+  );
+};
 
 export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedRecipesProps) {
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -28,6 +231,10 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
   const [view, setView] = useState<'collections' | 'recipes'>('collections');
   const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createCollectionName, setCreateCollectionName] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -138,6 +345,49 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
     setCollectionToDelete(null);
   };
 
+  const handleRenameCollection = async () => {
+    if (!selectedCollection || !newCollectionName.trim()) return;
+
+    setLoading(true);
+    const { error } = await updateCollection(selectedCollection.id, newCollectionName.trim());
+
+    if (error) {
+      setError(error.message);
+    } else {
+      // Update the collection name in the local state
+      setCollections(prev => prev.map(c => 
+        c.id === selectedCollection.id 
+          ? { ...c, name: newCollectionName.trim() }
+          : c
+      ));
+      
+      // Update the selected collection
+      setSelectedCollection(prev => prev ? { ...prev, name: newCollectionName.trim() } : null);
+    }
+
+    setLoading(false);
+    setShowRenameModal(false);
+    setNewCollectionName('');
+  };
+
+  const handleCreateCollection = async () => {
+    if (!createCollectionName.trim()) return;
+
+    setLoading(true);
+    const { data, error } = await createCollection(createCollectionName.trim());
+
+    if (error) {
+      setError(error.message);
+    } else if (data) {
+      // Add the new collection to the local state
+      setCollections(prev => [...prev, data]);
+    }
+
+    setLoading(false);
+    setShowCreateModal(false);
+    setCreateCollectionName('');
+  };
+
   const handleEditRecipe = (recipe: SavedRecipeWithCollection) => {
     setSelectedRecipeForEdit(recipe);
     setShowEditModal(true);
@@ -223,7 +473,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
           src={recipe.recipe_data.image}
           alt={recipe.title}
           fill
-          className="object-cover group-hover:scale-105 transition-transform duration-300"
+          className="object-cover"
         />
       );
     }
@@ -242,199 +492,6 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
   };
 
 
-  // Component for collection thumbnail grid
-  const CollectionThumbnail = ({ collection }: { collection: Collection }) => {
-    const [thumbnails, setThumbnails] = useState<string[]>([]);
-    const [recipeData, setRecipeData] = useState<SavedRecipeWithCollection[]>([]);
-    const [showDeleteButton, setShowDeleteButton] = useState(false);
-    const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
-    const [isLongPressing, setIsLongPressing] = useState(false);
-    
-    useEffect(() => {
-      const loadThumbnails = async () => {
-        const { data } = await getRecipesInCollection(collection.id);
-        if (data) {
-          const images = data
-            .filter(recipe => recipe.recipe_data.image)
-            .slice(0, 4)
-            .map(recipe => recipe.recipe_data.image!);
-          setThumbnails(images);
-          setRecipeData(data.slice(0, 4));
-        }
-      };
-      
-      loadThumbnails();
-    }, [collection.id]);
-
-    // Cleanup timer on unmount
-    useEffect(() => {
-      return () => {
-        if (longPressTimer) {
-          clearTimeout(longPressTimer);
-        }
-      };
-    }, [longPressTimer]);
-
-    const handleTouchStart = () => {
-      if (collection.name === 'All Recipes') return; // Don't allow delete for All Recipes
-      
-      setIsLongPressing(true);
-      const timer = setTimeout(() => {
-        setShowDeleteButton(true);
-        setIsLongPressing(false);
-        // Add haptic feedback if available
-        if (navigator.vibrate) {
-          navigator.vibrate(50);
-        }
-      }, 500); // 500ms long press
-      
-      setLongPressTimer(timer);
-    };
-
-    const handleTouchEnd = () => {
-      setIsLongPressing(false);
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        setLongPressTimer(null);
-      }
-    };
-
-    const handleMouseDown = () => {
-      if (collection.name === 'All Recipes') return;
-      
-      setIsLongPressing(true);
-      const timer = setTimeout(() => {
-        setShowDeleteButton(true);
-        setIsLongPressing(false);
-      }, 500);
-      
-      setLongPressTimer(timer);
-    };
-
-    const handleMouseUp = () => {
-      setIsLongPressing(false);
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        setLongPressTimer(null);
-      }
-    };
-
-    const handleMouseLeave = () => {
-      setIsLongPressing(false);
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        setLongPressTimer(null);
-      }
-    };
-
-    return (
-      <div className="relative group select-none" style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none', WebkitTapHighlightColor: 'transparent' }}>
-        <motion.button
-          onClick={() => {
-            if (!showDeleteButton) {
-              loadCollectionRecipes(collection);
-            }
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          onContextMenu={(e) => e.preventDefault()}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className={`group relative bg-background border border-border rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300 w-full select-none touch-none ${
-            isLongPressing ? 'scale-95 shadow-lg' : ''
-          }`}
-        >
-          {/* Thumbnail Grid - Fixed aspect ratio */}
-          <div className="aspect-square relative w-full">
-            <div className="grid grid-cols-2 gap-0.5 h-full w-full">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="relative bg-accent aspect-square">
-                  {thumbnails[index] ? (
-                    thumbnails[index] === 'instagram-video' ? (
-                      <div className="w-full h-full">
-                        {recipeData[index] ? renderCustomPreview(recipeData[index], true) : (
-                          <div className="w-full h-full bg-gradient-to-br from-gray-700 via-gray-800 to-black flex items-center justify-center">
-                            <Instagram className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="w-full h-full">
-                        {recipeData[index] ? renderCustomPreview(recipeData[index], true) : (
-                          <Image
-                            src={thumbnails[index]}
-                            alt=""
-                            fill
-                            className="object-cover"
-                          />
-                        )}
-                      </div>
-                    )
-                  ) : (
-                    <div className="w-full h-full bg-accent flex items-center justify-center">
-                      <Folder className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Collection Info - Fixed height */}
-          <div className="p-3 sm:p-4 h-20 flex flex-col justify-center select-none">
-            <h3 className="font-semibold text-card-foreground text-left mb-1 group-hover:text-primary transition-colors text-sm sm:text-base line-clamp-1 select-none">
-              {collection.name}
-            </h3>
-            <p className="text-xs sm:text-sm text-muted-foreground text-left select-none">
-              {collection.recipe_count || 0} recipe{(collection.recipe_count || 0) !== 1 ? 's' : ''}
-            </p>
-          </div>
-        </motion.button>
-
-        {/* Tap outside to dismiss delete button (mobile) */}
-        {showDeleteButton && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="fixed inset-0 z-10"
-            onClick={() => setShowDeleteButton(false)}
-          />
-        )}
-
-        {/* Delete Button - Show on hover (desktop) or after long press (mobile) */}
-        {collection.name !== 'All Recipes' && (
-          <motion.button
-            onClick={(e) => {
-              e.stopPropagation();
-              confirmDeleteCollection(collection);
-            }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className={`absolute -top-2 -right-2 w-8 h-8 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center shadow-lg transition-opacity duration-200 hover:bg-destructive/90 z-20 ${
-              showDeleteButton ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-            }`}
-            title="Delete collection"
-          >
-            <Trash2 className="w-4 h-4" />
-          </motion.button>
-        )}
-
-        {/* Small instruction text for mobile users */}
-        {showDeleteButton && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-black/80 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap z-30 md:hidden"
-          >
-            Tap outside to cancel
-          </motion.div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <AnimatePresence>
@@ -485,14 +542,33 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                     {view === 'collections' ? 'Collections' : selectedCollection?.name}
                   </h2>
                 </div>
-              <motion.button
-                onClick={onClose}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className="p-2 text-muted-foreground hover:text-card-foreground rounded-lg hover:bg-accent transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </motion.button>
+              {view === 'recipes' ? (
+                <motion.button
+                  onClick={() => {
+                    setNewCollectionName(selectedCollection?.name || '');
+                    setShowRenameModal(true);
+                  }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="p-2 text-muted-foreground hover:text-card-foreground rounded-lg hover:bg-accent transition-colors"
+                  title="Rename collection"
+                >
+                  <Pen className="w-5 h-5" />
+                </motion.button>
+              ) : (
+                <motion.button
+                  onClick={() => {
+                    setCreateCollectionName('');
+                    setShowCreateModal(true);
+                  }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="p-2 text-muted-foreground hover:text-card-foreground rounded-lg hover:bg-accent transition-colors"
+                  title="Create new collection"
+                >
+                  <Plus className="w-5 h-5" />
+                </motion.button>
+              )}
             </motion.div>
 
             {/* Content */}
@@ -548,7 +624,12 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                           damping: 25
                         }}
                       >
-                        <CollectionThumbnail collection={collection} />
+                        <CollectionThumbnail 
+                          collection={collection}
+                          onLoadCollectionRecipes={loadCollectionRecipes}
+                          onConfirmDeleteCollection={confirmDeleteCollection}
+                          renderCustomPreview={renderCustomPreview}
+                        />
                       </motion.div>
                     ))}
                   </motion.div>
@@ -581,11 +662,8 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                           stiffness: 300,
                           damping: 25
                         }}
-                        whileHover={{ 
-                          y: -5, 
-                          boxShadow: "0 10px 25px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)" 
-                        }}
-                        className="bg-background border border-border rounded-lg overflow-hidden transition-shadow group"
+                        onClick={() => handleSelectRecipe(savedRecipe)}
+                        className="bg-background border border-border rounded-lg overflow-hidden hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30 transition-all duration-300 group cursor-pointer"
                       >
                         {/* Recipe Image */}
                         {savedRecipe.recipe_data.image && (
@@ -625,40 +703,27 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                         )}
                         
                         <div className="p-4">
-                          <div className="flex items-stretch justify-between gap-3 min-h-[60px]">
-                            {/* Left side - Title and meta info */}
-                            <div className="flex-1 min-w-0 flex flex-col justify-between">
-                              {/* Title */}
-                              <h3 className="font-semibold text-card-foreground line-clamp-2">
-                                {savedRecipe.title}
-                              </h3>
-                              
-                              {/* Meta info */}
-                              <div className="flex items-center gap-3 text-xs md:text-[11px] text-muted-foreground whitespace-nowrap">
-                                {savedRecipe.recipe_data.totalTime && (
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    {savedRecipe.recipe_data.totalTime}
-                                  </div>
-                                )}
-                                {savedRecipe.recipe_data.servings && (
-                                  <div className="flex items-center gap-1">
-                                    <User className="w-3 h-3" />
-                                    {savedRecipe.recipe_data.servings}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                          <div className="flex flex-col gap-2">
+                            {/* Title */}
+                            <h3 className="font-semibold text-card-foreground line-clamp-2">
+                              {savedRecipe.title}
+                            </h3>
                             
-                            {/* Right side - View button (full height) */}
-                            <motion.button
-                              onClick={() => handleSelectRecipe(savedRecipe)}
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              className="flex-shrink-0 px-6 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center self-stretch"
-                            >
-                              View
-                            </motion.button>
+                            {/* Meta info */}
+                            <div className="flex items-center gap-3 text-xs md:text-[11px] text-muted-foreground">
+                              {savedRecipe.recipe_data.totalTime && (
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {savedRecipe.recipe_data.totalTime}
+                                </div>
+                              )}
+                              {savedRecipe.recipe_data.servings && (
+                                <div className="flex items-center gap-1">
+                                  <User className="w-3 h-3" />
+                                  {savedRecipe.recipe_data.servings}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </motion.div>
@@ -723,6 +788,144 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                   <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                 ) : (
                   'Delete'
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Rename Collection Modal */}
+      {showRenameModal && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setShowRenameModal(false);
+            setNewCollectionName('');
+          }}
+        >
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-card rounded-2xl shadow-2xl border border-border p-6 max-w-md w-full"
+          >
+            <h3 className="text-xl font-semibold text-card-foreground mb-4">Rename collection</h3>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                Collection name
+              </label>
+              <input
+                type="text"
+                value={newCollectionName}
+                onChange={(e) => setNewCollectionName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleRenameCollection();
+                  } else if (e.key === 'Escape') {
+                    setShowRenameModal(false);
+                    setNewCollectionName('');
+                  }
+                }}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                placeholder="Enter collection name"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowRenameModal(false);
+                  setNewCollectionName('');
+                }}
+                className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors text-card-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRenameCollection}
+                disabled={loading || !newCollectionName.trim()}
+                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  'Save'
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Create Collection Modal */}
+      {showCreateModal && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setShowCreateModal(false);
+            setCreateCollectionName('');
+          }}
+        >
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-card rounded-2xl shadow-2xl border border-border p-6 max-w-md w-full"
+          >
+            <h3 className="text-xl font-semibold text-card-foreground mb-4">Create new collection</h3>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                Collection name
+              </label>
+              <input
+                type="text"
+                value={createCollectionName}
+                onChange={(e) => setCreateCollectionName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleCreateCollection();
+                  } else if (e.key === 'Escape') {
+                    setShowCreateModal(false);
+                    setCreateCollectionName('');
+                  }
+                }}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-card-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                placeholder="Enter collection name"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setCreateCollectionName('');
+                }}
+                className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors text-card-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateCollection}
+                disabled={loading || !createCollectionName.trim()}
+                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  'Create'
                 )}
               </button>
             </div>
