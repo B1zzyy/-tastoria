@@ -799,8 +799,8 @@ export default function Home() {
               <div className="px-2 pointer-events-auto">
                 <RecipeForm onSubmit={handleParseRecipe} loading={loading} />
                 
-                {/* Sample Recipe Button */}
-                <div className="mt-4 flex justify-center">
+                {/* Sample Recipe Button - commented out for now */}
+                {/* <div className="mt-4 flex justify-center">
                   <motion.button
                     onClick={loadSampleRecipe}
                     whileHover={{ scale: 1.05 }}
@@ -810,7 +810,7 @@ export default function Home() {
                     <Cookie className="w-4 h-4" />
                     <span className="text-sm font-medium">Try Sample Recipe</span>
                   </motion.button>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>
@@ -853,8 +853,8 @@ export default function Home() {
               <div className="mb-8 pointer-events-auto">
                 <RecipeForm onSubmit={handleParseRecipe} loading={loading} />
                 
-                {/* Sample Recipe Button */}
-                <div className="mt-4 flex justify-center">
+                {/* Sample Recipe Button - commented out for now */}
+                {/* <div className="mt-4 flex justify-center">
                   <motion.button
                     onClick={loadSampleRecipe}
                     whileHover={{ scale: 1.05 }}
@@ -864,7 +864,7 @@ export default function Home() {
                     <Cookie className="w-4 h-4" />
                     <span className="text-sm font-medium">Try Sample Recipe</span>
                   </motion.button>
-                </div>
+                </div> */}
               </div>
 
               {/* Recipe Preview Mockup */}

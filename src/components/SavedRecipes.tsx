@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
-import { Clock, User, Folder, ArrowLeft, Instagram, Trash2, Pen, Plus, Pin, PinOff } from 'lucide-react';
+import { Clock, User, Folder, ArrowLeft, Instagram, Trash2, Pen, Plus, Pin, PinOff, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { deleteSavedRecipe, updateRecipeTitle, updateRecipeCustomPreview, togglePinRecipe } from '@/lib/recipeService';
+import { deleteSavedRecipe, updateRecipeTitle, updateRecipeCustomPreview, togglePinRecipe, getSavedRecipes } from '@/lib/recipeService';
 import { getUserCollections, getRecipesInCollection, ensureRecipesInAllCollection, cleanupDuplicateRecipes, deleteRecipeFromAllCollections, deleteCollection, updateCollection, createCollection, type Collection, type SavedRecipeWithCollection } from '@/lib/collectionsService';
 // import { type UnitSystem } from '@/lib/unitConverter';
 import EditRecipeModal from './EditRecipeModal';
@@ -224,26 +224,68 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
   const [collectionRecipes, setCollectionRecipes] = useState<SavedRecipeWithCollection[]>([]);
+  const [allRecipes, setAllRecipes] = useState<SavedRecipeWithCollection[]>([]);
   // const [unitSystem, setUnitSystem] = useState<UnitSystem>('metric');
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedRecipeForEdit, setSelectedRecipeForEdit] = useState<SavedRecipeWithCollection | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<'collections' | 'recipes'>('collections');
+  const [view, setView] = useState<'collections' | 'recipes' | 'all-recipes'>('all-recipes');
   const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createCollectionName, setCreateCollectionName] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Filter recipes based on search query
+  const filteredRecipes = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return allRecipes;
+    }
+    
+    const query = searchQuery.toLowerCase().trim();
+    return allRecipes.filter(recipe => 
+      recipe.title.toLowerCase().includes(query) ||
+      recipe.recipe_data.ingredients?.some(ingredient => 
+        ingredient.toLowerCase().includes(query)
+      ) ||
+      recipe.recipe_data.instructions?.some(instruction => 
+        instruction.toLowerCase().includes(query)
+      ) ||
+      recipe.recipe_data.description?.toLowerCase().includes(query) ||
+      recipe.recipe_data.cuisine?.toLowerCase().includes(query) ||
+      recipe.recipe_data.category?.toLowerCase().includes(query) ||
+      recipe.recipe_data.tags?.some(tag => 
+        tag.toLowerCase().includes(query)
+      )
+    );
+  }, [allRecipes, searchQuery]);
 
   useEffect(() => {
     if (isOpen) {
       loadCollections();
-      setView('collections'); // Always start with collections view
+      loadAllRecipes();
+      setView('all-recipes'); // Always start with all recipes view
       setSelectedCollection(null); // Reset selected collection
+      setShowSearch(false); // Always start with search bar retracted
+      setSearchQuery(''); // Clear any search query
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   const loadCollections = async () => {
     setLoading(true);
@@ -278,6 +320,22 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
       setError(error instanceof Error ? error.message : 'Failed to load recipes');
     } else {
       setCollectionRecipes(data || []);
+    }
+    
+    setLoading(false);
+  };
+
+  const loadAllRecipes = async () => {
+    setLoading(true);
+    setError(null);
+    setView('all-recipes');
+    
+    const { data, error } = await getSavedRecipes();
+    
+    if (error) {
+      setError(error instanceof Error ? error.message : 'Failed to load recipes');
+    } else {
+      setAllRecipes(data || []);
     }
     
     setLoading(false);
@@ -575,7 +633,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="flex items-center justify-between p-6 border-b border-border"
+              className="relative flex items-center justify-between p-6 border-b border-border"
             >
                 <div className="flex items-center gap-3">
                   {view === 'recipes' && (
@@ -588,9 +646,34 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                       <ArrowLeft className="w-5 h-5" />
                     </motion.button>
                   )}
-                  <h2 className="text-2xl font-bold text-card-foreground">
-                    {view === 'collections' ? 'Collections' : selectedCollection?.name}
-                  </h2>
+                   {view === 'recipes' ? (
+                     <h2 className="text-lg md:text-2xl font-bold text-card-foreground">
+                       {selectedCollection?.name}
+                     </h2>
+                   ) : (
+                       <div className="flex items-center gap-4 md:gap-8">
+                          <button
+                            onClick={loadAllRecipes}
+                            className={`text-base md:text-xl font-bold transition-colors ${
+                              view === 'all-recipes' 
+                                ? 'text-card-foreground border-b-2 border-card-foreground pb-1' 
+                                : 'text-muted-foreground hover:text-card-foreground'
+                            }`}
+                          >
+                            All recipes
+                          </button>
+                          <button
+                            onClick={() => setView('collections')}
+                            className={`text-base md:text-xl font-bold transition-colors ${
+                              view === 'collections' 
+                                ? 'text-card-foreground border-b-2 border-card-foreground pb-1' 
+                                : 'text-muted-foreground hover:text-card-foreground'
+                            }`}
+                          >
+                            Collections
+                          </button>
+                        </div>
+                   )}
                 </div>
               {view === 'recipes' ? (
                 <motion.button
@@ -605,6 +688,74 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                 >
                   <Pen className="w-5 h-5" />
                 </motion.button>
+              ) : view === 'all-recipes' ? (
+                  <motion.div
+                    animate={{
+                      width: showSearch ? (isMobile ? 160 : 280) : 40,
+                      backgroundColor: showSearch ? '#2a2a2a' : 'rgba(0, 0, 0, 0)',
+                      borderColor: showSearch ? '#404040' : 'rgba(0, 0, 0, 0)',
+                      borderRadius: showSearch ? 20 : 8,
+                      paddingLeft: showSearch ? 16 : 8,
+                      paddingRight: showSearch ? 16 : 8,
+                      paddingTop: showSearch ? 8 : 8,
+                      paddingBottom: showSearch ? 8 : 8,
+                    }}
+                    transition={{
+                      duration: 0.3,
+                      ease: [0.4, 0, 0.2, 1],
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 30
+                    }}
+                    className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center overflow-hidden"
+                  >
+                  <AnimatePresence mode="wait">
+                    {showSearch ? (
+                      <motion.div
+                        key="search-content"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        transition={{ duration: 0.2, delay: 0.1 }}
+                        className="flex items-center w-full"
+                      >
+                        <Search className="w-4 h-4 text-muted-foreground mr-2 flex-shrink-0" />
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Search recipes..."
+                          className="bg-transparent border-none outline-none text-card-foreground placeholder:text-muted-foreground flex-1 min-w-0"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => {
+                            setShowSearch(false);
+                            setSearchQuery('');
+                          }}
+                          className="ml-2 p-1 text-muted-foreground hover:text-card-foreground transition-colors flex-shrink-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </motion.div>
+                    ) : (
+                      <motion.button
+                        key="search-icon"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        onClick={() => setShowSearch(true)}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="text-muted-foreground hover:text-card-foreground transition-colors"
+                        title="Search recipes"
+                      >
+                        <Search className="w-5 h-5" />
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
               ) : (
                 <motion.button
                   onClick={() => {
@@ -680,6 +831,91 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                           onConfirmDeleteCollection={confirmDeleteCollection}
                           renderCustomPreview={renderCustomPreview}
                         />
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )
+              ) : view === 'all-recipes' ? (
+                // All Recipes View
+                allRecipes.length === 0 ? (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center py-12"
+                  >
+                    <p className="text-muted-foreground">No recipes saved yet.</p>
+                  </motion.div>
+                ) : filteredRecipes.length === 0 && searchQuery ? (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center py-12"
+                  >
+                    <Search className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No recipes found for "{searchQuery}"</p>
+                    <p className="text-sm text-muted-foreground mt-2">Try searching for ingredients, recipe names, or cuisines</p>
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                  >
+                    {filteredRecipes.map((savedRecipe: SavedRecipeWithCollection, index: number) => (
+                      <motion.div
+                        key={savedRecipe.id}
+                        initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ 
+                          delay: 0.4 + index * 0.1,
+                          type: "spring",
+                          stiffness: 300,
+                          damping: 25
+                        }}
+                      >
+                        {/* Simple Recipe Card - No Pin Functionality */}
+                        <div
+                          onClick={() => handleSelectRecipe(savedRecipe)}
+                          className="bg-background border border-border rounded-lg overflow-hidden hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30 transition-all duration-300 group cursor-pointer relative"
+                        >
+                          {/* Recipe Image */}
+                          {savedRecipe.recipe_data.image && (
+                            <div className="aspect-video relative overflow-hidden">
+                              {savedRecipe.recipe_data.image === 'instagram-video' ? (
+                                <div className="relative w-full h-full">
+                                  {renderCustomPreview(savedRecipe)}
+                                </div>
+                              ) : (
+                                <div className="relative w-full h-full">
+                                  {renderCustomPreview(savedRecipe)}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Recipe Info */}
+                          <div className="p-4">
+                            <h3 className="font-semibold text-card-foreground mb-2 line-clamp-2">
+                              {savedRecipe.title}
+                            </h3>
+                            {/* Meta info */}
+                            <div className="flex items-center gap-3 text-xs md:text-[11px] text-muted-foreground">
+                              {savedRecipe.recipe_data.totalTime && (
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {savedRecipe.recipe_data.totalTime}
+                                </div>
+                              )}
+                              {savedRecipe.recipe_data.servings && (
+                                <div className="flex items-center gap-1">
+                                  <User className="w-3 h-3" />
+                                  {savedRecipe.recipe_data.servings}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </motion.div>
                     ))}
                   </motion.div>
