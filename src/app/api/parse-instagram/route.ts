@@ -577,7 +577,7 @@ export async function POST(request: NextRequest) {
       console.log('📝 Caption length:', postData.caption.length);
       console.log('📝 Caption preview:', postData.caption.substring(0, 200));
       
-      const recipe = await parseRecipeWithGemini(postData.caption, 'instagram');
+      const recipe = await parseRecipeWithGemini(postData.caption);
       
       if (!recipe) {
         console.log('❌ Gemini failed to parse recipe from caption - trying fallback extraction...');

@@ -136,9 +136,9 @@ export default function Home() {
     }
   };
 
-  const handleEditRecipe = () => {
-    setShowEditModal(true);
-  };
+  // const handleEditRecipe = () => {
+  //   setShowEditModal(true);
+  // };
 
   const handleUpdateRecipe = (updatedRecipe: Recipe) => {
     // Update the current recipe with the edited data
