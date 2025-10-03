@@ -22,6 +22,7 @@ import { useTutorial } from '@/hooks/useTutorial';
 import AIChatButton from '@/components/AIChatButton';
 import RecipeAIChat from '@/components/RecipeAIChat';
 import { sampleChocolateChipCookies } from '@/lib/sampleRecipes';
+import { generateShortRecipeShareUrl, getSharedRecipeFromUrl } from '@/lib/urlSharing';
 
 
 export default function Home() {
@@ -254,21 +255,6 @@ export default function Home() {
   }, [checkIfRecipeSaved, user, setShowAuthModal]);
 
   // Recipe storage functions
-  const storeRecipe = (recipe: Recipe) => {
-    const id = `recipe_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const recipeData = { ...recipe, id, url: currentRecipeUrl };
-    sessionStorage.setItem(`recipe_${id}`, JSON.stringify(recipeData));
-    return id;
-  };
-
-  const getStoredRecipe = (id: string): Recipe | null => {
-    try {
-      const stored = sessionStorage.getItem(`recipe_${id}`);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  };
 
   const loadSampleRecipe = useCallback(() => {
     setRecipe(sampleChocolateChipCookies);
@@ -280,15 +266,15 @@ export default function Home() {
   // Handle shared recipe URLs
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const sharedRecipeUrl = urlParams.get('recipe');
-    const sharedRecipeId = urlParams.get('id');
+    const sharedRecipeData = urlParams.get('recipe');
+    const sharedRecipeUrl = urlParams.get('url'); // Legacy support for old URL format
     
-    if (sharedRecipeId && !recipe) {
-      // Load pre-parsed recipe from storage
-      const storedRecipe = getStoredRecipe(sharedRecipeId);
-      if (storedRecipe) {
-        setRecipe(storedRecipe);
-        setCurrentRecipeUrl((storedRecipe as Recipe & { url?: string }).url || '');
+    if (sharedRecipeData && !recipe) {
+      // Load recipe from URL-encoded data
+      const decodedRecipe = getSharedRecipeFromUrl();
+      if (decodedRecipe) {
+        setRecipe(decodedRecipe);
+        setCurrentRecipeUrl(''); // Reset URL since we're loading from shared data
         setError(null);
         // Clean up the URL
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -297,7 +283,7 @@ export default function Home() {
     }
     
     if (sharedRecipeUrl && !recipe) {
-      // Auto-parse the shared recipe (fallback for old links)
+      // Auto-parse the shared recipe (legacy support for old links)
       const decodedUrl = decodeURIComponent(sharedRecipeUrl);
       const isInstagram = decodedUrl.includes('instagram.com/');
       handleParseRecipe(decodedUrl, isInstagram ? 'instagram' : 'web');
@@ -485,9 +471,8 @@ export default function Home() {
                   onClick={async () => {
                     try {
                       if (recipe) {
-                        // Store the recipe and get a shareable ID
-                        const recipeId = storeRecipe(recipe);
-                        const shareUrl = `${window.location.origin}?id=${recipeId}`;
+                        // Generate shortened shareable URL with recipe data encoded
+                        const shareUrl = await generateShortRecipeShareUrl(recipe);
                         
                         if (navigator.share) {
                           await navigator.share({
@@ -506,8 +491,7 @@ export default function Home() {
                       // Fallback: try to copy to clipboard
                       try {
                         if (recipe) {
-                          const recipeId = storeRecipe(recipe);
-                          const shareUrl = `${window.location.origin}?id=${recipeId}`;
+                          const shareUrl = await generateShortRecipeShareUrl(recipe);
                           await navigator.clipboard.writeText(shareUrl);
                         }
                       } catch (clipboardError) {
@@ -593,9 +577,8 @@ export default function Home() {
                     onClick={async () => {
                       try {
                         if (recipe) {
-                          // Store the recipe and get a shareable ID
-                          const recipeId = storeRecipe(recipe);
-                          const shareUrl = `${window.location.origin}?id=${recipeId}`;
+                          // Generate shortened shareable URL with recipe data encoded
+                          const shareUrl = await generateShortRecipeShareUrl(recipe);
                           
                           if (navigator.share) {
                             await navigator.share({
@@ -614,8 +597,7 @@ export default function Home() {
                         // Fallback: try to copy to clipboard
                         try {
                           if (recipe) {
-                            const recipeId = storeRecipe(recipe);
-                            const shareUrl = `${window.location.origin}?id=${recipeId}`;
+                            const shareUrl = await generateShortRecipeShareUrl(recipe);
                             await navigator.clipboard.writeText(shareUrl);
                           }
                         } catch (clipboardError) {
