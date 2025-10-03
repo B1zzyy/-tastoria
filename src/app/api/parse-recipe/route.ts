@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
     console.log('🤖 Sending content to Gemini for parsing...');
     
     // Use Gemini to parse the recipe from the webpage content
-    const recipe = await parseRecipeWithGemini(content, url);
+    const recipe = await parseRecipeWithGemini(content);
     
     if (!recipe) {
       return NextResponse.json(
