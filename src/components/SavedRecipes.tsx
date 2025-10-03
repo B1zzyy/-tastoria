@@ -762,9 +762,9 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
               </h3>
             </div>
             
-            <p className="text-muted-foreground mb-6">
-              Are you sure you want to delete &quot;<strong>{collectionToDelete.name}</strong>&quot;? 
-              All recipes in this collection will be moved to &quot;All Recipes&quot;. This action cannot be undone.
+            <p className="text-muted-foreground mb-6 text-center">
+              Are you sure you want to delete &quot;<strong>{collectionToDelete.name}</strong>&quot;?<br />
+              This action cannot be undone.
             </p>
             
             <div className="flex gap-3">

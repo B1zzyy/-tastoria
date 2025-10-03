@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Image as ImageIcon, Instagram, Trash2 } from 'lucide-react';
+import { X, Image as ImageIcon, Instagram, Trash2, GripVertical, Plus } from 'lucide-react';
 
 interface EditRecipeModalProps {
   isOpen: boolean;
@@ -11,6 +11,8 @@ interface EditRecipeModalProps {
     id: string;
     title: string;
     image: string;
+    ingredients: string[];
+    instructions: string[];
     metadata?: {
       customPreview?: {
         type: 'emoji' | 'image';
@@ -21,6 +23,8 @@ interface EditRecipeModalProps {
   };
   onSave: (updates: {
     title: string;
+    ingredients: string[];
+    instructions: string[];
     customPreview: { type: 'emoji' | 'image'; value: string; gradient?: string } | null;
   }) => void;
   onDelete?: () => void;
@@ -59,9 +63,6 @@ const GRADIENT_OPTIONS = [
   { name: 'Sky', gradient: 'from-sky-400 to-blue-500' },
   { name: 'Lime', gradient: 'from-lime-400 to-green-500' },
   { name: 'Violet', gradient: 'from-violet-400 to-purple-500' },
-  { name: 'Amber', gradient: 'from-amber-400 to-yellow-500' },
-  { name: 'Teal', gradient: 'from-teal-400 to-cyan-500' },
-  { name: 'Indigo', gradient: 'from-indigo-400 to-blue-500' },
   { name: 'Custom', gradient: 'custom' }
 ];
 
@@ -83,6 +84,38 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  
+  // Instructions editing state
+  const [editableInstructions, setEditableInstructions] = useState<string[]>([]);
+  const [instructionKeys, setInstructionKeys] = useState<string[]>([]);
+  
+  // Ingredients editing state
+  const [editableIngredients, setEditableIngredients] = useState<string[]>([]);
+  const [ingredientKeys, setIngredientKeys] = useState<string[]>([]);
+  
+  // Drag and drop state
+  const [activeInstruction, setActiveInstruction] = useState<string | null>(null);
+  
+  // Memoized keys to ensure they're always valid
+  const memoizedIngredientKeys = useMemo(() => {
+    return editableIngredients.map((_, index) => {
+      const existingKey = ingredientKeys[index];
+      if (existingKey && existingKey !== '' && existingKey.trim() !== '') {
+        return existingKey;
+      }
+      return `ingredient-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${Math.random().toString(36).substr(2, 9)}`;
+    });
+  }, [editableIngredients, ingredientKeys]);
+  
+  const memoizedInstructionKeys = useMemo(() => {
+    return editableInstructions.map((_, index) => {
+      const existingKey = instructionKeys[index];
+      if (existingKey && existingKey !== '' && existingKey.trim() !== '') {
+        return existingKey;
+      }
+      return `instruction-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${Math.random().toString(36).substr(2, 9)}`;
+    });
+  }, [editableInstructions, instructionKeys]);
 
   // Reset state when recipe changes
   useEffect(() => {
@@ -114,7 +147,70 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
       setImageUrl('');
       setPreviewUrl('');
     }
+    
+    // Initialize instructions
+    const instructions = [...recipe.instructions];
+    setEditableInstructions(instructions);
+    const instructionKeysArray = instructions.map((_, index) => `instruction-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${Math.random().toString(36).substr(2, 9)}`);
+    setInstructionKeys(instructionKeysArray);
+    
+    
+    // Initialize ingredients
+    const ingredients = [...recipe.ingredients];
+    setEditableIngredients(ingredients);
+    const ingredientKeysArray = ingredients.map((_, index) => `ingredient-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${Math.random().toString(36).substr(2, 9)}`);
+    setIngredientKeys(ingredientKeysArray);
+    
   }, [recipe]);
+
+
+  // Auto-resize textareas when modal opens or content changes
+  useEffect(() => {
+    if (isOpen) {
+      // Small delay to ensure DOM is rendered
+      setTimeout(() => {
+        const textareas = document.querySelectorAll('.instruction-textarea, .ingredient-textarea');
+        textareas.forEach((textarea) => {
+          const element = textarea as HTMLTextAreaElement;
+          element.style.height = '1px';
+          element.style.height = element.scrollHeight + 'px';
+        });
+      }, 100);
+    }
+  }, [isOpen, editableInstructions, editableIngredients]);
+
+  // Additional useEffect to ensure ingredients resize properly when content changes
+  useEffect(() => {
+    if (isOpen && editableIngredients.length > 0) {
+      setTimeout(() => {
+        const ingredientTextareas = document.querySelectorAll('.ingredient-textarea');
+        ingredientTextareas.forEach((textarea) => {
+          const element = textarea as HTMLTextAreaElement;
+          element.style.height = '1px';
+          element.style.height = element.scrollHeight + 'px';
+        });
+      }, 50);
+    }
+  }, [isOpen, editableIngredients]);
+
+  // Force resize on initial render
+  useEffect(() => {
+    if (isOpen) {
+      const resizeTextareas = () => {
+        const ingredientTextareas = document.querySelectorAll('.ingredient-textarea');
+        ingredientTextareas.forEach((textarea) => {
+          const element = textarea as HTMLTextAreaElement;
+          element.style.height = '1px';
+          element.style.height = element.scrollHeight + 'px';
+        });
+      };
+      
+      // Multiple attempts to ensure proper sizing
+      setTimeout(resizeTextareas, 0);
+      setTimeout(resizeTextareas, 100);
+      setTimeout(resizeTextareas, 300);
+    }
+  }, [isOpen]);
 
   // Get current gradient value (either predefined or custom)
   const getCurrentGradient = () => {
@@ -122,6 +218,213 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
       return `${customGradientStart}-${customGradientEnd}`;
     }
     return selectedGradient;
+  };
+
+  // Handle instruction text changes
+  const updateInstruction = (index: number, text: string) => {
+    const newInstructions = [...editableInstructions];
+    const newKeys = [...instructionKeys];
+    
+    // Auto-delete step if text is empty and there's more than one step
+    if (text.trim() === '' && newInstructions.length > 1) {
+      newInstructions.splice(index, 1);
+      newKeys.splice(index, 1);
+    } else {
+      newInstructions[index] = text;
+    }
+    
+    // Ensure the key exists and is unique - regenerate if empty
+    if (!newKeys[index] || newKeys[index] === '' || newKeys[index].trim() === '') {
+      newKeys[index] = `instruction-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+    
+    setEditableInstructions(newInstructions);
+    setInstructionKeys(newKeys);
+  };
+
+  // Handle adding new instruction
+  const addInstruction = (index: number) => {
+    const newInstructions = [...editableInstructions];
+    const newKeys = [...instructionKeys];
+    const newKey = `instruction-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    newInstructions.splice(index + 1, 0, '');
+    newKeys.splice(index + 1, 0, newKey);
+    
+    setEditableInstructions(newInstructions);
+    setInstructionKeys(newKeys);
+  };
+
+  // Handle deleting instruction
+  const deleteInstruction = (index: number) => {
+    if (editableInstructions.length > 1) {
+      const newInstructions = [...editableInstructions];
+      const newKeys = [...instructionKeys];
+      
+      newInstructions.splice(index, 1);
+      newKeys.splice(index, 1);
+      
+      setEditableInstructions(newInstructions);
+      setInstructionKeys(newKeys);
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, instructionId: string) => {
+    e.dataTransfer.setData("instructionId", instructionId);
+    setActiveInstruction(instructionId);
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    const instructionId = e.dataTransfer.getData("instructionId");
+    setActiveInstruction(null);
+    clearHighlights();
+
+    const indicators = getIndicators();
+    const { element } = getNearestIndicator(e, indicators);
+
+    const before = (element as HTMLElement).dataset.before || "-1";
+
+    if (before !== instructionId) {
+      let copy = [...editableInstructions];
+      let keysCopy = [...instructionKeys];
+
+      const dragIndex = parseInt(instructionId);
+      const instructionToMove = copy[dragIndex];
+      const keyToMove = keysCopy[dragIndex];
+
+      if (!instructionToMove) return;
+
+      copy = copy.filter((_, index) => index !== dragIndex);
+      keysCopy = keysCopy.filter((_, index) => index !== dragIndex);
+
+      const moveToBack = before === "-1";
+
+      if (moveToBack) {
+        copy.push(instructionToMove);
+        keysCopy.push(keyToMove);
+      } else {
+        const beforeIndex = parseInt(before);
+        const dragIndex = parseInt(instructionId);
+        
+        // If dragging to a position after the current position, we need to adjust
+        // because removing the item shifts all subsequent indices down by 1
+        const insertAtIndex = beforeIndex > dragIndex ? beforeIndex - 1 : beforeIndex;
+        
+        copy.splice(insertAtIndex, 0, instructionToMove);
+        keysCopy.splice(insertAtIndex, 0, keyToMove);
+      }
+
+      setEditableInstructions(copy);
+      setInstructionKeys(keysCopy);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    highlightIndicator(e);
+  };
+
+  const clearHighlights = (els?: Element[]) => {
+    const indicators = els || getIndicators();
+    indicators.forEach((i) => {
+      (i as HTMLElement).style.opacity = "0";
+    });
+  };
+
+  const highlightIndicator = (e: React.DragEvent) => {
+    const indicators = getIndicators();
+    clearHighlights(indicators);
+
+    const el = getNearestIndicator(e, indicators);
+    (el.element as HTMLElement).style.opacity = "1";
+  };
+
+  const getNearestIndicator = (e: React.DragEvent, indicators: Element[]) => {
+    const DISTANCE_OFFSET = 50;
+
+    const el = indicators.reduce(
+      (closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = e.clientY - (box.top + DISTANCE_OFFSET);
+
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
+        }
+      },
+      {
+        offset: Number.NEGATIVE_INFINITY,
+        element: indicators[indicators.length - 1],
+      }
+    );
+
+    return el;
+  };
+
+  const getIndicators = () => {
+    return Array.from(document.querySelectorAll('[data-column="instructions"]'));
+  };
+
+  // DropIndicator component
+  const DropIndicator = ({ beforeId, column }: { beforeId: string | null; column: string }) => {
+    return (
+      <div
+        data-before={beforeId || "-1"}
+        data-column={column}
+        className="my-0.5 h-0.5 w-full bg-primary opacity-0"
+      />
+    );
+  };
+
+  // Handle ingredient text changes
+  const updateIngredient = (index: number, text: string) => {
+    const newIngredients = [...editableIngredients];
+    const newKeys = [...ingredientKeys];
+    
+    // Auto-delete ingredient if text is empty and there's more than one ingredient
+    if (text.trim() === '' && newIngredients.length > 1) {
+      newIngredients.splice(index, 1);
+      newKeys.splice(index, 1);
+    } else {
+      newIngredients[index] = text;
+    }
+    
+    // Ensure the key exists and is unique - regenerate if empty
+    if (!newKeys[index] || newKeys[index] === '' || newKeys[index].trim() === '') {
+      newKeys[index] = `ingredient-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+    
+    setEditableIngredients(newIngredients);
+    setIngredientKeys(newKeys);
+  };
+
+  // Handle adding new ingredient
+  const addIngredient = (index: number) => {
+    const newIngredients = [...editableIngredients];
+    const newKeys = [...ingredientKeys];
+    const newKey = `ingredient-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    newIngredients.splice(index + 1, 0, '');
+    newKeys.splice(index + 1, 0, newKey);
+    
+    setEditableIngredients(newIngredients);
+    setIngredientKeys(newKeys);
+  };
+
+  // Handle deleting ingredient
+  const deleteIngredient = (index: number) => {
+    if (editableIngredients.length > 1) {
+      const newIngredients = [...editableIngredients];
+      const newKeys = [...ingredientKeys];
+      
+      newIngredients.splice(index, 1);
+      newKeys.splice(index, 1);
+      
+      setEditableIngredients(newIngredients);
+      setIngredientKeys(newKeys);
+    }
   };
 
   const handleSave = () => {
@@ -133,8 +436,14 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
       customPreview = { type: 'image', value: imageUrl.trim() };
     }
 
+    // Filter out empty instructions and ingredients
+    const filteredInstructions = editableInstructions.filter(instruction => instruction.trim() !== '');
+    const filteredIngredients = editableIngredients.filter(ingredient => ingredient.trim() !== '');
+
     onSave({
       title: title.trim(),
+      ingredients: filteredIngredients,
+      instructions: filteredInstructions,
       customPreview
     });
     onClose();
@@ -237,16 +546,16 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div key="edit-recipe-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto scrollbar-hide"
+            className="bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide"
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-card-foreground">Edit Recipe</h2>
+              <h2 className="text-h2 text-card-foreground">Edit Recipe</h2>
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-accent rounded-lg transition-colors"
@@ -258,7 +567,7 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
             <div className="space-y-6">
               {/* Title Section */}
               <div>
-                <label className="block text-sm font-medium text-card-foreground mb-2">
+                <label className="block text-label text-card-foreground mb-2">
                   Title:
                 </label>
                 <input
@@ -272,7 +581,7 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
 
               {/* Preview Section */}
               <div>
-                <label className="block text-sm font-medium text-card-foreground mb-3">
+                <label className="block text-label text-card-foreground mb-3">
                   Preview Style:
                 </label>
                 
@@ -304,7 +613,7 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                          </div>
                        )}
                      </div>
-                     <p className="text-xs text-center text-muted-foreground mt-2">Default</p>
+                     <p className="text-caption text-center text-muted-foreground mt-2">Default</p>
                    </div>
 
                   {/* Emoji */}
@@ -333,7 +642,7 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                       )}
                       <span className="relative z-10">{selectedEmoji}</span>
                     </div>
-                    <p className="text-xs text-center text-muted-foreground mt-2">Emoji</p>
+                    <p className="text-caption text-center text-muted-foreground mt-2">Emoji</p>
                   </div>
 
                   {/* Custom Image */}
@@ -352,7 +661,7 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                     }`}>
                       <ImageIcon className="w-6 h-6 text-white" />
                     </div>
-                    <p className="text-xs text-center text-muted-foreground mt-2">Image</p>
+                    <p className="text-caption text-center text-muted-foreground mt-2">Image</p>
                   </div>
                 </div>
 
@@ -368,7 +677,7 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                     >
                      {/* Emoji Selection */}
                      <div className="p-4 bg-accent/20 rounded-xl border border-white/10">
-                       <h4 className="font-medium text-card-foreground mb-3">Choose an emoji:</h4>
+                       <h4 className="text-h5 text-card-foreground mb-3">Choose an emoji:</h4>
                        <div className="relative">
                          <div 
                            ref={emojiCarouselRef}
@@ -405,8 +714,8 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
 
                     {/* Gradient Selection */}
                     <div className="p-4 bg-accent/20 rounded-xl border border-white/10">
-                      <h4 className="font-medium text-card-foreground mb-3">Choose background gradient:</h4>
-                      <div className="grid grid-cols-6 gap-3">
+                      <h4 className="text-h5 text-card-foreground mb-3">Choose background gradient:</h4>
+                      <div className="grid grid-cols-3 gap-3 justify-items-center">
                         {GRADIENT_OPTIONS.map((gradient) => (
                           <button
                             key={gradient.gradient}
@@ -470,7 +779,7 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                           }}
                           className="p-4 bg-accent/20 rounded-xl border border-white/10"
                         >
-                          <h4 className="font-medium text-card-foreground mb-3">Custom Gradient:</h4>
+                          <h4 className="text-h5 text-card-foreground mb-3">Custom Gradient:</h4>
                           <div className="space-y-4">
                             {/* Preview */}
                             <div className="flex items-center justify-center">
@@ -489,7 +798,7 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                             {/* Color Pickers */}
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <label className="block text-sm font-medium text-card-foreground mb-2">
+                                <label className="block text-label text-card-foreground mb-2">
                                   Start Color:
                                 </label>
                                 <button
@@ -511,7 +820,7 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                               </div>
                               
                               <div>
-                                <label className="block text-sm font-medium text-card-foreground mb-2">
+                                <label className="block text-label text-card-foreground mb-2">
                                   End Color:
                                 </label>
                                 <button
@@ -572,7 +881,7 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                     {/* Image Preview */}
                     {previewUrl && (
                       <div>
-                        <label className="block text-sm font-medium text-card-foreground mb-2">
+                        <label className="block text-label text-card-foreground mb-2">
                           Preview:
                         </label>
                         <div className="w-16 h-16 rounded-lg overflow-hidden border border-border">
@@ -589,6 +898,165 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                   )}
                 </AnimatePresence>
 
+              </div>
+
+              {/* Ingredients and Instructions Section */}
+              <div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Ingredients Column */}
+                  <div className="p-4 bg-accent/20 rounded-xl border border-white/10">
+                    <h4 className="text-h5 text-card-foreground mb-3">Ingredients:</h4>
+                    <div className="space-y-3">
+                      <AnimatePresence mode="popLayout">
+                        {editableIngredients.map((ingredient, index) => {
+                          // Use memoized key which is guaranteed to be valid
+                          const key = memoizedIngredientKeys[index];
+                          
+                          return (
+                          <motion.div
+                            key={key}
+                            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                            transition={{ 
+                              type: "spring", 
+                              stiffness: 300, 
+                              damping: 30,
+                              opacity: { duration: 0.2 },
+                              scale: { duration: 0.2 }
+                            }}
+                            layout
+                            className="p-2 bg-background border border-border rounded-xl h-fit flex items-center gap-2"
+                          >
+                            <textarea
+                              value={ingredient}
+                              onChange={(e) => {
+                                updateIngredient(index, e.target.value);
+                                // Auto-resize textarea
+                                const target = e.target as HTMLTextAreaElement;
+                                target.style.height = '1px';
+                                target.style.height = target.scrollHeight + 'px';
+                              }}
+                              onInput={(e) => {
+                                // Additional auto-resize on input for immediate feedback
+                                const target = e.target as HTMLTextAreaElement;
+                                target.style.height = '1px';
+                                target.style.height = target.scrollHeight + 'px';
+                              }}
+                              className="ingredient-textarea flex-1 p-1 bg-transparent border-none text-card-foreground placeholder:text-muted-foreground focus:outline-none resize-none"
+                              style={{
+                                fontSize: '16px',
+                                lineHeight: '1.4',
+                                boxSizing: 'border-box',
+                                overflow: 'hidden',
+                                height: 'auto',
+                                minHeight: '1px'
+                              }}
+                              placeholder="Enter ingredient..."
+                            />
+                          </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Add New Ingredient Button */}
+                    <div className="mt-4">
+                      <button
+                        onClick={() => addIngredient(editableIngredients.length - 1)}
+                        className="w-full p-3 border-2 border-dashed border-border rounded-xl hover:border-primary/50 transition-colors flex items-center justify-center gap-2 text-muted-foreground hover:text-primary text-button"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Ingredient
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Mobile-only break line */}
+                  <div className="block lg:hidden w-full h-0.5 bg-border/60 my-6"></div>
+
+                  {/* Instructions Column */}
+                  <div className="p-4 bg-accent/20 rounded-xl border border-white/10">
+                    <h4 className="text-h5 text-card-foreground mb-3">Instructions:</h4>
+                     <div
+                       onDrop={handleDragEnd}
+                       onDragOver={handleDragOver}
+                       onDragLeave={() => clearHighlights()}
+                       className="space-y-3"
+                     >
+                       <AnimatePresence mode="popLayout">
+                         {editableInstructions.map((instruction, index) => {
+                           // Use memoized key which is guaranteed to be valid
+                           const key = memoizedInstructionKeys[index];
+                           
+                           return (
+                             <React.Fragment key={key}>
+                               <DropIndicator beforeId={index.toString()} column="instructions" />
+                               <motion.div
+                                 layout
+                                 layoutId={index.toString()}
+                                 draggable="true"
+                                 onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent, index.toString())}
+                                 initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                 animate={{ opacity: 1, y: 0, scale: 1 }}
+                                 exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                                 transition={{ 
+                                   type: "spring", 
+                                   stiffness: 300, 
+                                   damping: 30,
+                                   opacity: { duration: 0.2 },
+                                   scale: { duration: 0.2 }
+                                 }}
+                                 className={`flex items-start gap-3 p-3 bg-background border border-border rounded-xl cursor-grab active:cursor-grabbing transition-colors ${
+                                   activeInstruction === index.toString() ? 'opacity-50' : 'hover:bg-accent/20'
+                                 }`}
+                               >
+                                 {/* Step Number */}
+                                 <div className="flex-shrink-0 w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center text-sm font-semibold text-primary">
+                                   {index + 1}
+                                 </div>
+
+                                 {/* Instruction Input */}
+                                 <div className="flex-1">
+                                   <textarea
+                                     value={instruction}
+                                     onChange={(e) => {
+                                       updateInstruction(index, e.target.value);
+                                       // Auto-resize textarea
+                                       e.target.style.height = 'auto';
+                                       e.target.style.height = e.target.scrollHeight + 'px';
+                                     }}
+                                     className="instruction-textarea w-full p-0 bg-transparent border-none text-card-foreground placeholder:text-muted-foreground focus:outline-none resize-none overflow-hidden"
+                                     style={{
+                                       fontSize: '16px', // Prevents zoom on iOS
+                                       transform: 'translateZ(0)', // Hardware acceleration
+                                       backfaceVisibility: 'hidden', // Prevents flickering
+                                       minHeight: '40px',
+                                       height: 'auto'
+                                     }}
+                                     placeholder="Enter instruction..."
+                                   />
+                                 </div>
+                               </motion.div>
+                             </React.Fragment>
+                           );
+                         })}
+                         <DropIndicator beforeId={null} column="instructions" />
+                       </AnimatePresence>
+                     </div>
+
+                    {/* Add New Instruction Button */}
+                    <div className="mt-4">
+                      <button
+                        onClick={() => addInstruction(editableInstructions.length - 1)}
+                        className="w-full p-3 border-2 border-dashed border-border rounded-xl hover:border-primary/50 transition-colors flex items-center justify-center gap-2 text-muted-foreground hover:text-primary text-button"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Instruction
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 

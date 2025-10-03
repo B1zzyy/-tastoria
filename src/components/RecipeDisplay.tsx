@@ -6,7 +6,7 @@ import { convertIngredients, convertTemperature, type UnitSystem } from '@/lib/u
 import { updateRecipeInstructions } from '@/lib/recipeService';
 import UnitToggle from './UnitToggle';
 
-import { Clock, Users, Star, ChefHat, List, BookOpen, Check, Play, ExternalLink, Edit2, X, GripVertical, Plus } from 'lucide-react';
+import { Clock, Users, Star, ChefHat, List, BookOpen, Check, Play, ExternalLink, X, GripVertical, Plus } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import Confetti from './Confetti';
@@ -200,8 +200,8 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
                     <ChefHat className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-white/90 text-xs sm:text-sm font-medium">Instagram Recipe</p>
-                    <p className="text-white/70 text-xs hidden sm:block">Tap to watch video</p>
+                    <p className="text-white/90 text-caption sm:text-label">Instagram Recipe</p>
+                    <p className="text-white/70 text-caption hidden sm:block">Tap to watch video</p>
                   </div>
                 </div>
               </div>
@@ -218,7 +218,7 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
               
               {/* Clean title overlay - mobile optimized */}
               <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-black/60 to-transparent">
-                <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white leading-tight">
+                <h1 className="text-h1 text-white leading-tight">
                   {recipe.title}
                 </h1>
               </div>
@@ -246,20 +246,10 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
                       </div>
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                       <div className="absolute bottom-0 left-0 right-0 p-6">
-                        <h1 className="text-2xl md:text-3xl font-bold text-white">
+                        <h1 className="text-h1 text-white">
                           {recipe.title}
                         </h1>
                       </div>
-                      {/* Edit Button */}
-                      {isEditable && onEditRecipe && (
-                        <button
-                          onClick={() => onEditRecipe(recipe)}
-                          className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
-                          title="Edit recipe"
-                        >
-                          <Edit2 className="w-4 h-4 text-white" />
-                        </button>
-                      )}
                     </div>
                   );
                 }
@@ -272,20 +262,10 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <h1 className="text-2xl md:text-3xl font-bold text-white">
+                    <h1 className="text-h1 text-white">
                       {recipe.title}
                     </h1>
                   </div>
-                  {/* Edit Button */}
-                  {isEditable && onEditRecipe && (
-                    <button
-                      onClick={() => onEditRecipe(recipe)}
-                      className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
-                      title="Edit recipe"
-                    >
-                      <Edit2 className="w-4 h-4 text-white" />
-                    </button>
-                  )}
                 </div>
               );
             } else if (customPreview?.type === 'image') {
@@ -300,20 +280,10 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <h1 className="text-2xl md:text-3xl font-bold text-white">
+                    <h1 className="text-h1 text-white">
                       {recipe.title}
                     </h1>
                   </div>
-                  {/* Edit Button */}
-                  {isEditable && onEditRecipe && (
-                    <button
-                      onClick={() => onEditRecipe(recipe)}
-                      className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
-                      title="Edit recipe"
-                    >
-                      <Edit2 className="w-4 h-4 text-white" />
-                    </button>
-                  )}
                 </div>
               );
             } else if (recipe.image && recipe.image !== 'instagram-video') {
@@ -329,20 +299,10 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <h1 className="text-2xl md:text-3xl font-bold text-white">
+                    <h1 className="text-h1 text-white">
                       {recipe.title}
                     </h1>
                   </div>
-                  {/* Edit Button */}
-                  {isEditable && onEditRecipe && (
-                    <button
-                      onClick={() => onEditRecipe(recipe)}
-                      className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
-                      title="Edit recipe"
-                    >
-                      <Edit2 className="w-4 h-4 text-white" />
-                    </button>
-                  )}
                 </div>
               );
             }
@@ -351,7 +311,7 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
           
           {!recipe.image && !recipe.metadata?.customPreview && (
             <div className="p-6">
-              <h1 className="text-2xl md:text-3xl font-bold text-card-foreground">
+              <h1 className="text-h1 text-card-foreground">
                 {recipe.title}
               </h1>
             </div>
@@ -366,7 +326,7 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
               {recipe.totalTime && (
                 <div className="text-center flex flex-col justify-center h-full">
                   <Clock className="w-5 h-5 text-primary mx-auto mb-1" />
-                  <div className="text-xs text-muted-foreground">Total</div>
+                  <div className="text-caption text-muted-foreground">Total</div>
                   <div className="font-semibold text-card-foreground">{recipe.totalTime}</div>
                 </div>
               )}
@@ -477,16 +437,6 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
               )}
             </div>
             
-            {/* Edit Instructions Button */}
-            {isEditable && onEditRecipe && (
-              <button
-                onClick={openEditInstructionsModal}
-                className="p-2 hover:bg-accent rounded-lg transition-colors"
-                title="Edit instructions"
-              >
-                <Edit2 className="w-4 h-4 text-muted-foreground" />
-              </button>
-            )}
             
             {recipe.instructions.length > 0 && completedSteps.size > 0 && (
               <div className="flex flex-col items-end gap-2">

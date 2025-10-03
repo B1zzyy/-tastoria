@@ -8,7 +8,7 @@ import RecipeForm, { type SourceType } from '@/components/RecipeForm';
 import RecipeDisplay from '@/components/RecipeDisplay';
 import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
-import { isRecipeSaved, updateRecipeTitle, updateRecipeCustomPreview } from '@/lib/recipeService';
+import { isRecipeSaved, updateRecipeTitle, updateRecipeCustomPreview, updateRecipeInstructions, updateRecipeIngredients } from '@/lib/recipeService';
 import { deleteRecipeFromAllCollections } from '@/lib/collectionsService';
 import SavedRecipes from '@/components/SavedRecipes';
 import CollectionModal from '@/components/CollectionModal';
@@ -331,7 +331,7 @@ export default function Home() {
             data-tutorial="collections-button"
           >
             <Bookmark className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-card-foreground">Saved</span>
+            <span className="text-label text-card-foreground">Saved</span>
           </button>
         )}
 
@@ -343,7 +343,7 @@ export default function Home() {
               className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg shadow-sm hover:bg-accent transition-colors"
             >
               <User className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-card-foreground">
+              <span className="text-label text-card-foreground">
                 {user.name}
               </span>
               <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showUserDropdown ? 'rotate-180' : ''}`} />
@@ -370,8 +370,8 @@ export default function Home() {
                     transition={{ delay: 0.1 }}
                     className="p-3 border-b border-border"
                   >
-                    <p className="text-sm font-medium text-card-foreground">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                    <p className="text-label text-card-foreground">{user.name}</p>
+                    <p className="text-caption text-muted-foreground">{user.email}</p>
                   </motion.div>
                   <motion.button
                     initial={{ opacity: 0, x: -10 }}
@@ -380,7 +380,7 @@ export default function Home() {
                     whileHover={{ backgroundColor: "hsl(var(--accent))" }}
                     whileTap={{ scale: 0.98 }}
                     onClick={tutorial.startTutorial}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-card-foreground transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-2 text-body-sm text-card-foreground transition-colors"
                   >
                     <HelpCircle className="w-4 h-4" />
                     {tutorial.isCompleted ? 'Help' : 'Start Tutorial'}
@@ -392,7 +392,7 @@ export default function Home() {
                     whileHover={{ backgroundColor: "hsl(var(--accent))" }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-card-foreground transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-2 text-body-sm text-card-foreground transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
                     Sign out
@@ -407,7 +407,7 @@ export default function Home() {
               setAuthMode('signup');
               setShowAuthModal(true);
             }}
-            className="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
+            className="px-4 py-2 text-button text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
           >
             Sign Up
           </button>
@@ -460,15 +460,18 @@ export default function Home() {
                   </button>
                 )}
 
-                <button 
-                  onClick={() => window.print()} 
-                  className="p-2 hover:bg-accent rounded-lg transition-colors" 
-                  aria-label="Print recipe"
-                >
-                  <svg className="w-6 h-6 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                  </svg>
-                </button>
+                {/* Edit Button - Only show when viewing from saved recipes */}
+                {isViewingFromSavedRecipes && (
+                  <button 
+                    onClick={() => setShowEditModal(true)} 
+                    className="p-2 hover:bg-accent rounded-lg transition-colors" 
+                    aria-label="Edit recipe"
+                  >
+                    <svg className="w-6 h-6 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                )}
                 
                 <button 
                   onClick={async () => {
@@ -536,7 +539,7 @@ export default function Home() {
                       className="w-8 h-8"
                     />
                   </div>
-                  <span className="font-bold text-lg text-foreground">Tastoria</span>
+                  <span className="text-h3 text-foreground">Tastoria</span>
                 </button>
                 
 
@@ -563,17 +566,19 @@ export default function Home() {
                     </button>
                   )}
 
-                  {/* Print Button */}
-                  <button 
-                    onClick={() => window.print()} 
-                    className="p-2 hover:bg-accent rounded-lg transition-colors" 
-                    aria-label="Print recipe"
-                    title="Print recipe"
-                  >
-                    <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                  </button>
+                  {/* Edit Button - Only show when viewing from saved recipes */}
+                  {isViewingFromSavedRecipes && (
+                    <button 
+                      onClick={() => setShowEditModal(true)} 
+                      className="p-2 hover:bg-accent rounded-lg transition-colors" 
+                      aria-label="Edit recipe"
+                      title="Edit recipe"
+                    >
+                      <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  )}
 
                   {/* Share Button */}
                   <button 
@@ -628,7 +633,7 @@ export default function Home() {
                         className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg hover:bg-accent transition-colors"
                       >
                         <User className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-medium text-card-foreground">
+                        <span className="text-label text-card-foreground">
                           {user.name}
                         </span>
                         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showDesktopUserDropdown ? 'rotate-180' : ''}`} />
@@ -665,7 +670,7 @@ export default function Home() {
                               whileHover={{ backgroundColor: "hsl(var(--accent))" }}
                               whileTap={{ scale: 0.98 }}
                               onClick={handleDesktopLogout}
-                              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-card-foreground transition-colors"
+                              className="w-full flex items-center gap-3 px-3 py-2 text-body-sm text-card-foreground transition-colors"
                             >
                               <LogOut className="w-4 h-4" />
                               Sign out
@@ -958,6 +963,8 @@ export default function Home() {
             id: currentSavedRecipeId || '',
             title: recipe.title,
             image: recipe.image || '',
+            ingredients: recipe.ingredients,
+            instructions: recipe.instructions,
             metadata: recipe.metadata
           }}
           onSave={async (updates) => {
@@ -973,6 +980,28 @@ export default function Home() {
                 }
                 // Update local recipe state
                 setRecipe(prev => prev ? { ...prev, title: updates.title } : null);
+              }
+              
+              // Update ingredients if changed
+              if (JSON.stringify(updates.ingredients) !== JSON.stringify(recipe.ingredients)) {
+                const { error: ingredientsError } = await updateRecipeIngredients(currentSavedRecipeId, updates.ingredients);
+                if (ingredientsError) {
+                  console.error('Failed to update ingredients:', ingredientsError);
+                  return;
+                }
+                // Update local recipe state
+                setRecipe(prev => prev ? { ...prev, ingredients: updates.ingredients } : null);
+              }
+              
+              // Update instructions if changed
+              if (JSON.stringify(updates.instructions) !== JSON.stringify(recipe.instructions)) {
+                const { error: instructionsError } = await updateRecipeInstructions(currentSavedRecipeId, updates.instructions);
+                if (instructionsError) {
+                  console.error('Failed to update instructions:', instructionsError);
+                  return;
+                }
+                // Update local recipe state
+                setRecipe(prev => prev ? { ...prev, instructions: updates.instructions } : null);
               }
               
               // Update custom preview if changed
