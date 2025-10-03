@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Image as ImageIcon, Instagram, Trash2, Plus } from 'lucide-react';
+import { X, Image as ImageIcon, Instagram, Trash2, Plus, GripVertical } from 'lucide-react';
 
 interface EditRecipeModalProps {
   isOpen: boolean;
@@ -989,10 +989,10 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                            // Use memoized key which is guaranteed to be valid
                            const key = memoizedInstructionKeys[index];
                            
-                           return (
-                             <React.Fragment key={key}>
-                               <DropIndicator beforeId={index.toString()} column="instructions" />
-                               <motion.div
+                             return (
+                               <div key={key}>
+                                 <DropIndicator beforeId={index.toString()} column="instructions" />
+                                 <motion.div
                                  layout
                                  layoutId={index.toString()}
                                  draggable="true"
@@ -1007,7 +1007,7 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                                    opacity: { duration: 0.2 },
                                    scale: { duration: 0.2 }
                                  }}
-                                 className={`flex items-start gap-3 p-3 bg-background border border-border rounded-xl cursor-grab active:cursor-grabbing transition-colors ${
+                                 className={`group flex items-start gap-3 p-3 bg-background border border-border rounded-xl cursor-grab active:cursor-grabbing transition-colors ${
                                    activeInstruction === index.toString() ? 'opacity-50' : 'hover:bg-accent/20'
                                  }`}
                                >
@@ -1037,8 +1037,13 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                                      placeholder="Enter instruction..."
                                    />
                                  </div>
-                               </motion.div>
-                             </React.Fragment>
+
+                                 {/* Hover Drag Handle */}
+                                 <div className="flex-shrink-0 flex items-center justify-center w-6 h-6 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing self-center">
+                                   <GripVertical className="w-4 h-4" />
+                                 </div>
+                                 </motion.div>
+                               </div>
                            );
                          })}
                          <DropIndicator beforeId={null} column="instructions" />

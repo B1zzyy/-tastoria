@@ -8,6 +8,7 @@ export interface SavedRecipe {
   recipe_data: Recipe
   title: string
   created_at: string
+  pinned?: boolean
 }
 
 export async function saveRecipe(recipe: Recipe, url: string): Promise<{ data: SavedRecipe | null, error: unknown }> {
@@ -286,6 +287,45 @@ export async function updateRecipeIngredients(
     const { data, error } = await supabase
       .from('saved_recipes')
       .update({ recipe_data: updatedRecipeData })
+      .eq('id', recipeId)
+      .eq('user_id', user.id)
+      .select()
+      .single()
+
+    if (error) {
+      return { data: null, error }
+    }
+
+    return { data, error: null }
+  } catch (error) {
+    return { data: null, error }
+  }
+}
+
+export async function togglePinRecipe(recipeId: string): Promise<{ data: SavedRecipe | null, error: unknown }> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return { data: null, error: { message: 'User not authenticated' } }
+    }
+
+    // First get the current pinned status
+    const { data: currentRecipe, error: fetchError } = await supabase
+      .from('saved_recipes')
+      .select('pinned')
+      .eq('id', recipeId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (fetchError) {
+      return { data: null, error: fetchError }
+    }
+
+    // Toggle the pinned status
+    const { data, error } = await supabase
+      .from('saved_recipes')
+      .update({ pinned: !currentRecipe.pinned })
       .eq('id', recipeId)
       .eq('user_id', user.id)
       .select()

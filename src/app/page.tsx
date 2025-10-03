@@ -15,12 +15,13 @@ import CollectionModal from '@/components/CollectionModal';
 import EditRecipeModal from '@/components/EditRecipeModal';
 import BlurText from '../components/BlurText';
 import LiquidEther from '../components/LiquidEther';
-import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck, HelpCircle } from 'lucide-react';
+import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck, HelpCircle, Cookie } from 'lucide-react';
 import '@/lib/keepAlive'; // Import to initialize keep-alive service
 import TutorialOverlay from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import AIChatButton from '@/components/AIChatButton';
 import RecipeAIChat from '@/components/RecipeAIChat';
+import { sampleChocolateChipCookies } from '@/lib/sampleRecipes';
 
 
 export default function Home() {
@@ -268,6 +269,13 @@ export default function Home() {
       return null;
     }
   };
+
+  const loadSampleRecipe = useCallback(() => {
+    setRecipe(sampleChocolateChipCookies);
+    setCurrentRecipeUrl('sample://chocolate-chip-cookies');
+    setIsViewingFromSavedRecipes(false);
+    setError(null);
+  }, []);
 
   // Handle shared recipe URLs
   useEffect(() => {
@@ -808,6 +816,19 @@ export default function Home() {
               {/* Mobile Search Form */}
               <div className="px-2 pointer-events-auto">
                 <RecipeForm onSubmit={handleParseRecipe} loading={loading} />
+                
+                {/* Sample Recipe Button */}
+                <div className="mt-4 flex justify-center">
+                  <motion.button
+                    onClick={loadSampleRecipe}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors border border-primary/20"
+                  >
+                    <Cookie className="w-4 h-4" />
+                    <span className="text-sm font-medium">Try Sample Recipe</span>
+                  </motion.button>
+                </div>
               </div>
             </div>
           </div>
@@ -847,8 +868,21 @@ export default function Home() {
               </div>
 
               {/* Search Form */}
-              <div className="mb-16 pointer-events-auto">
+              <div className="mb-8 pointer-events-auto">
                 <RecipeForm onSubmit={handleParseRecipe} loading={loading} />
+                
+                {/* Sample Recipe Button */}
+                <div className="mt-4 flex justify-center">
+                  <motion.button
+                    onClick={loadSampleRecipe}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors border border-primary/20"
+                  >
+                    <Cookie className="w-4 h-4" />
+                    <span className="text-sm font-medium">Try Sample Recipe</span>
+                  </motion.button>
+                </div>
               </div>
 
               {/* Recipe Preview Mockup */}

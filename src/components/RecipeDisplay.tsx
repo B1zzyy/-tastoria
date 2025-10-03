@@ -325,7 +325,7 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
               {recipe.totalTime && (
                 <div className="text-center flex flex-col justify-center h-full">
                   <Clock className="w-5 h-5 text-primary mx-auto mb-1" />
-                  <div className="text-caption text-muted-foreground">Total</div>
+                  <div className="text-xs text-muted-foreground">Total</div>
                   <div className="font-semibold text-card-foreground">{recipe.totalTime}</div>
                 </div>
               )}

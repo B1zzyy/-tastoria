@@ -20,6 +20,7 @@ export interface SavedRecipeWithCollection {
   collection_id?: string;
   collection_name?: string;
   created_at: string;
+  pinned?: boolean;
 }
 
 // Get all collections for the current user
@@ -153,6 +154,7 @@ export async function getRecipesInCollection(collectionId: string): Promise<{ da
         collections(name)
       `)
       .eq('collection_id', collectionId)
+      .order('pinned', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (error) {

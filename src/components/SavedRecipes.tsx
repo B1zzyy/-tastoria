@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Clock, User, Folder, ArrowLeft, Instagram, Trash2, Pen, Plus } from 'lucide-react';
+import { Clock, User, Folder, ArrowLeft, Instagram, Trash2, Pen, Plus, Pin, PinOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { deleteSavedRecipe, updateRecipeTitle, updateRecipeCustomPreview } from '@/lib/recipeService';
+import { deleteSavedRecipe, updateRecipeTitle, updateRecipeCustomPreview, togglePinRecipe } from '@/lib/recipeService';
 import { getUserCollections, getRecipesInCollection, ensureRecipesInAllCollection, cleanupDuplicateRecipes, deleteRecipeFromAllCollections, deleteCollection, updateCollection, createCollection, type Collection, type SavedRecipeWithCollection } from '@/lib/collectionsService';
 // import { type UnitSystem } from '@/lib/unitConverter';
 import EditRecipeModal from './EditRecipeModal';
 import type { Recipe } from '@/lib/recipe-parser';
+import SwipeToPin from './SwipeToPin';
 
 interface SavedRecipesProps {
   isOpen: boolean;
@@ -316,6 +317,35 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
       setError(error instanceof Error ? error.message : 'Failed to delete recipe');
     } else {
       setCollectionRecipes(prev => prev.filter(recipe => recipe.id !== recipeId));
+    }
+  };
+
+  const handleTogglePin = async (recipeId: string) => {
+    try {
+      setLoading(true);
+      const { error } = await togglePinRecipe(recipeId);
+      
+      if (error) {
+        setError(error instanceof Error ? error.message : 'Failed to toggle pin');
+      } else {
+        // Update the local state to reflect the pin change
+        setCollectionRecipes(prev => 
+          prev.map(recipe => 
+            recipe.id === recipeId 
+              ? { ...recipe, pinned: !recipe.pinned }
+              : recipe
+          ).sort((a, b) => {
+            // Sort by pinned status first, then by created_at
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          })
+        );
+      }
+    } catch (error) {
+      setError('Failed to toggle pin');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -682,45 +712,147 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                           stiffness: 300,
                           damping: 25
                         }}
-                        onClick={() => handleSelectRecipe(savedRecipe)}
-                        className="bg-background border border-border rounded-lg overflow-hidden hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30 transition-all duration-300 group cursor-pointer"
                       >
-                        {/* Recipe Image */}
-                        {savedRecipe.recipe_data.image && (
-                          <div className="aspect-video relative overflow-hidden">
-                            {savedRecipe.recipe_data.image === 'instagram-video' ? (
-                              <div className="relative w-full h-full">
-                                {renderCustomPreview(savedRecipe)}
+                        {/* Mobile: Swipe to Pin */}
+                        <div className="md:hidden">
+                          <SwipeToPin
+                            onPin={() => handleTogglePin(savedRecipe.id)}
+                            isPinned={savedRecipe.pinned || false}
+                            className="w-full"
+                          >
+                            <div
+                              onClick={() => handleSelectRecipe(savedRecipe)}
+                              className="bg-background border border-border rounded-lg overflow-hidden hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30 transition-all duration-300 group cursor-pointer relative"
+                            >
+                              {/* Pin indicator */}
+                              {savedRecipe.pinned && (
+                                <div className="absolute top-2 right-2 z-10">
+                                  <div className="bg-primary rounded-full p-1.5 shadow-md border border-primary/30">
+                                    <Pin className="w-4 h-4 text-primary-foreground fill-current" />
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Recipe Image */}
+                              {savedRecipe.recipe_data.image && (
+                                <div className="aspect-video relative overflow-hidden">
+                                  {savedRecipe.recipe_data.image === 'instagram-video' ? (
+                                    <div className="relative w-full h-full">
+                                      {renderCustomPreview(savedRecipe)}
+                                    </div>
+                                  ) : (
+                                    <div className="relative w-full h-full">
+                                      {renderCustomPreview(savedRecipe)}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              
+                              <div className="p-4">
+                                <div className="flex flex-col gap-2">
+                                  {/* Title */}
+                                  <h3 className="font-semibold text-card-foreground line-clamp-2">
+                                    {savedRecipe.title}
+                                  </h3>
+                                  
+                                  {/* Meta info */}
+                                  <div className="flex items-center gap-3 text-xs md:text-[11px] text-muted-foreground">
+                                    {savedRecipe.recipe_data.totalTime && (
+                                      <div className="flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        {savedRecipe.recipe_data.totalTime}
+                                      </div>
+                                    )}
+                                    {savedRecipe.recipe_data.servings && (
+                                      <div className="flex items-center gap-1">
+                                        <User className="w-3 h-3" />
+                                        {savedRecipe.recipe_data.servings}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                            ) : (
-                              <div className="relative w-full h-full">
-                                {renderCustomPreview(savedRecipe)}
+                            </div>
+                          </SwipeToPin>
+                        </div>
+
+                        {/* Desktop: Hover Pin Button */}
+                        <div className="hidden md:block">
+                          <div
+                            onClick={() => handleSelectRecipe(savedRecipe)}
+                            className="bg-background border border-border rounded-lg overflow-hidden hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30 transition-all duration-300 group cursor-pointer relative"
+                          >
+                            {/* Pin indicator - always visible if pinned */}
+                            {savedRecipe.pinned && (
+                              <div className="absolute top-2 right-2 z-10">
+                                <div className="bg-primary rounded-full p-1.5 shadow-md border border-primary/30">
+                                  <Pin className="w-4 h-4 text-primary-foreground fill-current" />
+                                </div>
                               </div>
                             )}
-                          </div>
-                        )}
-                        
-                        <div className="p-4">
-                          <div className="flex flex-col gap-2">
-                            {/* Title */}
-                            <h3 className="font-semibold text-card-foreground line-clamp-2">
-                              {savedRecipe.title}
-                            </h3>
+
+                            {/* Hover Pin Button - only visible on hover */}
+                            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              <motion.button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleTogglePin(savedRecipe.id);
+                                }}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                className={`rounded-full p-1.5 shadow-md border transition-colors ${
+                                  savedRecipe.pinned 
+                                    ? 'bg-primary border-primary/30' 
+                                    : 'bg-background/80 backdrop-blur-sm border-border hover:bg-primary/10'
+                                }`}
+                                title={savedRecipe.pinned ? 'Unpin recipe' : 'Pin recipe'}
+                              >
+                                {savedRecipe.pinned ? (
+                                  <PinOff className="w-4 h-4 text-primary-foreground fill-current" />
+                                ) : (
+                                  <Pin className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />
+                                )}
+                              </motion.button>
+                            </div>
                             
-                            {/* Meta info */}
-                            <div className="flex items-center gap-3 text-xs md:text-[11px] text-muted-foreground">
-                              {savedRecipe.recipe_data.totalTime && (
-                                <div className="flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {savedRecipe.recipe_data.totalTime}
+                            {/* Recipe Image */}
+                            {savedRecipe.recipe_data.image && (
+                              <div className="aspect-video relative overflow-hidden">
+                                {savedRecipe.recipe_data.image === 'instagram-video' ? (
+                                  <div className="relative w-full h-full">
+                                    {renderCustomPreview(savedRecipe)}
+                                  </div>
+                                ) : (
+                                  <div className="relative w-full h-full">
+                                    {renderCustomPreview(savedRecipe)}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            <div className="p-4">
+                              <div className="flex flex-col gap-2">
+                                {/* Title */}
+                                <h3 className="font-semibold text-card-foreground line-clamp-2">
+                                  {savedRecipe.title}
+                                </h3>
+                                
+                                {/* Meta info */}
+                                <div className="flex items-center gap-3 text-xs md:text-[11px] text-muted-foreground">
+                                  {savedRecipe.recipe_data.totalTime && (
+                                    <div className="flex items-center gap-1">
+                                      <Clock className="w-3 h-3" />
+                                      {savedRecipe.recipe_data.totalTime}
+                                    </div>
+                                  )}
+                                  {savedRecipe.recipe_data.servings && (
+                                    <div className="flex items-center gap-1">
+                                      <User className="w-3 h-3" />
+                                      {savedRecipe.recipe_data.servings}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                              {savedRecipe.recipe_data.servings && (
-                                <div className="flex items-center gap-1">
-                                  <User className="w-3 h-3" />
-                                  {savedRecipe.recipe_data.servings}
-                                </div>
-                              )}
+                              </div>
                             </div>
                           </div>
                         </div>

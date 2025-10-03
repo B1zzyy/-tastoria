@@ -33,6 +33,7 @@ function decodeHtmlEntities(text: string): string {
 }
 
 export interface Recipe {
+  id?: string;
   title: string;
   description?: string;
   image?: string;
@@ -44,15 +45,24 @@ export interface Recipe {
   instructions: string[];
   instagramUrl?: string; // For Instagram video popup
   nutrition?: {
-    calories?: string;
+    calories?: number | string;
     protein?: string;
+    carbohydrates?: string;
     carbs?: string;
     fat?: string;
+    fiber?: string;
+    sugar?: string;
+    sodium?: string;
+    cholesterol?: string;
   };
   difficulty?: string;
+  cuisine?: string;
+  category?: string;
   author?: string;
   rating?: string;
   reviewCount?: string;
+  tags?: string[];
+  notes?: string;
   metadata?: {
     instructionsGenerated?: boolean; // True if instructions were AI-generated
     customPreview?: {
