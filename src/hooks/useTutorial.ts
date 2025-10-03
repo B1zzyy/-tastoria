@@ -99,13 +99,21 @@ export const useTutorial = () => {
     setCurrentStepIndex(0);
   }, []);
 
+  const completeTutorial = useCallback(() => {
+    setIsActive(false);
+    setIsCompleted(true);
+    localStorage.setItem('tastoria-tutorial-completed', 'true');
+  }, []);
+
   const nextStep = useCallback(() => {
     if (currentStepIndex < TUTORIAL_STEPS.length - 1) {
       setCurrentStepIndex(prev => prev + 1);
     } else {
-      completeTutorial();
+      setIsActive(false);
+      setIsCompleted(true);
+      localStorage.setItem('tastoria-tutorial-completed', 'true');
     }
-  }, [currentStepIndex, completeTutorial]);
+  }, [currentStepIndex]);
 
   const previousStep = useCallback(() => {
     if (currentStepIndex > 0) {
@@ -116,12 +124,6 @@ export const useTutorial = () => {
   const skipTutorial = useCallback(() => {
     completeTutorial();
   }, [completeTutorial]);
-
-  const completeTutorial = useCallback(() => {
-    setIsActive(false);
-    setIsCompleted(true);
-    localStorage.setItem('tastoria-tutorial-completed', 'true');
-  }, []);
 
   const resetTutorial = useCallback(() => {
     setIsCompleted(false);
