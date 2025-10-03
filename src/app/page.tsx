@@ -920,7 +920,6 @@ export default function Home() {
           <div className="max-w-6xl mx-auto">
             <RecipeDisplay 
               recipe={recipe} 
-              onEditRecipe={handleEditRecipe}
               onUpdateRecipe={handleUpdateRecipe}
               isEditable={isViewingFromSavedRecipes}
               savedRecipeId={currentSavedRecipeId}
