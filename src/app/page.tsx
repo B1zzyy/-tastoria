@@ -15,7 +15,7 @@ import CollectionModal from '@/components/CollectionModal';
 import EditRecipeModal from '@/components/EditRecipeModal';
 import BlurText from '../components/BlurText';
 import LiquidEther from '../components/LiquidEther';
-import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck, HelpCircle, Cookie } from 'lucide-react';
+import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck, HelpCircle } from 'lucide-react';
 import '@/lib/keepAlive'; // Import to initialize keep-alive service
 import TutorialOverlay from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
@@ -256,12 +256,12 @@ export default function Home() {
 
   // Recipe storage functions
 
-  const loadSampleRecipe = useCallback(() => {
-    setRecipe(sampleChocolateChipCookies);
-    setCurrentRecipeUrl('sample://chocolate-chip-cookies');
-    setIsViewingFromSavedRecipes(false);
-    setError(null);
-  }, []);
+  // const loadSampleRecipe = useCallback(() => {
+  //   setRecipe(sampleChocolateChipCookies);
+  //   setCurrentRecipeUrl('sample://chocolate-chip-cookies');
+  //   setIsViewingFromSavedRecipes(false);
+  //   setError(null);
+  // }, []);
 
   // Handle shared recipe URLs
   useEffect(() => {

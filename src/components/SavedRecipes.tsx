@@ -400,7 +400,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
           })
         );
       }
-    } catch (error) {
+    } catch {
       setError('Failed to toggle pin');
     } finally {
       setLoading(false);
@@ -852,7 +852,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                     className="text-center py-12"
                   >
                     <Search className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No recipes found for "{searchQuery}"</p>
+                    <p className="text-muted-foreground">No recipes found for &quot;{searchQuery}&quot;</p>
                     <p className="text-sm text-muted-foreground mt-2">Try searching for ingredients, recipe names, or cuisines</p>
                   </motion.div>
                 ) : (
