@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Image as ImageIcon, Instagram, Trash2, GripVertical, Plus } from 'lucide-react';
+import { X, Image as ImageIcon, Instagram, Trash2, Plus } from 'lucide-react';
 
 interface EditRecipeModalProps {
   isOpen: boolean;
@@ -255,19 +255,19 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
     setInstructionKeys(newKeys);
   };
 
-  // Handle deleting instruction
-  const deleteInstruction = (index: number) => {
-    if (editableInstructions.length > 1) {
-      const newInstructions = [...editableInstructions];
-      const newKeys = [...instructionKeys];
+  // Handle deleting instruction (currently unused but kept for future functionality)
+  // const deleteInstruction = (index: number) => {
+  //   if (editableInstructions.length > 1) {
+  //     const newInstructions = [...editableInstructions];
+  //     const newKeys = [...instructionKeys];
       
-      newInstructions.splice(index, 1);
-      newKeys.splice(index, 1);
+  //     newInstructions.splice(index, 1);
+  //     newKeys.splice(index, 1);
       
-      setEditableInstructions(newInstructions);
-      setInstructionKeys(newKeys);
-    }
-  };
+  //     setEditableInstructions(newInstructions);
+  //     setInstructionKeys(newKeys);
+  //   }
+  // };
 
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, instructionId: string) => {
@@ -413,19 +413,19 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
     setIngredientKeys(newKeys);
   };
 
-  // Handle deleting ingredient
-  const deleteIngredient = (index: number) => {
-    if (editableIngredients.length > 1) {
-      const newIngredients = [...editableIngredients];
-      const newKeys = [...ingredientKeys];
+  // Handle deleting ingredient (currently unused but kept for future functionality)
+  // const deleteIngredient = (index: number) => {
+  //   if (editableIngredients.length > 1) {
+  //     const newIngredients = [...editableIngredients];
+  //     const newKeys = [...ingredientKeys];
       
-      newIngredients.splice(index, 1);
-      newKeys.splice(index, 1);
+  //     newIngredients.splice(index, 1);
+  //     newKeys.splice(index, 1);
       
-      setEditableIngredients(newIngredients);
-      setIngredientKeys(newKeys);
-    }
-  };
+  //     setEditableIngredients(newIngredients);
+  //     setIngredientKeys(newKeys);
+  //   }
+  // };
 
   const handleSave = () => {
     let customPreview: { type: 'emoji' | 'image'; value: string; gradient?: string } | null = null;

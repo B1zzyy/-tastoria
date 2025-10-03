@@ -15,13 +15,12 @@ import AIChatButton from './AIChatButton';
 
 interface RecipeDisplayProps {
   recipe: Recipe;
-  onEditRecipe?: (recipe: Recipe) => void;
   onUpdateRecipe?: (recipe: Recipe) => void;
   isEditable?: boolean;
   savedRecipeId?: string | null;
 }
 
-export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, isEditable = false, savedRecipeId }: RecipeDisplayProps) {
+export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = false, savedRecipeId }: RecipeDisplayProps) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [showInstagramPopup, setShowInstagramPopup] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -55,14 +54,14 @@ export default function RecipeDisplay({ recipe, onEditRecipe, onUpdateRecipe, is
     setCompletedSteps(newCompletedSteps);
   };
 
-  // Initialize editable instructions when modal opens
-  const openEditInstructionsModal = () => {
-    const instructions = [...recipe.instructions];
-    setEditableInstructions(instructions);
-    // Generate stable keys for each instruction
-    setInstructionKeys(instructions.map((_, index) => `instruction-${index}-${Date.now()}`));
-    setShowEditInstructionsModal(true);
-  };
+  // Initialize editable instructions when modal opens (currently unused)
+  // const openEditInstructionsModal = () => {
+  //   const instructions = [...recipe.instructions];
+  //   setEditableInstructions(instructions);
+  //   // Generate stable keys for each instruction
+  //   setInstructionKeys(instructions.map((_, index) => `instruction-${index}-${Date.now()}`));
+  //   setShowEditInstructionsModal(true);
+  // };
 
   // Auto-resize textareas when modal opens and prevent mobile keyboard issues
   useEffect(() => {

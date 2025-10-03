@@ -390,10 +390,10 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
     setCreateCollectionName('');
   };
 
-  const _handleEditRecipe = (recipe: SavedRecipeWithCollection) => {
-    setSelectedRecipeForEdit(recipe);
-    setShowEditModal(true);
-  };
+  // const _handleEditRecipe = (recipe: SavedRecipeWithCollection) => {
+  //   setSelectedRecipeForEdit(recipe);
+  //   setShowEditModal(true);
+  // };
 
   const handleSaveRecipeEdit = async (updates: {
     title: string;
@@ -943,6 +943,8 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
               id: selectedRecipeForEdit.id,
               title: selectedRecipeForEdit.title,
               image: selectedRecipeForEdit.recipe_data.image || '',
+              ingredients: selectedRecipeForEdit.recipe_data.ingredients || [],
+              instructions: selectedRecipeForEdit.recipe_data.instructions || [],
               metadata: selectedRecipeForEdit.recipe_data.metadata
             }}
             onSave={handleSaveRecipeEdit}

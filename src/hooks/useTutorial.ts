@@ -105,7 +105,7 @@ export const useTutorial = () => {
     } else {
       completeTutorial();
     }
-  }, [currentStepIndex]);
+  }, [currentStepIndex, completeTutorial]);
 
   const previousStep = useCallback(() => {
     if (currentStepIndex > 0) {
@@ -115,7 +115,7 @@ export const useTutorial = () => {
 
   const skipTutorial = useCallback(() => {
     completeTutorial();
-  }, []);
+  }, [completeTutorial]);
 
   const completeTutorial = useCallback(() => {
     setIsActive(false);

@@ -63,7 +63,7 @@ export default function Home() {
       
       return () => clearTimeout(timer);
     }
-  }, [user, tutorial.isCompleted, tutorial.isActive, tutorial.startTutorial]);
+  }, [user, tutorial.isCompleted, tutorial.isActive, tutorial.startTutorial, tutorial]);
 
   
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -136,7 +136,7 @@ export default function Home() {
     }
   };
 
-  const handleEditRecipe = (_recipeToEdit: Recipe) => {
+  const handleEditRecipe = () => {
     setShowEditModal(true);
   };
 

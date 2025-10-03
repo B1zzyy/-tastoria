@@ -191,7 +191,7 @@ export default function TutorialOverlay({
       
       tryAgain();
     }
-  }, [isActive, currentStep.targetElement, currentStepIndex]);
+  }, [isActive, currentStep.targetElement, currentStepIndex, windowSize.width]);
 
   // Update highlight position on scroll/resize
   useEffect(() => {
