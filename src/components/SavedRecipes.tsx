@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Clock, User, Folder, ArrowLeft, Instagram, Trash2, Pen, Plus, Pin, PinOff, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { deleteSavedRecipe, updateRecipeTitle, updateRecipeCustomPreview, togglePinRecipe, getSavedRecipes } from '@/lib/recipeService';
+import { recipeCache } from '@/lib/recipeCache';
 import { getUserCollections, getRecipesInCollection, ensureRecipesInAllCollection, cleanupDuplicateRecipes, deleteRecipeFromAllCollections, deleteCollection, updateCollection, createCollection, type Collection, type SavedRecipeWithCollection } from '@/lib/collectionsService';
 // import { type UnitSystem } from '@/lib/unitConverter';
 import EditRecipeModal from './EditRecipeModal';
@@ -319,7 +320,14 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
     if (error) {
       setError(error instanceof Error ? error.message : 'Failed to load recipes');
     } else {
-      setCollectionRecipes(data || []);
+      const recipes = data || [];
+      
+      // Cache each recipe
+      recipes.forEach(savedRecipe => {
+        recipeCache.set(savedRecipe.id, savedRecipe.recipe_data);
+      });
+      
+      setCollectionRecipes(recipes);
     }
     
     setLoading(false);
@@ -335,7 +343,14 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
     if (error) {
       setError(error instanceof Error ? error.message : 'Failed to load recipes');
     } else {
-      setAllRecipes(data || []);
+      const recipes = data || [];
+      
+      // Cache each recipe
+      recipes.forEach(savedRecipe => {
+        recipeCache.set(savedRecipe.id, savedRecipe.recipe_data);
+      });
+      
+      setAllRecipes(recipes);
     }
     
     setLoading(false);
@@ -896,7 +911,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                           
                           {/* Recipe Info */}
                           <div className="p-4">
-                            <h3 className="font-semibold text-card-foreground mb-2 line-clamp-2">
+                            <h3 className="font-semibold text-card-foreground mb-2 line-clamp-1">
                               {savedRecipe.title}
                             </h3>
                             {/* Meta info */}
@@ -987,7 +1002,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                               <div className="p-4">
                                 <div className="flex flex-col gap-2">
                                   {/* Title */}
-                                  <h3 className="font-semibold text-card-foreground line-clamp-2">
+                                  <h3 className="font-semibold text-card-foreground line-clamp-1">
                                     {savedRecipe.title}
                                   </h3>
                                   
@@ -1069,7 +1084,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                             <div className="p-4">
                               <div className="flex flex-col gap-2">
                                 {/* Title */}
-                                <h3 className="font-semibold text-card-foreground line-clamp-2">
+                                <h3 className="font-semibold text-card-foreground line-clamp-1">
                                   {savedRecipe.title}
                                 </h3>
                                 

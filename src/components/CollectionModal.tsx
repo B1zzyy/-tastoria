@@ -20,7 +20,6 @@ export default function CollectionModal({ isOpen, onClose, recipe, recipeUrl, on
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
   const [showNewCollection, setShowNewCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
-  const [newCollectionDescription, setNewCollectionDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,7 +55,7 @@ export default function CollectionModal({ isOpen, onClose, recipe, recipeUrl, on
     if (!newCollectionName.trim()) return;
 
     setLoading(true);
-    const { data, error } = await createCollection(newCollectionName.trim(), newCollectionDescription.trim() || undefined);
+    const { data, error } = await createCollection(newCollectionName.trim());
     
     if (error) {
       setError(error.message);
@@ -65,7 +64,6 @@ export default function CollectionModal({ isOpen, onClose, recipe, recipeUrl, on
       setSelectedCollectionId(data.id);
       setShowNewCollection(false);
       setNewCollectionName('');
-      setNewCollectionDescription('');
     }
     
     setLoading(false);
@@ -143,7 +141,7 @@ export default function CollectionModal({ isOpen, onClose, recipe, recipeUrl, on
             >
               {/* Recipe Info */}
               <div className="mb-6">
-                <h3 className="font-medium text-card-foreground mb-2 line-clamp-2">
+                <h3 className="font-medium text-card-foreground mb-2 line-clamp-1">
                   {recipe.title}
                 </h3>
                 <p className="text-sm text-muted-foreground">
@@ -226,13 +224,6 @@ export default function CollectionModal({ isOpen, onClose, recipe, recipeUrl, on
                           className="w-full px-3 py-2 mb-3 bg-background border border-border rounded-lg text-card-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                           autoFocus
                         />
-                        <input
-                          type="text"
-                          placeholder="Description (optional)"
-                          value={newCollectionDescription}
-                          onChange={(e) => setNewCollectionDescription(e.target.value)}
-                          className="w-full px-3 py-2 mb-3 bg-background border border-border rounded-lg text-card-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                        />
                         <div className="flex gap-2">
                           <button
                             onClick={handleCreateCollection}
@@ -245,7 +236,6 @@ export default function CollectionModal({ isOpen, onClose, recipe, recipeUrl, on
                             onClick={() => {
                               setShowNewCollection(false);
                               setNewCollectionName('');
-                              setNewCollectionDescription('');
                             }}
                             className="px-3 py-2 border border-border rounded-lg hover:bg-accent transition-colors"
                           >

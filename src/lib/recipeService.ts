@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { Recipe } from './recipe-parser'
+import { recipeCache } from './recipeCache'
 
 export interface SavedRecipe {
   id: string
@@ -74,6 +75,11 @@ export async function deleteSavedRecipe(recipeId: string): Promise<{ error: unkn
       .delete()
       .eq('id', recipeId)
 
+    // Invalidate cache after successful deletion
+    if (!error) {
+      recipeCache.invalidate(recipeId)
+    }
+
     return { error }
   } catch (error) {
     return { error }
@@ -141,6 +147,11 @@ export async function updateRecipeTitle(recipeId: string, newTitle: string): Pro
       .eq('id', recipeId)
       .eq('user_id', user.id)
 
+    // Invalidate cache after successful update
+    if (!error) {
+      recipeCache.invalidate(recipeId)
+    }
+
     return { error }
   } catch (error) {
     return { error }
@@ -191,6 +202,9 @@ export async function updateRecipeCustomPreview(
     if (error) {
       return { data: null, error }
     }
+
+    // Invalidate cache after successful update
+    recipeCache.invalidate(recipeId)
 
     return { data, error: null }
   } catch (error) {
@@ -244,6 +258,9 @@ export async function updateRecipeInstructions(
       return { data: null, error }
     }
 
+    // Invalidate cache after successful update
+    recipeCache.invalidate(recipeId)
+
     return { data, error: null }
   } catch (error) {
     return { data: null, error }
@@ -296,6 +313,9 @@ export async function updateRecipeIngredients(
       return { data: null, error }
     }
 
+    // Invalidate cache after successful update
+    recipeCache.invalidate(recipeId)
+
     return { data, error: null }
   } catch (error) {
     return { data: null, error }
@@ -334,6 +354,9 @@ export async function togglePinRecipe(recipeId: string): Promise<{ data: SavedRe
     if (error) {
       return { data: null, error }
     }
+
+    // Invalidate cache after successful update
+    recipeCache.invalidate(recipeId)
 
     return { data, error: null }
   } catch (error) {

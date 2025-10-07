@@ -579,6 +579,10 @@ export async function POST(request: NextRequest) {
       
       const recipe = await parseRecipeWithGemini(postData.caption);
       
+      // Set Instagram-specific properties
+      recipe.image = 'instagram-video';
+      recipe.instagramUrl = cleanUrl;
+      
       if (!recipe) {
         console.log('❌ Gemini failed to parse recipe from caption - trying fallback extraction...');
         
@@ -620,6 +624,9 @@ export async function POST(request: NextRequest) {
           if (enhancedRecipe && enhancedRecipe.instructions && enhancedRecipe.instructions.length > 0) {
             console.log('✅ Successfully generated instructions from ingredients');
             recipe.instructions = enhancedRecipe.instructions;
+            // Ensure Instagram properties are preserved
+            recipe.image = 'instagram-video';
+            recipe.instagramUrl = cleanUrl;
           }
         } catch (error) {
           console.log('⚠️ Failed to generate instructions:', error);

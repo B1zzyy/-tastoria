@@ -6,7 +6,7 @@ import { convertIngredients, convertTemperature, type UnitSystem } from '@/lib/u
 import { updateRecipeInstructions } from '@/lib/recipeService';
 import UnitToggle from './UnitToggle';
 
-import { Clock, Users, Star, ChefHat, List, BookOpen, Check, Play, ExternalLink, X, GripVertical, Plus } from 'lucide-react';
+import { Clock, Users, Star, ChefHat, List, BookOpen, Check, Play, ExternalLink, X, GripVertical, Plus, Instagram } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import Confetti from './Confetti';
@@ -182,47 +182,7 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
       {/* Hero Section - Recipe Image/Video & Title */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
-          {recipe.image === 'instagram-video' && recipe.instagramUrl ? (
-            <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-gray-800 via-gray-600 to-black">
-              {/* Instagram-style pattern overlay */}
-              <div className="absolute inset-0 opacity-10">
-                <div className="absolute inset-0" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.3'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                  backgroundSize: '30px 30px'
-                }} />
-              </div>
-              
-              {/* Clean header with Instagram badge - mobile optimized */}
-              <div className="absolute top-4 left-4 right-4 sm:top-6 sm:left-6 sm:right-6">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                    <ChefHat className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-white/90 text-caption sm:text-label">Instagram Recipe</p>
-                    <p className="text-white/70 text-caption hidden sm:block">Tap to watch video</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Subtle play button - mobile optimized */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <button
-                  onClick={() => setShowInstagramPopup(true)}
-                  className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
-                >
-                  <Play className="w-5 h-5 sm:w-6 sm:h-6 text-white ml-0.5 group-hover:scale-110 transition-transform" fill="white" />
-                </button>
-              </div>
-              
-              {/* Clean title overlay - mobile optimized */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-black/60 to-transparent">
-                <h1 className="text-h1 text-white leading-tight">
-                  {recipe.title}
-                </h1>
-              </div>
-            </div>
-          ) : (() => {
+          {(() => {
             // Check for custom preview first
             const customPreview = recipe.metadata?.customPreview;
             
@@ -249,6 +209,17 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                           {recipe.title}
                         </h1>
                       </div>
+                      {/* Instagram open button - top right corner */}
+                      {recipe.image === 'instagram-video' && recipe.instagramUrl && (
+                        <div className="absolute top-4 right-4">
+                          <button
+                            onClick={() => setShowInstagramPopup(true)}
+                            className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
+                          >
+                            <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 }
@@ -265,6 +236,17 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                       {recipe.title}
                     </h1>
                   </div>
+                  {/* Instagram open button - top right corner */}
+                  {recipe.image === 'instagram-video' && recipe.instagramUrl && (
+                    <div className="absolute top-4 right-4">
+                      <button
+                        onClick={() => setShowInstagramPopup(true)}
+                        className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
+                      >
+                        <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             } else if (customPreview?.type === 'image') {
@@ -283,6 +265,17 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                       {recipe.title}
                     </h1>
                   </div>
+                  {/* Instagram open button - top right corner */}
+                  {recipe.image === 'instagram-video' && recipe.instagramUrl && (
+                    <div className="absolute top-4 right-4">
+                      <button
+                        onClick={() => setShowInstagramPopup(true)}
+                        className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
+                      >
+                        <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             } else if (recipe.image && recipe.image !== 'instagram-video') {
@@ -301,6 +294,41 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                     <h1 className="text-h1 text-white">
                       {recipe.title}
                     </h1>
+                  </div>
+                  {/* Instagram open button - top right corner */}
+                  {recipe.image === 'instagram-video' && recipe.instagramUrl && (
+                    <div className="absolute top-4 right-4">
+                      <button
+                        onClick={() => setShowInstagramPopup(true)}
+                        className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
+                      >
+                        <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            } else if (recipe.image === 'instagram-video' && recipe.instagramUrl) {
+              // Fallback for Instagram recipes without custom preview - use same graphic as SavedRecipes
+              return (
+                <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-gray-700 via-gray-800 to-black flex items-center justify-center">
+                  {/* Instagram logo - same as SavedRecipes default */}
+                  <Instagram className="w-16 h-16 sm:w-20 sm:h-20 text-white" />
+                  
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <h1 className="text-h1 text-white">
+                      {recipe.title}
+                    </h1>
+                  </div>
+                  {/* Instagram open button - top right corner */}
+                  <div className="absolute top-4 right-4">
+                    <button
+                      onClick={() => setShowInstagramPopup(true)}
+                      className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
+                    >
+                      <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />
+                    </button>
                   </div>
                 </div>
               );

@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { Recipe } from './recipe-parser';
+import { recipeCache } from './recipeCache';
 
 export interface Collection {
   id: string;
@@ -218,6 +219,9 @@ export async function saveRecipeToCollection(recipe: Recipe, recipeUrl: string, 
         return { error: new Error(error.message) };
       }
 
+      // Invalidate cache for updated recipe
+      recipeCache.invalidate(existingRecipe.id);
+
       // If the selected collection is not "All Recipes", also save to "All Recipes"
       if (allRecipesCollection && collectionId !== allRecipesCollection.id) {
         // Check if recipe already exists in "All Recipes"
@@ -250,12 +254,26 @@ export async function saveRecipeToCollection(recipe: Recipe, recipeUrl: string, 
           user_id: user.id,
           title: recipe.title,
           recipe_url: recipeUrl,
-          recipe_data: recipe,
+          recipe_data: recipe, // This preserves all metadata including instructionsGenerated
           collection_id: collectionId
         });
 
       if (error) {
         return { error: new Error(error.message) };
+      }
+
+      // Get the newly created recipe ID for cache invalidation
+      const { data: newRecipe } = await supabase
+        .from('saved_recipes')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('recipe_url', recipeUrl)
+        .eq('collection_id', collectionId)
+        .single();
+
+      if (newRecipe) {
+        // Invalidate cache for new recipe
+        recipeCache.invalidate(newRecipe.id);
       }
 
       // If the selected collection is not "All Recipes", also save to "All Recipes"
@@ -266,7 +284,7 @@ export async function saveRecipeToCollection(recipe: Recipe, recipeUrl: string, 
             user_id: user.id,
             title: recipe.title,
             recipe_url: recipeUrl,
-            recipe_data: recipe,
+            recipe_data: recipe, // This preserves all metadata including instructionsGenerated
             collection_id: allRecipesCollection.id
           });
       }

@@ -91,11 +91,31 @@ export default function Home() {
   const handleLogout = async () => {
     await signOut();
     setShowUserDropdown(false);
+    
+    // If user was viewing a recipe, clear it and go to home page
+    if (recipe) {
+      setRecipe(null);
+      setCurrentRecipeUrl('');
+      setIsRecipeCurrentlySaved(false);
+      setCurrentSavedRecipeId(null);
+      setIsViewingFromSavedRecipes(false);
+      setError(null);
+    }
   };
 
   const handleDesktopLogout = async () => {
     await signOut();
     setShowDesktopUserDropdown(false);
+    
+    // If user was viewing a recipe, clear it and go to home page
+    if (recipe) {
+      setRecipe(null);
+      setCurrentRecipeUrl('');
+      setIsRecipeCurrentlySaved(false);
+      setCurrentSavedRecipeId(null);
+      setIsViewingFromSavedRecipes(false);
+      setError(null);
+    }
   };
 
   const handleSaveRecipe = async () => {
@@ -126,10 +146,14 @@ export default function Home() {
         console.error('Failed to delete recipe:', error);
         // You could show an error toast here
       } else {
-        // Successfully deleted
+        // Successfully deleted - redirect to home screen
         setIsRecipeCurrentlySaved(false);
         setCurrentSavedRecipeId(null);
-        console.log('Recipe deleted successfully from all collections');
+        setRecipe(null);
+        setCurrentRecipeUrl('');
+        setIsViewingFromSavedRecipes(false);
+        setError(null);
+        console.log('Recipe deleted successfully from all collections - redirected to home');
       }
     } catch (error) {
       console.error('Error deleting recipe:', error);
@@ -454,8 +478,8 @@ export default function Home() {
                   </button>
                 )}
 
-                {/* Edit Button - Only show when viewing from saved recipes */}
-                {isViewingFromSavedRecipes && (
+                {/* Edit Button - Show when recipe is saved */}
+                {isRecipeCurrentlySaved && (
                   <button 
                     onClick={() => setShowEditModal(true)} 
                     className="p-2 hover:bg-accent rounded-lg transition-colors" 
@@ -558,8 +582,8 @@ export default function Home() {
                     </button>
                   )}
 
-                  {/* Edit Button - Only show when viewing from saved recipes */}
-                  {isViewingFromSavedRecipes && (
+                  {/* Edit Button - Show when recipe is saved */}
+                  {isRecipeCurrentlySaved && (
                     <button 
                       onClick={() => setShowEditModal(true)} 
                       className="p-2 hover:bg-accent rounded-lg transition-colors" 
@@ -937,7 +961,7 @@ export default function Home() {
             <RecipeDisplay 
               recipe={recipe} 
               onUpdateRecipe={handleUpdateRecipe}
-              isEditable={isViewingFromSavedRecipes}
+              isEditable={isRecipeCurrentlySaved}
               savedRecipeId={currentSavedRecipeId}
             />
           </div>
@@ -952,9 +976,20 @@ export default function Home() {
           onClose={() => setShowCollectionModal(false)}
           recipe={recipe}
           recipeUrl={currentRecipeUrl}
-          onSaved={() => {
+          onSaved={async () => {
             setIsRecipeCurrentlySaved(true);
             setShowCollectionModal(false);
+            
+            // After saving, enable edit mode and get the saved recipe ID
+            setIsViewingFromSavedRecipes(true);
+            
+            // Get the saved recipe ID
+            if (currentRecipeUrl) {
+              const { data, recipeId } = await isRecipeSaved(currentRecipeUrl);
+              if (data && recipeId) {
+                setCurrentSavedRecipeId(recipeId);
+              }
+            }
             
             // Don't animate the button away - instead show "Saved" state
             // The button will now show green "Saved" state instead of disappearing

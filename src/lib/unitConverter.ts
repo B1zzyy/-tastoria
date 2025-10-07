@@ -24,6 +24,7 @@ const conversionFactors = {
   'liter': { imperial: 'cups', factor: 4.22675 },
   'liters': { imperial: 'cups', factor: 4.22675 },
   
+  
   // Imperial to metric (reverse conversions)
   'oz': { metric: 'g', factor: 28.3495 },
   'ounce': { metric: 'g', factor: 28.3495 },
@@ -35,22 +36,25 @@ const conversionFactors = {
   'cup': { metric: 'ml', factor: 236.588 },
   'cups': { metric: 'ml', factor: 236.588 },
   'tbsp': { metric: 'ml', factor: 14.7868 },
+  'tbsps': { metric: 'ml', factor: 14.7868 },
+  'tbs': { metric: 'ml', factor: 14.7868 },
   'tablespoon': { metric: 'ml', factor: 14.7868 },
   'tablespoons': { metric: 'ml', factor: 14.7868 },
   'tsp': { metric: 'ml', factor: 4.92892 },
+  'tsps': { metric: 'ml', factor: 4.92892 },
   'teaspoon': { metric: 'ml', factor: 4.92892 },
   'teaspoons': { metric: 'ml', factor: 4.92892 },
 };
 
 // Special ingredient-specific conversions (volume to weight)
 const ingredientConversions = {
-  'flour': { 'cup': '120g', 'tbsp': '7.5g', 'tsp': '2.5g' },
-  'sugar': { 'cup': '200g', 'tbsp': '12.5g', 'tsp': '4.2g' },
-  'brown sugar': { 'cup': '220g', 'tbsp': '13.8g', 'tsp': '4.6g' },
-  'butter': { 'cup': '227g', 'tbsp': '14.2g', 'tsp': '4.7g' },
-  'milk': { 'cup': '240ml', 'tbsp': '15ml', 'tsp': '5ml' },
-  'oil': { 'cup': '240ml', 'tbsp': '15ml', 'tsp': '5ml' },
-  'water': { 'cup': '240ml', 'tbsp': '15ml', 'tsp': '5ml' },
+  'flour': { 'cup': '120g', 'tbsp': '7.5g', 'tbsps': '7.5g', 'tbs': '7.5g', 'tsp': '2.5g', 'tsps': '2.5g' },
+  'sugar': { 'cup': '200g', 'tbsp': '12.5g', 'tbsps': '12.5g', 'tbs': '12.5g', 'tsp': '4.2g', 'tsps': '4.2g' },
+  'brown sugar': { 'cup': '220g', 'tbsp': '13.8g', 'tbsps': '13.8g', 'tbs': '13.8g', 'tsp': '4.6g', 'tsps': '4.6g' },
+  'butter': { 'cup': '227g', 'tbsp': '14.2g', 'tbsps': '14.2g', 'tbs': '14.2g', 'tsp': '4.7g', 'tsps': '4.7g' },
+  'milk': { 'cup': '240ml', 'tbsp': '15ml', 'tbsps': '15ml', 'tbs': '15ml', 'tsp': '5ml', 'tsps': '5ml' },
+  'oil': { 'cup': '240ml', 'tbsp': '15ml', 'tbsps': '15ml', 'tbs': '15ml', 'tsp': '5ml', 'tsps': '5ml' },
+  'water': { 'cup': '240ml', 'tbsp': '15ml', 'tbsps': '15ml', 'tbs': '15ml', 'tsp': '5ml', 'tsps': '5ml' },
 };
 
 export function parseIngredient(ingredient: string): { amount: number; unit: string; name: string; original: string } {

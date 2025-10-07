@@ -22,6 +22,7 @@ export interface Recipe {
     sugar?: string;
   };
   image?: string;
+  instagramUrl?: string; // For Instagram video popup
   metadata?: {
     instructionsGenerated: boolean;
   };
@@ -134,11 +135,18 @@ Return ONLY the JSON object:`;
     let instructionsWereGenerated = false;
     
     // Check if the original content had proper cooking instructions
-    const hasProperInstructions = content.toLowerCase().includes('step') || 
-                                 content.toLowerCase().includes('instructions') ||
-                                 content.toLowerCase().includes('directions') ||
-                                 content.toLowerCase().includes('method') ||
-                                 (content.match(/\d+\./g) && content.match(/\d+\./g)!.length >= 3); // Has numbered steps
+    // Look for more specific cooking instruction patterns
+    const hasProperInstructions = (
+      // Look for explicit instruction keywords
+      content.toLowerCase().includes('instructions:') ||
+      content.toLowerCase().includes('directions:') ||
+      content.toLowerCase().includes('method:') ||
+      content.toLowerCase().includes('how to make') ||
+      content.toLowerCase().includes('how to cook') ||
+      // Look for numbered cooking steps (but not just ingredient lists)
+      (content.match(/\d+\.\s*(heat|add|mix|stir|cook|bake|fry|boil|simmer|season|preheat|combine|whisk|beat|fold|pour|drain|serve)/gi) && 
+       content.match(/\d+\.\s*(heat|add|mix|stir|cook|bake|fry|boil|simmer|season|preheat|combine|whisk|beat|fold|pour|drain|serve)/gi)!.length >= 3)
+    );
     
     // If no proper instructions found in content, they were likely generated
     if (!hasProperInstructions) {
