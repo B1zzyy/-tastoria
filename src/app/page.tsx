@@ -21,7 +21,6 @@ import TutorialOverlay from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import AIChatButton from '@/components/AIChatButton';
 import RecipeAIChat from '@/components/RecipeAIChat';
-import { sampleChocolateChipCookies } from '@/lib/sampleRecipes';
 import { generateShortRecipeShareUrl, getSharedRecipeFromUrl } from '@/lib/urlSharing';
 
 
@@ -41,7 +40,6 @@ export default function Home() {
   const [isRecipeCurrentlySaved, setIsRecipeCurrentlySaved] = useState(false);
   const [currentSavedRecipeId, setCurrentSavedRecipeId] = useState<string | null>(null);
   const [showConstructionAlert, setShowConstructionAlert] = useState(false);
-  const [isViewingFromSavedRecipes, setIsViewingFromSavedRecipes] = useState(false);
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
@@ -98,7 +96,6 @@ export default function Home() {
       setCurrentRecipeUrl('');
       setIsRecipeCurrentlySaved(false);
       setCurrentSavedRecipeId(null);
-      setIsViewingFromSavedRecipes(false);
       setError(null);
     }
   };
@@ -113,7 +110,6 @@ export default function Home() {
       setCurrentRecipeUrl('');
       setIsRecipeCurrentlySaved(false);
       setCurrentSavedRecipeId(null);
-      setIsViewingFromSavedRecipes(false);
       setError(null);
     }
   };
@@ -151,7 +147,6 @@ export default function Home() {
         setCurrentSavedRecipeId(null);
         setRecipe(null);
         setCurrentRecipeUrl('');
-        setIsViewingFromSavedRecipes(false);
         setError(null);
         console.log('Recipe deleted successfully from all collections - redirected to home');
       }
@@ -190,7 +185,6 @@ export default function Home() {
     setCurrentRecipeUrl(url);
     setIsRecipeCurrentlySaved(true);
     setCurrentSavedRecipeId(recipeId || null);
-    setIsViewingFromSavedRecipes(true); // Mark as viewing from saved recipes
     setShowAIChat(false); // Always close AI chat when opening a saved recipe
     setError(null);
   };
@@ -207,7 +201,6 @@ export default function Home() {
     setRecipe(null);
     setCurrentRecipeUrl(url);
     setIsRecipeCurrentlySaved(false);
-    setIsViewingFromSavedRecipes(false); // Reset flag when manually searching
 
     // Check if it's an Instagram URL
     const isInstagramUrl = url.includes('instagram.com/p/') || 
@@ -444,7 +437,6 @@ export default function Home() {
                 onClick={() => {
                   setRecipe(null);
                   setError(null);
-                  setIsViewingFromSavedRecipes(false);
                 }}
                 className="p-2 hover:bg-accent rounded-lg transition-colors"
                 aria-label="Go back"
@@ -542,7 +534,6 @@ export default function Home() {
                   onClick={() => {
                     setRecipe(null);
                     setError(null);
-                    setIsViewingFromSavedRecipes(false);
                   }}
                   className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                 >
@@ -981,7 +972,6 @@ export default function Home() {
             setShowCollectionModal(false);
             
             // After saving, enable edit mode and get the saved recipe ID
-            setIsViewingFromSavedRecipes(true);
             
             // Get the saved recipe ID
             if (currentRecipeUrl) {

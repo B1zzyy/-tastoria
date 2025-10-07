@@ -6,7 +6,7 @@ import { convertIngredients, convertTemperature, type UnitSystem } from '@/lib/u
 import { updateRecipeInstructions } from '@/lib/recipeService';
 import UnitToggle from './UnitToggle';
 
-import { Clock, Users, Star, ChefHat, List, BookOpen, Check, Play, ExternalLink, X, GripVertical, Plus, Instagram } from 'lucide-react';
+import { Clock, Users, Star, ChefHat, List, BookOpen, Check, ExternalLink, X, GripVertical, Plus, Instagram } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import Confetti from './Confetti';

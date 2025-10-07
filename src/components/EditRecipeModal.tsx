@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Image as ImageIcon, Instagram, Trash2, Plus, GripVertical } from 'lucide-react';
+import Image from 'next/image';
 
 interface EditRecipeModalProps {
   isOpen: boolean;
@@ -602,10 +603,11 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                          : 'border-border hover:border-primary/50'
                      }`}>
                        {recipe.image && recipe.image !== 'instagram-video' ? (
-                         <img
+                         <Image
                            src={recipe.image}
                            alt="Original recipe"
-                           className="w-full h-full object-cover"
+                           fill
+                           className="object-cover"
                          />
                        ) : (
                          <div className="w-full h-full bg-gradient-to-br from-gray-700 via-gray-800 to-black flex items-center justify-center">
@@ -885,9 +887,11 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                           Preview:
                         </label>
                         <div className="w-16 h-16 rounded-lg overflow-hidden border border-border">
-                          <img
+                          <Image
                             src={previewUrl}
                             alt="Preview"
+                            width={64}
+                            height={64}
                             className="w-full h-full object-cover"
                             onError={() => setPreviewUrl('')}
                           />

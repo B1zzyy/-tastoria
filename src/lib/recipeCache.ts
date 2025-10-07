@@ -26,7 +26,6 @@ class RecipeCacheService {
       ingredients: recipe.ingredients,
       instructions: recipe.instructions,
       image: recipe.image,
-      customPreview: recipe.customPreview,
       instagramUrl: recipe.instagramUrl,
       metadata: recipe.metadata
     });

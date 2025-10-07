@@ -576,10 +576,11 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
       );
     } else if (customPreview?.type === 'image') {
       return (
-        <img
+        <Image
           src={customPreview.value}
           alt="Custom preview"
-          className="w-full h-full object-cover"
+          fill
+          className="object-cover"
           onError={(e) => {
             // Fallback to Instagram logo if image fails to load
             e.currentTarget.style.display = 'none';

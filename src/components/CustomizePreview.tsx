@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Image as ImageIcon, Instagram } from 'lucide-react';
+import Image from 'next/image';
 
 interface CustomizePreviewProps {
   isOpen: boolean;
@@ -189,9 +190,11 @@ export default function CustomizePreview({ isOpen, onClose, currentPreview, onSa
                         Preview:
                       </label>
                       <div className="w-20 h-20 rounded-lg overflow-hidden border border-border">
-                        <img
+                        <Image
                           src={previewUrl}
                           alt="Preview"
+                          width={80}
+                          height={80}
                           className="w-full h-full object-cover"
                           onError={() => setPreviewUrl('')}
                         />
