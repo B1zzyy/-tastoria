@@ -74,10 +74,13 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     let subscriptionStatus: string
     let subscriptionEndDate: string | null = null
 
+    console.log(`Processing subscription ${subscription.id} with status: ${subscription.status}`)
+
     if (subscription.status === 'active') {
       subscriptionStatus = 'paid'
       subscriptionEndDate = new Date((subscription as unknown as { current_period_end: number }).current_period_end * 1000).toISOString()
-    } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
+      console.log(`Setting subscription to PAID with end date: ${subscriptionEndDate}`)
+    } else if (subscription.status === 'canceled' || subscription.status === 'unpaid' || subscription.status === 'past_due') {
       // Check if subscription is still in grace period
       const currentPeriodEnd = new Date((subscription as unknown as { current_period_end: number }).current_period_end * 1000)
       const now = new Date()
@@ -109,6 +112,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
       console.error('Error updating subscription status:', updateError)
     } else {
       console.log(`Updated subscription for user ${profile.id}: ${subscriptionStatus}`)
+      console.log(`Subscription end date set to: ${subscriptionEndDate}`)
     }
   } catch (error) {
     console.error('Error handling subscription change:', error)
