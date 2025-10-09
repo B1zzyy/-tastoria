@@ -8,6 +8,7 @@ import RecipeForm, { type SourceType } from '@/components/RecipeForm';
 import RecipeDisplay from '@/components/RecipeDisplay';
 import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
+import { useTrial } from '@/hooks/useTrial';
 import { isRecipeSaved, updateRecipeTitle, updateRecipeCustomPreview, updateRecipeInstructions, updateRecipeIngredients } from '@/lib/recipeService';
 import { deleteRecipeFromAllCollections } from '@/lib/collectionsService';
 import SavedRecipes from '@/components/SavedRecipes';
@@ -21,7 +22,14 @@ import TutorialOverlay from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import AIChatButton from '@/components/AIChatButton';
 import RecipeAIChat from '@/components/RecipeAIChat';
+import { PaywallModal } from '@/components/PaywallModal';
+import UserProfileModal from '@/components/UserProfileModal';
+import WelcomeTrialModal from '@/components/WelcomeTrialModal';
+import PremiumUpgradeSection from '@/components/PremiumUpgradeSection';
+import ScrollIndicator from '@/components/ScrollIndicator';
 import { generateShortRecipeShareUrl, getSharedRecipeFromUrl } from '@/lib/urlSharing';
+import { PaymentService } from '@/lib/paymentService';
+import { supabase } from '@/lib/supabase';
 
 
 export default function Home() {
@@ -35,6 +43,10 @@ export default function Home() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showDesktopUserDropdown, setShowDesktopUserDropdown] = useState(false);
+  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
+  const [showWelcomeTrialModal, setShowWelcomeTrialModal] = useState(false);
+  const [showPremiumSection, setShowPremiumSection] = useState(false);
+  const [userProfileImage, setUserProfileImage] = useState<string | null>(null);
   const [showSavedRecipes, setShowSavedRecipes] = useState(false);
   const [currentRecipeUrl, setCurrentRecipeUrl] = useState<string>('');
   const [isRecipeCurrentlySaved, setIsRecipeCurrentlySaved] = useState(false);
@@ -44,18 +56,146 @@ export default function Home() {
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallFeature, setPaywallFeature] = useState<string>('');
   
   // Use real authentication
   const { user, signOut } = useAuth();
+  
+  // Use trial system
+  const { canAccessFeature, isTrialActive, isPaidUser, daysRemaining, trialDisplayInfo } = useTrial();
+  
+  // Helper function to check feature access
+  const checkFeatureAccess = async (feature: 'collections' | 'ai_chat' | 'unlimited_parsing', featureName: string) => {
+    if (!user) {
+      setShowAuthModal(true);
+      return false;
+    }
+    
+    const hasAccess = await canAccessFeature(feature);
+    if (!hasAccess) {
+      setPaywallFeature(featureName);
+      setShowPaywall(true);
+      return false;
+    }
+    return true;
+  };
   
   // Debug user state changes
   useEffect(() => {
     console.log('User state changed:', user);
   }, [user]);
 
+  // Auto-show paywall for expired trials
+  useEffect(() => {
+    if (user && trialDisplayInfo && trialDisplayInfo.status === 'expired' && !showPaywall) {
+      setPaywallFeature('All Premium Features');
+      setShowPaywall(true);
+    }
+  }, [user, trialDisplayInfo, showPaywall]);
+
+  // Close auth modal when user successfully logs in
+  useEffect(() => {
+    if (user && showAuthModal) {
+      setShowAuthModal(false);
+    }
+  }, [user, showAuthModal]);
+
+  // Handle payment success
+  useEffect(() => {
+    const handlePaymentSuccess = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentStatus = urlParams.get('payment');
+      const sessionId = urlParams.get('session_id');
+
+      // Check if we've already processed this payment
+      if (localStorage.getItem('paymentProcessed') === sessionId) {
+        return;
+      }
+
+      if (paymentStatus === 'success' && sessionId) {
+        // Mark this payment as processed
+        localStorage.setItem('paymentProcessed', sessionId);
+        
+        // Verify payment and update subscription
+        const result = await PaymentService.verifyPayment(sessionId);
+        
+        if (result.success) {
+          // Close paywall and refresh trial status
+          setShowPaywall(false);
+          // Clean up URL parameters
+          window.history.replaceState({}, '', window.location.pathname);
+          // Force refresh trial status
+          window.location.reload();
+        }
+      } else if (paymentStatus === 'cancelled') {
+        // User cancelled payment, just close paywall
+        setShowPaywall(false);
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    };
+
+    handlePaymentSuccess();
+  }, []);
+
+  // Load user profile image
+  const loadUserProfileImage = async () => {
+    if (!user) {
+      setUserProfileImage(null);
+      return;
+    }
+
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('profile_image_url')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.profile_image_url) {
+        setUserProfileImage(profile.profile_image_url);
+      } else {
+        setUserProfileImage(null);
+      }
+    } catch (error) {
+      console.log('No profile image found');
+      setUserProfileImage(null);
+    }
+  };
+
+  // Load profile image when user changes
+  useEffect(() => {
+    loadUserProfileImage();
+  }, [user]);
+
+  // Listen for user update events to force re-render
+  useEffect(() => {
+    const handleUserUpdate = () => {
+      console.log('User update event received, forcing complete re-render...');
+      // Force a complete page refresh to ensure all components update
+      setTimeout(() => {
+        window.location.reload();
+      }, 200);
+    };
+
+    window.addEventListener('userUpdated', handleUserUpdate);
+    return () => window.removeEventListener('userUpdated', handleUserUpdate);
+  }, []);
+
   // Show welcome message for new users
   useEffect(() => {
     if (user && !tutorial.isCompleted && !tutorial.isActive) {
+      // Check if we've shown the welcome modal for this user before
+      const welcomeModalShown = localStorage.getItem(`welcome-shown-${user.id}`);
+      
+      // Show welcome trial modal for new users first
+      if (!welcomeModalShown) {
+        setShowWelcomeTrialModal(true);
+        // Mark as shown for this user
+        localStorage.setItem(`welcome-shown-${user.id}`, 'true');
+      }
+      
       // Auto-start tutorial for new users after a short delay
       const timer = setTimeout(() => {
         tutorial.startTutorial();
@@ -309,25 +449,20 @@ export default function Home() {
     }
   }, [recipe, handleParseRecipe]);
 
-  // Disable scroll on home page (when no recipe is displayed) - only on desktop
+  // Always allow scrolling since premium section is always present
   useEffect(() => {
-    if (!recipe) {
-      // Only disable scroll on desktop devices (768px and above)
-      if (window.innerWidth >= 768) {
-        document.body.style.overflow = 'hidden';
-      }
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+    document.body.style.overflow = 'unset';
 
     // Cleanup on unmount
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [recipe]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Main Content Area */}
+      <div className="relative min-h-screen flex flex-col">
       {/* Maintenance Popup - Unremovable */}
       {/* <MaintenancePopup /> */}
       
@@ -336,7 +471,12 @@ export default function Home() {
         {/* Saved Recipes Button - Only show when user is logged in and not viewing a recipe */}
         {user && !recipe && (
           <button
-            onClick={() => setShowSavedRecipes(true)}
+            onClick={async () => {
+              const hasAccess = await checkFeatureAccess('collections', 'Collections & Saved Recipes');
+              if (hasAccess) {
+                setShowSavedRecipes(true);
+              }
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg shadow-sm hover:bg-accent transition-colors"
             title="Saved Recipes"
             data-tutorial="collections-button"
@@ -353,7 +493,17 @@ export default function Home() {
               onClick={() => setShowUserDropdown(!showUserDropdown)}
               className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg shadow-sm hover:bg-accent transition-colors"
             >
-              <User className="w-4 h-4 text-muted-foreground" />
+              {userProfileImage ? (
+                <div className="w-6 h-6 rounded-full overflow-hidden -my-1">
+                  <img
+                    src={userProfileImage}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <User className="w-4 h-4 text-muted-foreground" />
+              )}
               <span className="text-label text-card-foreground">
                 {user.name}
               </span>
@@ -375,23 +525,60 @@ export default function Home() {
                   }}
                   className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden origin-top-right"
                 >
-                  <motion.div 
+                  <motion.button
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.1 }}
-                    className="p-3 border-b border-border"
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      setShowUserProfileModal(true);
+                      setShowUserDropdown(false);
+                    }}
+                    className="w-full p-3 border-b border-border text-left transition-colors hover:bg-accent/80"
                   >
-                    <p className="text-label text-card-foreground">{user.name}</p>
-                    <p className="text-caption text-muted-foreground">{user.email}</p>
-                  </motion.div>
+                    <div className="flex items-center gap-3">
+                      {userProfileImage ? (
+                        <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                          <img
+                            src={userProfileImage}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-label text-card-foreground">{user.name}</p>
+                        {isPaidUser ? (
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div>
+                            <span className="text-xs font-bold bg-gradient-to-r from-primary via-primary/90 to-primary/80 bg-clip-text text-transparent">
+                              PREMIUM
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-medium text-gray-500">
+                              TRIAL
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              ({trialDisplayInfo?.daysRemaining || 7} days left)
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.button>
                   <motion.button
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.1 }}
-                    whileHover={{ backgroundColor: "hsl(var(--accent))" }}
                     whileTap={{ scale: 0.98 }}
                     onClick={tutorial.startTutorial}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-body-sm text-card-foreground transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-2 text-body-sm text-card-foreground transition-colors hover:bg-accent/80"
                   >
                     <HelpCircle className="w-4 h-4" />
                     {tutorial.isCompleted ? 'Help' : 'Start Tutorial'}
@@ -400,10 +587,9 @@ export default function Home() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.15 }}
-                    whileHover={{ backgroundColor: "hsl(var(--accent))" }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-body-sm text-card-foreground transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-2 text-body-sm text-card-foreground transition-colors hover:bg-accent/80"
                   >
                     <LogOut className="w-4 h-4" />
                     Sign out
@@ -637,7 +823,17 @@ export default function Home() {
                         onClick={() => setShowDesktopUserDropdown(!showDesktopUserDropdown)}
                         className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg hover:bg-accent transition-colors"
                       >
-                        <User className="w-4 h-4 text-muted-foreground" />
+                        {userProfileImage ? (
+                          <div className="w-6 h-6 rounded-full overflow-hidden -my-1">
+                            <img
+                              src={userProfileImage}
+                              alt="Profile"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <User className="w-4 h-4 text-muted-foreground" />
+                        )}
                         <span className="text-label text-card-foreground">
                           {user.name}
                         </span>
@@ -659,15 +855,54 @@ export default function Home() {
                             }}
                             className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden origin-top-right"
                           >
-                            <motion.div 
+                            <motion.button
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
                               transition={{ delay: 0.1 }}
-                              className="p-3 border-b border-border"
+                              whileHover={{ backgroundColor: "hsl(var(--accent))" }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => {
+                                setShowUserProfileModal(true);
+                                setShowDesktopUserDropdown(false);
+                              }}
+                              className="w-full p-3 border-b border-border text-left transition-colors"
                             >
-                              <p className="text-sm font-medium text-card-foreground">{user.name}</p>
-                              <p className="text-xs text-muted-foreground">{user.email}</p>
-                            </motion.div>
+                              <div className="flex items-center gap-3">
+                                {userProfileImage ? (
+                                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                                    <img
+                                      src={userProfileImage}
+                                      alt="Profile"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                                    <User className="w-4 h-4 text-muted-foreground" />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-card-foreground">{user.name}</p>
+                                  {isPaidUser ? (
+                                    <div className="flex items-center gap-1">
+                                      <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div>
+                                      <span className="text-xs font-bold bg-gradient-to-r from-primary via-primary/90 to-primary/80 bg-clip-text text-transparent">
+                                        PREMIUM
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-xs font-medium text-gray-500">
+                                        TRIAL
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        ({trialDisplayInfo?.daysRemaining || 7} days left)
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </motion.button>
                             <motion.button
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
@@ -930,6 +1165,11 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+
+              {/* Scroll Indicator - Right after the recipe mockup */}
+              {!recipe && (
+                <ScrollIndicator />
+              )}
             </div>
           </div>
         </div>
@@ -1184,12 +1424,17 @@ export default function Home() {
       {/* AI Chat Button - Only show when viewing a recipe or during tutorial */}
       {(recipe || (tutorial.isActive && tutorial.currentStep?.id === 'ai-chat')) && (
         <AIChatButton 
-          onClick={() => {
+          onClick={async () => {
             // Don't open chat during tutorial
             if (tutorial.isActive && tutorial.currentStep?.id === 'ai-chat') {
               return;
             }
-            setShowAIChat(true);
+            
+            // Check trial access for AI chat
+            const hasAccess = await checkFeatureAccess('ai_chat', 'AI Recipe Chat');
+            if (hasAccess) {
+              setShowAIChat(true);
+            }
           }}
         />
       )}
@@ -1202,6 +1447,29 @@ export default function Home() {
           recipe={recipe}
         />
       )}
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        feature={paywallFeature}
+      />
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        isOpen={showUserProfileModal}
+        onClose={() => setShowUserProfileModal(false)}
+      />
+
+        {/* Premium Upgrade Section - Always present */}
+        <PremiumUpgradeSection />
+      </div>
+
+      {/* Welcome Trial Modal */}
+      <WelcomeTrialModal
+        isOpen={showWelcomeTrialModal}
+        onClose={() => setShowWelcomeTrialModal(false)}
+      />
 
     </div>
   );
