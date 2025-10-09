@@ -76,10 +76,10 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 
     if (subscription.status === 'active') {
       subscriptionStatus = 'paid'
-      subscriptionEndDate = new Date((subscription as any).current_period_end * 1000).toISOString()
+      subscriptionEndDate = new Date((subscription as unknown as { current_period_end: number }).current_period_end * 1000).toISOString()
     } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
       // Check if subscription is still in grace period
-      const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000)
+      const currentPeriodEnd = new Date((subscription as unknown as { current_period_end: number }).current_period_end * 1000)
       const now = new Date()
       
       if (now < currentPeriodEnd) {
@@ -93,7 +93,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
       }
     } else {
       subscriptionStatus = 'expired'
-      subscriptionEndDate = new Date((subscription as any).current_period_end * 1000).toISOString()
+      subscriptionEndDate = new Date((subscription as unknown as { current_period_end: number }).current_period_end * 1000).toISOString()
     }
 
     // Update user's subscription status in Supabase
