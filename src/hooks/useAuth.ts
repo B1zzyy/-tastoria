@@ -197,7 +197,7 @@ export function useAuth() {
             setTimeout(() => reject(new Error('Session fetch timeout')), 5000)
           );
 
-          const { data: { session } } = await Promise.race([sessionPromise, sessionTimeoutPromise]) as { data: { session: any } };
+          const { data: { session } } = await Promise.race([sessionPromise, sessionTimeoutPromise]) as { data: { session: { user: { id: string; email: string | null; user_metadata?: { name?: string } } } | null } };
           
           if (session?.user) {
             
@@ -212,7 +212,7 @@ export function useAuth() {
               setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
             );
 
-            const { data: profile } = await Promise.race([profilePromise, profileTimeoutPromise]) as { data: any };
+            const { data: profile } = await Promise.race([profilePromise, profileTimeoutPromise]) as { data: { name: string; email: string } | null };
             
             if (profile) {
               setUser({

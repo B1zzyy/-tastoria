@@ -124,15 +124,19 @@ export class TrialService {
 
       // Only initialize if profile doesn't exist or doesn't have trial_start_date
       if (!existingProfile || !existingProfile.trial_start_date) {
-        const profileData: any = {
+        const profileData: {
+          id: string;
+          trial_start_date: string;
+          subscription_status: string;
+          email: string;
+          name: string;
+        } = {
           id: userId,
           trial_start_date: new Date().toISOString(),
-          subscription_status: 'trial'
+          subscription_status: 'trial',
+          email: userEmail || 'user@example.com',
+          name: userName || 'User'
         }
-
-        // Add email and name if provided (required fields)
-        profileData.email = userEmail || 'user@example.com'
-        profileData.name = userName || 'User'
 
         const { error } = await supabase
           .from('profiles')
@@ -221,7 +225,10 @@ export class TrialService {
     endDate?: string
   ): Promise<void> {
     try {
-      const updateData: any = {
+      const updateData: {
+        subscription_status: string;
+        subscription_end_date?: string;
+      } = {
         subscription_status: status
       }
 
