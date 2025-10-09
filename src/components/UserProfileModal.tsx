@@ -53,14 +53,16 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
         .single();
 
       if (profile && !error) {
-        // Check if subscription is cancelled by looking at Stripe subscription status
-        // For now, we'll check if there's an end date in the future (indicating cancellation)
-        const hasEndDate = profile.subscription_end_date && 
-                           new Date(profile.subscription_end_date) > new Date();
+        // Check if subscription is cancelled
+        // If status is 'paid', the subscription is active (regardless of end date)
+        // If status is 'expired', the subscription is cancelled/expired
+        const isCancelled = profile.subscription_status === 'expired';
         
-        // If user has 'paid' status but with a future end date, they're cancelled
-        // If user has 'paid' status with no end date or past end date, they're active
-        const isCancelled = profile.subscription_status === 'paid' && hasEndDate;
+        console.log('Loading subscription details:', {
+          status: profile.subscription_status,
+          endDate: profile.subscription_end_date,
+          isCancelled: isCancelled
+        });
         
         setSubscriptionDetails({
           status: profile.subscription_status,
