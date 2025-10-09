@@ -172,7 +172,7 @@ export function useAuth() {
         setTimeout(() => reject(new Error('Profile update timeout after 10 seconds')), 10000)
       );
 
-      const { error } = await Promise.race([updatePromise, timeoutPromise]) as { error: any };
+      const { error } = await Promise.race([updatePromise, timeoutPromise]) as { error: Error | null };
 
       if (error) {
         console.error('Profile update error:', error);

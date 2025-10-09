@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Edit3, X, ChevronDown, ChevronUp, Check, Star } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -42,7 +42,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
   }, [user?.name]);
 
   // Load subscription details
-  const loadSubscriptionDetails = async () => {
+  const loadSubscriptionDetails = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -71,9 +71,9 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     } catch {
       console.error('Error loading subscription details');
     }
-  };
+  }, [user]);
 
-  const loadProfileImage = async () => {
+  const loadProfileImage = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -87,10 +87,10 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
         setProfileImage(profile.profile_image_url);
         setOriginalProfileImage(profile.profile_image_url);
       }
-    } catch (error) {
+    } catch {
       console.log('No existing profile image found');
     }
-  };
+  }, [user]);
 
   // Load existing profile image when modal opens
   useEffect(() => {

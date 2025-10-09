@@ -139,7 +139,7 @@ export default function Home() {
   }, []);
 
   // Load user profile image
-  const loadUserProfileImage = async () => {
+  const loadUserProfileImage = useCallback(async () => {
     if (!user) {
       setUserProfileImage(null);
       return;
@@ -161,7 +161,7 @@ export default function Home() {
       console.log('No profile image found');
       setUserProfileImage(null);
     }
-  };
+  }, [user]);
 
   // Load profile image when user changes
   useEffect(() => {
