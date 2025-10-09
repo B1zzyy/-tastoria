@@ -65,9 +65,9 @@ export function useTrial() {
     loadTrialStatus()
   }, [user])
 
-  const canAccessFeature = async (feature: 'collections' | 'ai_chat' | 'unlimited_parsing'): Promise<boolean> => {
+  const canAccessFeature = async (): Promise<boolean> => {
     if (!user) return false
-    return await TrialService.canAccessFeature(user.id, feature)
+    return await TrialService.canAccessFeature(user.id)
   }
 
   const refreshTrialStatus = async () => {

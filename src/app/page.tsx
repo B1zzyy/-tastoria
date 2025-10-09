@@ -71,7 +71,7 @@ export default function Home() {
       return false;
     }
     
-    const hasAccess = await canAccessFeature(feature);
+    const hasAccess = await canAccessFeature();
     if (!hasAccess) {
       setPaywallFeature(featureName);
       setShowPaywall(true);
