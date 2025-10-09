@@ -78,25 +78,42 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 
     if (subscription.status === 'active') {
       subscriptionStatus = 'paid'
-      subscriptionEndDate = new Date((subscription as unknown as { current_period_end: number }).current_period_end * 1000).toISOString()
-      console.log(`Setting subscription to PAID with end date: ${subscriptionEndDate}`)
+      const periodEnd = (subscription as unknown as { current_period_end: number | null }).current_period_end
+      if (periodEnd) {
+        subscriptionEndDate = new Date(periodEnd * 1000).toISOString()
+        console.log(`Setting subscription to PAID with end date: ${subscriptionEndDate}`)
+      } else {
+        console.log(`Setting subscription to PAID with no end date`)
+      }
     } else if (subscription.status === 'canceled' || subscription.status === 'unpaid' || subscription.status === 'past_due') {
       // Check if subscription is still in grace period
-      const currentPeriodEnd = new Date((subscription as unknown as { current_period_end: number }).current_period_end * 1000)
-      const now = new Date()
-      
-      if (now < currentPeriodEnd) {
-        // Still in grace period - keep as paid until period ends
-        subscriptionStatus = 'paid'
-        subscriptionEndDate = currentPeriodEnd.toISOString()
-      } else {
-        // Grace period ended - mark as expired
+      const periodEnd = (subscription as unknown as { current_period_end: number | null }).current_period_end
+      if (!periodEnd) {
+        console.log('No period end date found, marking as expired')
         subscriptionStatus = 'expired'
-        subscriptionEndDate = currentPeriodEnd.toISOString()
+        subscriptionEndDate = null
+      } else {
+        const currentPeriodEnd = new Date(periodEnd * 1000)
+        const now = new Date()
+        
+        if (now < currentPeriodEnd) {
+          // Still in grace period - keep as paid until period ends
+          subscriptionStatus = 'paid'
+          subscriptionEndDate = currentPeriodEnd.toISOString()
+        } else {
+          // Grace period ended - mark as expired
+          subscriptionStatus = 'expired'
+          subscriptionEndDate = currentPeriodEnd.toISOString()
+        }
       }
     } else {
       subscriptionStatus = 'expired'
-      subscriptionEndDate = new Date((subscription as unknown as { current_period_end: number }).current_period_end * 1000).toISOString()
+      const periodEnd = (subscription as unknown as { current_period_end: number | null }).current_period_end
+      if (periodEnd) {
+        subscriptionEndDate = new Date(periodEnd * 1000).toISOString()
+      } else {
+        subscriptionEndDate = null
+      }
     }
 
     // Update user's subscription status in Supabase
