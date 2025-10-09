@@ -53,28 +53,28 @@ export class TrialService {
         }
 
         // Check if user is a paid subscriber
-        if ((profile as any).subscription_status === 'paid') {
+        if ((profile as { subscription_status: string }).subscription_status === 'paid') {
           
           // If no end date, assume active subscription
-          if (!(profile as any).subscription_end_date) {
+          if (!(profile as { subscription_end_date: string | null }).subscription_end_date) {
             const result = {
               isTrialActive: false,
               daysRemaining: 0,
-              trialStartDate: (profile as any).trial_start_date || new Date().toISOString(),
+              trialStartDate: (profile as { trial_start_date: string }).trial_start_date || new Date().toISOString(),
               isPaidUser: true
             };
             this.cache.set(userId, { data: result, timestamp: Date.now() });
             return result;
           }
           
-          const subscriptionEnd = new Date((profile as any).subscription_end_date)
+          const subscriptionEnd = new Date((profile as { subscription_end_date: string }).subscription_end_date)
           const now = new Date()
           
           if (subscriptionEnd > now) {
             const paidResult = {
               isTrialActive: false,
               daysRemaining: 0,
-              trialStartDate: (profile as any).trial_start_date || new Date().toISOString(),
+              trialStartDate: (profile as { trial_start_date: string }).trial_start_date || new Date().toISOString(),
               isPaidUser: true
             };
             // Cache the paid result
@@ -86,7 +86,7 @@ export class TrialService {
         }
 
         // Check trial status
-        const trialStartDate = (profile as any).trial_start_date || new Date().toISOString()
+        const trialStartDate = (profile as { trial_start_date: string }).trial_start_date || new Date().toISOString()
         const trialStart = new Date(trialStartDate)
         const now = new Date()
         const daysSinceStart = Math.floor((now.getTime() - trialStart.getTime()) / (1000 * 60 * 60 * 24))
@@ -150,7 +150,7 @@ export class TrialService {
   /**
    * Check if user can access a feature
    */
-  static async canAccessFeature(userId: string, feature: 'collections' | 'ai_chat' | 'unlimited_parsing'): Promise<boolean> {
+  static async canAccessFeature(userId: string): Promise<boolean> {
     const trialStatus = await this.getTrialStatus(userId)
     
     // Paid users can access everything

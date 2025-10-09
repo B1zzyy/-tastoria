@@ -1,16 +1,14 @@
 import React, { useState } from 'react'
-import { X, Crown, Check, Sparkles, Loader2 } from 'lucide-react'
+import { Crown, Check, Sparkles, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PaymentService } from '@/lib/paymentService'
 import { useAuth } from '@/hooks/useAuth'
 
 interface PaywallModalProps {
   isOpen: boolean
-  onClose: () => void
   feature?: string
 }
 
-export function PaywallModal({ isOpen, onClose, feature }: PaywallModalProps) {
+export function PaywallModal({ isOpen, feature }: PaywallModalProps) {
   const { user } = useAuth()
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -121,7 +119,7 @@ export function PaywallModal({ isOpen, onClose, feature }: PaywallModalProps) {
 
         {/* Features */}
         <div className="px-6 pb-6">
-          <h3 className="font-semibold text-foreground mb-3">What's included:</h3>
+          <h3 className="font-semibold text-foreground mb-3">What&apos;s included:</h3>
           <div className="space-y-3">
             {features.map((feature, index) => (
               <div key={index} className="flex items-center gap-3">

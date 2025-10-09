@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTrial } from '@/hooks/useTrial'
-import { Clock, Crown } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 interface TrialStatusProps {

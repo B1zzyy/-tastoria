@@ -6,7 +6,6 @@ import { User, Edit3, X, ChevronDown, ChevronUp, Check, Star } from 'lucide-reac
 import { useAuth } from '@/hooks/useAuth';
 import { useTrial } from '@/hooks/useTrial';
 import { supabase } from '@/lib/supabase';
-import { PaymentService } from '@/lib/paymentService';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -15,7 +14,7 @@ interface UserProfileModalProps {
 
 export default function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
   const { user, updateProfile } = useAuth();
-  const { isPaidUser, trialDisplayInfo } = useTrial();
+  const { isPaidUser } = useTrial();
   const [name, setName] = useState(user?.name || '');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +25,6 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
   const [originalProfileImage, setOriginalProfileImage] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState('');
-  const [isUpgrading, setIsUpgrading] = useState(false);
   const [subscriptionDetails, setSubscriptionDetails] = useState<{
     status: string;
     endDate: string | null;
@@ -42,46 +40,6 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
       setOriginalName(user.name);
     }
   }, [user?.name]);
-
-  // Load existing profile image when modal opens
-  useEffect(() => {
-    if (isOpen && user) {
-      loadProfileImage();
-      loadSubscriptionDetails();
-      
-      // Check if user just returned from portal
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('portal') === 'return') {
-        // Refresh subscription details after returning from portal
-        setTimeout(() => {
-          loadSubscriptionDetails();
-        }, 2000);
-        
-        // Clean up URL parameter
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, '', newUrl);
-      }
-    }
-  }, [isOpen, user]);
-
-  // Refresh subscription details when user returns from portal
-  useEffect(() => {
-    const handlePortalReturn = () => {
-      if (isOpen && user) {
-        // Small delay to ensure database is updated
-        setTimeout(() => {
-          loadSubscriptionDetails();
-        }, 1000);
-      }
-    };
-
-    // Listen for when user returns from portal
-    window.addEventListener('focus', handlePortalReturn);
-    
-    return () => {
-      window.removeEventListener('focus', handlePortalReturn);
-    };
-  }, [isOpen, user]);
 
   // Load subscription details
   const loadSubscriptionDetails = async () => {
@@ -110,22 +68,10 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
           isCancelled: isCancelled
         });
       }
-    } catch (error) {
-      console.error('Error loading subscription details:', error);
+    } catch {
+      console.error('Error loading subscription details');
     }
   };
-
-  // Handle body scroll lock when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      // Prevent background scrolling
-      document.body.style.overflow = 'hidden';
-      return () => {
-        // Restore scrolling when modal closes
-        document.body.style.overflow = 'unset';
-      };
-    }
-  }, [isOpen]);
 
   const loadProfileImage = async () => {
     if (!user) return;
@@ -145,6 +91,58 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
       console.log('No existing profile image found');
     }
   };
+
+  // Load existing profile image when modal opens
+  useEffect(() => {
+    if (isOpen && user) {
+      loadProfileImage();
+      loadSubscriptionDetails();
+      
+      // Check if user just returned from portal
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('portal') === 'return') {
+        // Refresh subscription details after returning from portal
+        setTimeout(() => {
+          loadSubscriptionDetails();
+        }, 2000);
+        
+        // Clean up URL parameter
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [isOpen, user, loadProfileImage, loadSubscriptionDetails]);
+
+  // Refresh subscription details when user returns from portal
+  useEffect(() => {
+    const handlePortalReturn = () => {
+      if (isOpen && user) {
+        // Small delay to ensure database is updated
+        setTimeout(() => {
+          loadSubscriptionDetails();
+        }, 1000);
+      }
+    };
+
+    // Listen for when user returns from portal
+    window.addEventListener('focus', handlePortalReturn);
+    
+    return () => {
+      window.removeEventListener('focus', handlePortalReturn);
+    };
+  }, [isOpen, user, loadSubscriptionDetails]);
+
+  // Handle body scroll lock when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Prevent background scrolling
+      document.body.style.overflow = 'hidden';
+      return () => {
+        // Restore scrolling when modal closes
+        document.body.style.overflow = 'unset';
+      };
+    }
+  }, [isOpen]);
 
   // Check if there are any changes
   const hasChanges = () => {

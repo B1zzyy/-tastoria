@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Clock, Star, Check, X } from 'lucide-react'
+import { Clock, Star, Check } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useTrial } from '@/hooks/useTrial'
 
@@ -51,7 +51,7 @@ export default function WelcomeTrialModal({ isOpen, onClose }: WelcomeTrialModal
                     <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/80 bg-clip-text text-transparent">
                       Welcome to Tastoria!
                     </h2>
-                    <p className="text-muted-foreground">You're starting your free trial</p>
+                    <p className="text-muted-foreground">You&apos;re starting your free trial</p>
                   </div>
                 </div>
               </div>
@@ -64,7 +64,7 @@ export default function WelcomeTrialModal({ isOpen, onClose }: WelcomeTrialModal
                     <span className="text-lg font-semibold text-primary">FREE TRIAL ACTIVE</span>
                   </div>
                   <p className="text-muted-foreground mb-4">
-                    You have <span className="font-semibold text-foreground">{daysRemaining} days</span> to explore all of Tastoria's premium features at no cost.
+                    You have <span className="font-semibold text-foreground">{daysRemaining} days</span> to explore all of Tastoria&apos;s premium features at no cost.
                   </p>
                 </div>
 
@@ -72,7 +72,7 @@ export default function WelcomeTrialModal({ isOpen, onClose }: WelcomeTrialModal
                 <div className="mb-6">
                   <div className="flex items-center gap-2 mb-3">
                     <Star className="w-5 h-5 text-primary" />
-                    <span className="font-semibold text-foreground">What's included in your trial:</span>
+                    <span className="font-semibold text-foreground">What&apos;s included in your trial:</span>
                   </div>
                   <div className="space-y-2">
                     {[

@@ -4,11 +4,6 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Infinity, 
-  Clock, 
-  FileText, 
-  Printer, 
-  Heart, 
-  ThumbsUp,
   Check,
   Star,
   Info,
@@ -149,7 +144,7 @@ export default function PremiumUpgradeSection() {
               Welcome to the team! 🎉
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              You're already part of the Tastoria Premium family. Enjoy unlimited access to all our features!
+              You&apos;re already part of the Tastoria Premium family. Enjoy unlimited access to all our features!
             </p>
           </div>
 

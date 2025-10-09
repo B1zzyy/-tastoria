@@ -45,7 +45,6 @@ export default function Home() {
   const [showDesktopUserDropdown, setShowDesktopUserDropdown] = useState(false);
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [showWelcomeTrialModal, setShowWelcomeTrialModal] = useState(false);
-  const [showPremiumSection, setShowPremiumSection] = useState(false);
   const [userProfileImage, setUserProfileImage] = useState<string | null>(null);
   const [showSavedRecipes, setShowSavedRecipes] = useState(false);
   const [currentRecipeUrl, setCurrentRecipeUrl] = useState<string>('');
@@ -63,7 +62,7 @@ export default function Home() {
   const { user, signOut } = useAuth();
   
   // Use trial system
-  const { canAccessFeature, isTrialActive, isPaidUser, daysRemaining, trialDisplayInfo } = useTrial();
+  const { canAccessFeature, isPaidUser, trialDisplayInfo } = useTrial();
   
   // Helper function to check feature access
   const checkFeatureAccess = async (feature: 'collections' | 'ai_chat' | 'unlimited_parsing', featureName: string) => {
@@ -158,7 +157,7 @@ export default function Home() {
       } else {
         setUserProfileImage(null);
       }
-    } catch (error) {
+    } catch {
       console.log('No profile image found');
       setUserProfileImage(null);
     }
@@ -167,7 +166,7 @@ export default function Home() {
   // Load profile image when user changes
   useEffect(() => {
     loadUserProfileImage();
-  }, [user]);
+  }, [user, loadUserProfileImage]);
 
   // Listen for user update events to force re-render
   useEffect(() => {
@@ -1449,11 +1448,10 @@ export default function Home() {
       )}
 
       {/* Paywall Modal */}
-      <PaywallModal
-        isOpen={showPaywall}
-        onClose={() => setShowPaywall(false)}
-        feature={paywallFeature}
-      />
+        <PaywallModal 
+          isOpen={showPaywall} 
+          feature={paywallFeature}
+        />
 
       {/* User Profile Modal */}
       <UserProfileModal

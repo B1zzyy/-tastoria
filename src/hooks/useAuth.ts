@@ -172,7 +172,7 @@ export function useAuth() {
         setTimeout(() => reject(new Error('Profile update timeout after 10 seconds')), 10000)
       );
 
-      const { error } = await Promise.race([updatePromise, timeoutPromise]) as any;
+      const { error } = await Promise.race([updatePromise, timeoutPromise]) as { error: any };
 
       if (error) {
         console.error('Profile update error:', error);
@@ -197,7 +197,7 @@ export function useAuth() {
             setTimeout(() => reject(new Error('Session fetch timeout')), 5000)
           );
 
-          const { data: { session } } = await Promise.race([sessionPromise, sessionTimeoutPromise]) as any;
+          const { data: { session } } = await Promise.race([sessionPromise, sessionTimeoutPromise]) as { data: { session: any } };
           
           if (session?.user) {
             
@@ -212,7 +212,7 @@ export function useAuth() {
               setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
             );
 
-            const { data: profile } = await Promise.race([profilePromise, profileTimeoutPromise]) as any;
+            const { data: profile } = await Promise.race([profilePromise, profileTimeoutPromise]) as { data: any };
             
             if (profile) {
               setUser({
