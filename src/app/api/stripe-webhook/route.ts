@@ -86,25 +86,17 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
         console.log(`Setting subscription to PAID with no end date`)
       }
     } else if (subscription.status === 'canceled' || subscription.status === 'unpaid' || subscription.status === 'past_due') {
-      // Check if subscription is still in grace period
+      // For cancelled subscriptions, always mark as expired
+      console.log(`Subscription is ${subscription.status}, marking as expired`)
+      subscriptionStatus = 'expired'
+      
       const periodEnd = (subscription as unknown as { current_period_end: number | null }).current_period_end
-      if (!periodEnd) {
-        console.log('No period end date found, marking as expired')
-        subscriptionStatus = 'expired'
-        subscriptionEndDate = null
+      if (periodEnd) {
+        subscriptionEndDate = new Date(periodEnd * 1000).toISOString()
+        console.log(`Setting end date to: ${subscriptionEndDate}`)
       } else {
-        const currentPeriodEnd = new Date(periodEnd * 1000)
-        const now = new Date()
-        
-        if (now < currentPeriodEnd) {
-          // Still in grace period - keep as paid until period ends
-          subscriptionStatus = 'paid'
-          subscriptionEndDate = currentPeriodEnd.toISOString()
-        } else {
-          // Grace period ended - mark as expired
-          subscriptionStatus = 'expired'
-          subscriptionEndDate = currentPeriodEnd.toISOString()
-        }
+        subscriptionEndDate = null
+        console.log('No period end date found')
       }
     } else {
       subscriptionStatus = 'expired'
