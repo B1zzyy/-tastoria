@@ -7,6 +7,7 @@ export interface AuthUser {
   id: string
   email: string
   name: string
+  created_at: string
 }
 
 export function useAuth() {
@@ -78,25 +79,28 @@ export function useAuth() {
         const fallbackUser = {
           id: authUser.id,
           email: authUser.email || '',
-          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User'
+          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+          created_at: authUser.created_at || new Date().toISOString()
         };
         setUser(fallbackUser);
         return
       }
 
       if (profile && typeof profile === 'object' && profile !== null) {
-        const profileData = profile as { id: string; email: string; name: string };
+        const profileData = profile as { id: string; email: string; name: string; created_at: string };
         setUser({
           id: profileData.id,
           email: profileData.email,
-          name: profileData.name
+          name: profileData.name,
+          created_at: profileData.created_at || authUser.created_at || new Date().toISOString()
         })
       } else {
         // Fallback if profile is null
         setUser({
           id: authUser.id,
           email: authUser.email || '',
-          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User'
+          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+          created_at: authUser.created_at || new Date().toISOString()
         })
       }
     } catch (error) {
@@ -105,7 +109,8 @@ export function useAuth() {
       const fallbackUser = {
         id: authUser.id,
         email: authUser.email || '',
-        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User'
+        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+        created_at: authUser.created_at || new Date().toISOString()
       };
       console.log('✅ useAuth: Using fallback user data:', fallbackUser);
       setUser(fallbackUser);
@@ -184,6 +189,10 @@ export function useAuth() {
       setUser(prev => {
         if (!prev) return null;
         const newUser = { ...prev, ...updates };
+        // Ensure created_at is preserved
+        if (!newUser.created_at) {
+          newUser.created_at = prev.created_at;
+        }
         // Force a new object reference to ensure React detects the change
         return { ...newUser };
       })
@@ -218,7 +227,8 @@ export function useAuth() {
               setUser({
                 id: session.user.id,
                 email: session.user.email || '',
-                name: profile.name || session.user.user_metadata?.name || 'User'
+                name: profile.name || session.user.user_metadata?.name || 'User',
+                created_at: new Date().toISOString()
               });
             }
           }

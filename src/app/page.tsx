@@ -46,6 +46,7 @@ export default function Home() {
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [showWelcomeTrialModal, setShowWelcomeTrialModal] = useState(false);
   const [userProfileImage, setUserProfileImage] = useState<string | null>(null);
+  const [isSubscriptionCancelled, setIsSubscriptionCancelled] = useState(false);
   const [showSavedRecipes, setShowSavedRecipes] = useState(false);
   const [currentRecipeUrl, setCurrentRecipeUrl] = useState<string>('');
   const [isRecipeCurrentlySaved, setIsRecipeCurrentlySaved] = useState(false);
@@ -92,6 +93,30 @@ export default function Home() {
       setShowPaywall(true);
     }
   }, [user, trialDisplayInfo, showPaywall]);
+
+  // Check if subscription is cancelled
+  useEffect(() => {
+    const checkSubscriptionStatus = async () => {
+      if (!user) return;
+      
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('subscription_status, subscription_end_date')
+          .eq('id', user.id)
+          .single();
+
+        if (profile && !error) {
+          const isCancelled = profile.subscription_status === 'expired' && profile.subscription_end_date;
+          setIsSubscriptionCancelled(isCancelled);
+        }
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+      }
+    };
+
+    checkSubscriptionStatus();
+  }, [user]);
 
   // Close auth modal when user successfully logs in
   useEffect(() => {
@@ -182,27 +207,46 @@ export default function Home() {
     return () => window.removeEventListener('userUpdated', handleUserUpdate);
   }, []);
 
-  // Show welcome message for new users
+  // Show welcome message for new users or expired trials
   useEffect(() => {
+    // Reset tutorial completion for new users (less than 1 hour old)
+    const isNewUser = user?.created_at && 
+      (Date.now() - new Date(user.created_at).getTime()) < (60 * 60 * 1000);
+    
+    // Reset tutorial completion for new users
+    if (isNewUser && tutorial.isCompleted) {
+      tutorial.resetTutorial();
+    }
+    
     if (user && !tutorial.isCompleted && !tutorial.isActive) {
       // Check if we've shown the welcome modal for this user before
       const welcomeModalShown = localStorage.getItem(`welcome-shown-${user.id}`);
       
-      // Show welcome trial modal for new users first
-      if (!welcomeModalShown) {
+      // Check if trial has expired
+      const isTrialExpired = trialDisplayInfo && trialDisplayInfo.status === 'expired';
+      
+      // Show welcome modal if:
+      // 1. User is new (less than 1 hour old) OR trial has expired
+      // 2. AND we haven't shown it before
+      if ((isNewUser || isTrialExpired) && !welcomeModalShown) {
         setShowWelcomeTrialModal(true);
         // Mark as shown for this user
         localStorage.setItem(`welcome-shown-${user.id}`, 'true');
       }
       
-      // Auto-start tutorial for new users after a short delay
-      const timer = setTimeout(() => {
-        tutorial.startTutorial();
-      }, 2000);
+      // Auto-start tutorial for new users after a short delay (only if they haven't seen welcome modal)
+      let timer: NodeJS.Timeout | null = null;
+      if (!welcomeModalShown) {
+        timer = setTimeout(() => {
+          tutorial.startTutorial();
+        }, 2000);
+      }
       
-      return () => clearTimeout(timer);
+      return () => {
+        if (timer) clearTimeout(timer);
+      };
     }
-  }, [user, tutorial.isCompleted, tutorial.isActive, tutorial.startTutorial, tutorial]);
+  }, [user, tutorial.isCompleted, tutorial.isActive, tutorial.startTutorial, tutorial, trialDisplayInfo]);
 
   
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -551,11 +595,18 @@ export default function Home() {
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-label text-card-foreground">{user.name}</p>
-                        {isPaidUser ? (
+                        {isPaidUser && !isSubscriptionCancelled ? (
                           <div className="flex items-center gap-1">
                             <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div>
                             <span className="text-xs font-bold bg-gradient-to-r from-primary via-primary/90 to-primary/80 bg-clip-text text-transparent">
                               PREMIUM
+                            </span>
+                          </div>
+                        ) : isSubscriptionCancelled ? (
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></div>
+                            <span className="text-xs font-medium text-orange-500">
+                              CANCELLED
                             </span>
                           </div>
                         ) : (
@@ -882,11 +933,18 @@ export default function Home() {
                                 )}
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-card-foreground">{user.name}</p>
-                                  {isPaidUser ? (
+                                  {isPaidUser && !isSubscriptionCancelled ? (
                                     <div className="flex items-center gap-1">
                                       <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div>
                                       <span className="text-xs font-bold bg-gradient-to-r from-primary via-primary/90 to-primary/80 bg-clip-text text-transparent">
                                         PREMIUM
+                                      </span>
+                                    </div>
+                                  ) : isSubscriptionCancelled ? (
+                                    <div className="flex items-center gap-1">
+                                      <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></div>
+                                      <span className="text-xs font-medium text-orange-500">
+                                        CANCELLED
                                       </span>
                                     </div>
                                   ) : (

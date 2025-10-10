@@ -29,6 +29,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     status: string;
     endDate: string | null;
     isCancelled: boolean;
+    nextBillingDate: string | null;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -64,10 +65,25 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
           isCancelled: isCancelled
         });
         
+        // If user is paid and not cancelled, fetch actual billing date from Stripe
+        let nextBillingDate = null;
+        if (profile.subscription_status === 'paid' && !isCancelled) {
+          try {
+            const response = await fetch(`/api/get-subscription-details?userId=${user.id}`);
+            if (response.ok) {
+              const data = await response.json();
+              nextBillingDate = data.nextBillingDate;
+            }
+          } catch (error) {
+            console.error('Error fetching billing date from Stripe:', error);
+          }
+        }
+        
         setSubscriptionDetails({
           status: profile.subscription_status,
           endDate: profile.subscription_end_date,
-          isCancelled: isCancelled
+          isCancelled: isCancelled,
+          nextBillingDate: nextBillingDate
         });
       }
     } catch {
@@ -578,6 +594,12 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                                       day: 'numeric',
                                       year: 'numeric'
                                     }) :
+                                   isPaidUser && subscriptionDetails?.nextBillingDate ? 
+                                    new Date(subscriptionDetails.nextBillingDate).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                    }) :
                                    isPaidUser ? 'Next month' : 'In 7 days'}
                                 </span>
                               </div>
@@ -611,13 +633,6 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                             </div>
                           )}
 
-                          {/* Refresh Button */}
-                          <button
-                            onClick={loadSubscriptionDetails}
-                            className="w-full px-3 py-2 text-xs text-muted-foreground hover:text-foreground border border-border/30 rounded-lg hover:bg-background/20 transition-colors"
-                          >
-                            Refresh Status
-                          </button>
 
                           {/* Action Button */}
                           {subscriptionDetails?.isCancelled ? (
