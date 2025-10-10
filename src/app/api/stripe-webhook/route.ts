@@ -70,66 +70,29 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
       return
     }
 
-    // Determine subscription status
-    let subscriptionStatus: string
-    let subscriptionEndDate: string | null = null
-
-    console.log(`Processing subscription ${subscription.id} with status: ${subscription.status}`)
-    
-    // Check if subscription is cancelled (even if still active until period end)
-    const isCancelled = (subscription as unknown as { cancel_at_period_end: boolean }).cancel_at_period_end
-    console.log(`Subscription cancel_at_period_end: ${isCancelled}`)
-
-    if (subscription.status === 'active' && !isCancelled) {
-      subscriptionStatus = 'paid'
-      const periodEnd = (subscription as unknown as { current_period_end: number | null }).current_period_end
-      if (periodEnd) {
-        subscriptionEndDate = new Date(periodEnd * 1000).toISOString()
-        console.log(`Setting subscription to PAID with end date: ${subscriptionEndDate}`)
-      } else {
-        console.log(`Setting subscription to PAID with no end date`)
-      }
-    } else if (subscription.status === 'active' && isCancelled) {
-      // Subscription is active but cancelled at period end
-      console.log(`Subscription is active but cancelled at period end, marking as expired`)
-      subscriptionStatus = 'expired'
-      const periodEnd = (subscription as unknown as { current_period_end: number | null }).current_period_end
-      if (periodEnd) {
-        subscriptionEndDate = new Date(periodEnd * 1000).toISOString()
-        console.log(`Setting end date to: ${subscriptionEndDate}`)
-      } else {
-        subscriptionEndDate = null
-        console.log('No period end date found')
-      }
-    } else if (subscription.status === 'canceled' || subscription.status === 'unpaid' || subscription.status === 'past_due') {
-      // For cancelled subscriptions, always mark as expired
-      console.log(`Subscription is ${subscription.status}, marking as expired`)
-      subscriptionStatus = 'expired'
-      
-      const periodEnd = (subscription as unknown as { current_period_end: number | null }).current_period_end
-      if (periodEnd) {
-        subscriptionEndDate = new Date(periodEnd * 1000).toISOString()
-        console.log(`Setting end date to: ${subscriptionEndDate}`)
-      } else {
-        subscriptionEndDate = null
-        console.log('No period end date found')
-      }
-    } else {
-      subscriptionStatus = 'expired'
-      const periodEnd = (subscription as unknown as { current_period_end: number | null }).current_period_end
-      if (periodEnd) {
-        subscriptionEndDate = new Date(periodEnd * 1000).toISOString()
-      } else {
-        subscriptionEndDate = null
-      }
-    }
+  // Check if subscription is cancelled (has cancel_at date)
+  const isCancelled = subscription.cancel_at !== null
+  
+  console.log(`Processing subscription ${subscription.id}`)
+  console.log(`- Status: ${subscription.status}`)
+  console.log(`- Cancel at: ${subscription.cancel_at}`)
+  console.log(`- Is cancelled: ${isCancelled}`)
+  
+  // Logic: if cancelled OR not active = expired, otherwise = paid
+  let subscriptionStatus: string
+  if (isCancelled || subscription.status !== 'active') {
+    subscriptionStatus = 'expired'
+    console.log('Setting subscription to EXPIRED (cancelled or inactive)')
+  } else {
+    subscriptionStatus = 'paid'
+    console.log('Setting subscription to PAID (active and not cancelled)')
+  }
 
     // Update user's subscription status in Supabase
     const { error: updateError } = await supabaseServer
       .from('profiles')
       .update({
         subscription_status: subscriptionStatus,
-        subscription_end_date: subscriptionEndDate,
       })
       .eq('id', profile.id)
 
@@ -137,7 +100,6 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
       console.error('Error updating subscription status:', updateError)
     } else {
       console.log(`Updated subscription for user ${profile.id}: ${subscriptionStatus}`)
-      console.log(`Subscription end date set to: ${subscriptionEndDate}`)
     }
   } catch (error) {
     console.error('Error handling subscription change:', error)
