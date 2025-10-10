@@ -75,8 +75,12 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     let subscriptionEndDate: string | null = null
 
     console.log(`Processing subscription ${subscription.id} with status: ${subscription.status}`)
+    
+    // Check if subscription is cancelled (even if still active until period end)
+    const isCancelled = (subscription as unknown as { cancel_at_period_end: boolean }).cancel_at_period_end
+    console.log(`Subscription cancel_at_period_end: ${isCancelled}`)
 
-    if (subscription.status === 'active') {
+    if (subscription.status === 'active' && !isCancelled) {
       subscriptionStatus = 'paid'
       const periodEnd = (subscription as unknown as { current_period_end: number | null }).current_period_end
       if (periodEnd) {
@@ -84,6 +88,18 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
         console.log(`Setting subscription to PAID with end date: ${subscriptionEndDate}`)
       } else {
         console.log(`Setting subscription to PAID with no end date`)
+      }
+    } else if (subscription.status === 'active' && isCancelled) {
+      // Subscription is active but cancelled at period end
+      console.log(`Subscription is active but cancelled at period end, marking as expired`)
+      subscriptionStatus = 'expired'
+      const periodEnd = (subscription as unknown as { current_period_end: number | null }).current_period_end
+      if (periodEnd) {
+        subscriptionEndDate = new Date(periodEnd * 1000).toISOString()
+        console.log(`Setting end date to: ${subscriptionEndDate}`)
+      } else {
+        subscriptionEndDate = null
+        console.log('No period end date found')
       }
     } else if (subscription.status === 'canceled' || subscription.status === 'unpaid' || subscription.status === 'past_due') {
       // For cancelled subscriptions, always mark as expired
