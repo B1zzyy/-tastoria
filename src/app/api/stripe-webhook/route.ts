@@ -80,11 +80,21 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
   
   // Logic: if cancelled OR not active = expired, otherwise = paid
   let subscriptionStatus: string
+  let subscriptionEndDate: string | null = null
+  
   if (isCancelled || subscription.status !== 'active') {
     subscriptionStatus = 'expired'
+    // If cancelled, set end date to the cancel_at timestamp
+    if (isCancelled && subscription.cancel_at) {
+      subscriptionEndDate = new Date(subscription.cancel_at * 1000).toISOString()
+    }
     console.log('Setting subscription to EXPIRED (cancelled or inactive)')
+    if (subscriptionEndDate) {
+      console.log(`Setting end date to: ${subscriptionEndDate}`)
+    }
   } else {
     subscriptionStatus = 'paid'
+    subscriptionEndDate = null // Clear end date for active subscriptions
     console.log('Setting subscription to PAID (active and not cancelled)')
   }
 
@@ -93,6 +103,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
       .from('profiles')
       .update({
         subscription_status: subscriptionStatus,
+        subscription_end_date: subscriptionEndDate,
       })
       .eq('id', profile.id)
 
