@@ -549,7 +549,7 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
       const filePath = `recipe-images/${fileName}`;
 
       // Upload compressed image to Supabase Storage
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('recipe-images')
         .upload(filePath, compressedFile, {
           cacheControl: '3600',

@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Search, Link2, Globe, Instagram, Send } from 'lucide-react';
+import { Link2, Globe, Instagram, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
-import GradientText from './GradientText';
 
 // Custom Arrow Right component using the provided SVG
 const ArrowRight = ({ className }: { className?: string }) => (
@@ -176,7 +175,7 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
       {sourceType === 'instagram' && (
         <div className="text-center px-4">
           <p className="text-xs text-muted-foreground">
-            If the caption doesn't include instructions, we'll generate some for you. You can always edit them after you save the recipe to match the reel perfectly.
+            If the caption doesn&apos;t include instructions, we&apos;ll generate some for you. You can always edit them after you save the recipe to match the reel perfectly.
           </p>
         </div>
       )}
