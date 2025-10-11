@@ -31,6 +31,8 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     isCancelled: boolean;
     nextBillingDate: string | null;
   } | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -261,6 +263,81 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+
+    setIsDeleting(true);
+    setError(null);
+
+    try {
+      // First, check if user has an active subscription
+      if (subscriptionDetails?.status === 'paid' && !subscriptionDetails?.isCancelled) {
+        setError('Please cancel your subscription first before deleting your account. You can do this in the subscription management section above.');
+        setIsDeleting(false);
+        return;
+      }
+
+      // Confirm deletion
+      const confirmed = window.confirm(
+        'Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your recipes and data.'
+      );
+
+      if (!confirmed) {
+        setIsDeleting(false);
+        return;
+      }
+
+      // Delete user's recipes first
+      const { error: recipesError } = await supabase
+        .from('recipes')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (recipesError) {
+        console.error('Error deleting recipes:', recipesError);
+        // Continue with account deletion even if recipes deletion fails
+      }
+
+      // Delete user profile data
+      const { error: deleteError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      // Delete the user from Supabase Auth (this requires admin privileges)
+      // We'll need to call our API endpoint for this
+      const response = await fetch('/api/delete-user-account', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete user account');
+      }
+
+      // Sign out the user
+      await supabase.auth.signOut();
+
+      // Close modal and redirect to home
+      onClose();
+      window.location.href = '/';
+
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      setError('Failed to delete account. Please try again or contact support.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -578,8 +655,8 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                               <div className="flex justify-between">
                                 <span>Price:</span>
                                 <span className="text-foreground">
-                                  {subscriptionDetails?.isCancelled ? '$0.99/month' :
-                                   isPaidUser ? '$0.99/month' : 'Free'}
+                                  {subscriptionDetails?.isCancelled ? '$6.99/month' :
+                                   isPaidUser ? '$6.99/month' : 'Free'}
                                 </span>
                               </div>
                               <div className="flex justify-between">
@@ -600,7 +677,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                                       day: 'numeric',
                                       year: 'numeric'
                                     }) :
-                                   isPaidUser ? 'Next month' : 'In 7 days'}
+                                   isPaidUser ? 'Next month' : 'In 10 days'}
                                 </span>
                               </div>
                             </div>
@@ -777,7 +854,83 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
               </div>
             </motion.div>
           )}
+
+          {/* Delete Account Section */}
+          <div className="p-6 pt-0">
+            <div className="border-t border-border/50 pt-6">
+              <div className="text-center">
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Danger Zone</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Permanently delete your account and all associated data
+                </p>
+                <button
+                  onClick={() => setShowDeleteConfirmation(true)}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete Account'}
+                </button>
+              </div>
+            </div>
+          </div>
         </motion.div>
+
+        {/* Delete Confirmation Modal */}
+        <AnimatePresence>
+          {showDeleteConfirmation && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              onClick={() => setShowDeleteConfirmation(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-background border border-border rounded-xl p-6 max-w-md w-full"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <X className="w-6 h-6 text-red-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Delete Account</h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    This action cannot be undone. This will permanently delete your account, 
+                    all your recipes, and remove all data associated with your account.
+                  </p>
+                  
+                  {subscriptionDetails?.status === 'paid' && !subscriptionDetails?.isCancelled && (
+                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mb-4">
+                      <p className="text-sm text-yellow-400">
+                        <strong>Active Subscription Detected:</strong> Please cancel your subscription first 
+                        before deleting your account.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDeleteConfirmation(false)}
+                      className="flex-1 px-4 py-2 bg-background/50 border border-border/50 text-foreground rounded-lg hover:bg-background/80 transition-colors text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDeleteAccount}
+                      disabled={isDeleting || (subscriptionDetails?.status === 'paid' && !subscriptionDetails?.isCancelled)}
+                      className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isDeleting ? 'Deleting...' : 'Delete Account'}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Hidden file input */}
         <input

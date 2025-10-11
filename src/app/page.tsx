@@ -30,6 +30,7 @@ import ScrollIndicator from '@/components/ScrollIndicator';
 import { generateShortRecipeShareUrl, getSharedRecipeFromUrl } from '@/lib/urlSharing';
 import { PaymentService } from '@/lib/paymentService';
 import { supabase } from '@/lib/supabase';
+import Footer from '@/components/Footer';
 
 
 export default function Home() {
@@ -615,7 +616,7 @@ export default function Home() {
                               TRIAL
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              ({trialDisplayInfo?.daysRemaining || 7} days left)
+                              ({trialDisplayInfo?.daysRemaining || 10} days left)
                             </span>
                           </div>
                         )}
@@ -953,7 +954,7 @@ export default function Home() {
                                         TRIAL
                                       </span>
                                       <span className="text-xs text-muted-foreground">
-                                        ({trialDisplayInfo?.daysRemaining || 7} days left)
+                                        ({trialDisplayInfo?.daysRemaining || 10} days left)
                                       </span>
                                     </div>
                                   )}
@@ -1526,6 +1527,9 @@ export default function Home() {
         isOpen={showWelcomeTrialModal}
         onClose={() => setShowWelcomeTrialModal(false)}
       />
+
+      {/* Footer */}
+      <Footer />
 
     </div>
   );

@@ -14,7 +14,6 @@ interface WelcomeTrialModalProps {
 export default function WelcomeTrialModal({ isOpen, onClose }: WelcomeTrialModalProps) {
   const { user } = useAuth()
   const { daysRemaining } = useTrial()
-  const [isUpgrading, setIsUpgrading] = useState(false)
 
   if (!isOpen || !user) return null
 
@@ -110,57 +109,24 @@ export default function WelcomeTrialModal({ isOpen, onClose }: WelcomeTrialModal
                     Start Exploring
                   </button>
                   <button
-                    onClick={async () => {
-                      if (!user) {
-                        console.error('No user found for upgrade')
-                        return
-                      }
-
-                      setIsUpgrading(true)
-
-                      try {
-                        // Create checkout session directly
-                        const response = await fetch('/api/create-checkout-session', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({
-                            userId: user.id,
-                            userEmail: user.email,
-                          }),
-                        })
-
-                        if (!response.ok) {
-                          const errorData = await response.json()
-                          throw new Error(errorData.error || 'Failed to create checkout session')
+                    onClick={() => {
+                      // Close the welcome modal first
+                      onClose()
+                      
+                      // Then scroll to the premium section after a short delay
+                      setTimeout(() => {
+                        const premiumSection = document.querySelector('[data-premium-section]')
+                        if (premiumSection) {
+                          premiumSection.scrollIntoView({ 
+                            behavior: 'smooth',
+                            block: 'start'
+                          })
                         }
-
-                        const result = await response.json()
-
-                        // Redirect to Stripe checkout
-                        if (result.url) {
-                          window.location.href = result.url
-                        } else {
-                          throw new Error('No checkout URL received')
-                        }
-                      } catch (error) {
-                        console.error('Upgrade error:', error)
-                        alert('Failed to start upgrade process. Please try again.')
-                        setIsUpgrading(false)
-                      }
+                      }, 300)
                     }}
-                    disabled={isUpgrading}
-                    className="flex-1 h-12 px-6 bg-gradient-to-r from-primary to-primary/90 text-black rounded-xl hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 h-12 px-6 bg-gradient-to-r from-primary to-primary/90 text-black rounded-xl hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
                   >
-                    {isUpgrading ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                        Processing...
-                      </div>
-                    ) : (
-                      'Upgrade Now'
-                    )}
+                    Upgrade Now
                   </button>
                 </div>
               </div>

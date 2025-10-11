@@ -1,5 +1,5 @@
--- Reset 7-day free trial for all existing users
--- This will give all current users a fresh 7-day trial starting from now
+-- Reset 10-day free trial for all existing users
+-- This will give all current users a fresh 10-day trial starting from now
 
 -- Update existing users to have a new trial start date (current timestamp)
 -- and reset their subscription status to 'trial'
@@ -24,7 +24,7 @@ WHERE
 --   subscription_end_date = NULL
 -- WHERE 
 --   subscription_status IN ('expired', 'paid')
---   OR trial_start_date < NOW() - INTERVAL '7 days';
+--   OR trial_start_date < NOW() - INTERVAL '10 days';
 
 -- Show the results
 SELECT 

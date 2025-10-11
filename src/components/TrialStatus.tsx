@@ -27,7 +27,7 @@ export function TrialStatus({ onClick }: TrialStatusProps) {
     return null
   }
 
-  const displayDays = trialDisplayInfo?.daysRemaining || daysRemaining || 7
+  const displayDays = trialDisplayInfo?.daysRemaining || daysRemaining || 10
 
   return (
     <motion.button

@@ -47,15 +47,15 @@ export function useTrial() {
         // Set default trial status even on error
         const defaultStatus = {
           isTrialActive: true,
-          daysRemaining: 7,
+          daysRemaining: 10,
           trialStartDate: new Date().toISOString(),
           isPaidUser: false
         }
         setTrialStatus(defaultStatus)
         setTrialDisplayInfo({
           status: 'trial',
-          daysRemaining: 7,
-          message: '7 days left in your free trial'
+          daysRemaining: 10,
+          message: '10 days left in your free trial'
         })
       } finally {
         setLoading(false)

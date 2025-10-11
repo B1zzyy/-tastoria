@@ -18,7 +18,7 @@ export interface UserProfile {
 }
 
 export class TrialService {
-  private static readonly TRIAL_DURATION_DAYS = 7 // Change to 0.001 for testing (1 minute)
+  private static readonly TRIAL_DURATION_DAYS = 10 // Change to 0.001 for testing (1 minute)
   private static cache = new Map<string, { data: TrialStatus; timestamp: number }>();
   private static readonly CACHE_DURATION = 60000; // 1 minute cache
 
@@ -210,7 +210,7 @@ export class TrialService {
   private static getDefaultTrialStatus(): TrialStatus {
     return {
       isTrialActive: true,
-      daysRemaining: 7,
+      daysRemaining: 10,
       trialStartDate: new Date().toISOString(),
       isPaidUser: false
     }

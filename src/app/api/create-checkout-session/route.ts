@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
       // Determine pricing based on plan type
       const isYearly = planType === 'yearly'
-      const unitAmount = isYearly ? 5988 : 99 // $59.88 or $0.99 in cents
+      const unitAmount = isYearly ? 5988 : 699 // $59.88 or $6.99 in cents
       const interval = isYearly ? 'year' : 'month'
 
       // Create Stripe checkout session
