@@ -13,59 +13,149 @@ export interface AuthUser {
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
+  
+  // Cache for user profiles to prevent repeated database calls
+  const profileCache = new Map<string, { data: AuthUser; timestamp: number }>()
+  const PROFILE_CACHE_DURATION = 300000 // 5 minutes
+  
+  // Session recovery mechanism
+  const attemptSessionRecovery = async () => {
+    try {
+      console.log('🔄 Attempting session recovery...')
+      const { data: { session }, error } = await supabase.auth.getSession()
+      
+      if (error) {
+        console.error('❌ Session recovery failed:', error)
+        return false
+      }
+      
+      if (session?.user) {
+        console.log('✅ Session recovered for:', session.user.email)
+        await fetchUserProfile(session.user)
+        return true
+      }
+      
+      return false
+    } catch (error) {
+      console.error('❌ Session recovery error:', error)
+      return false
+    }
+  }
 
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        await fetchUserProfile(session.user)
-        // Initialize trial for new users
-        await TrialService.initializeTrial(
-          session.user.id, 
-          session.user.email || undefined, 
-          session.user.user_metadata?.name || undefined
-        )
+      try {
+        // console.log('🔍 Getting initial session...')
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('❌ Error getting session:', error)
+          setLoading(false)
+          return
+        }
+        
+        if (session?.user) {
+          // console.log('✅ Found existing session for:', session.user.email)
+          await fetchUserProfile(session.user)
+          // Initialize trial for new users (don't wait for this to complete)
+          TrialService.initializeTrial(
+            session.user.id, 
+            session.user.email || undefined, 
+            session.user.user_metadata?.name || undefined
+          ).catch(err => console.warn('Trial initialization failed:', err))
+        } else {
+          console.log('ℹ️ No existing session found')
+        }
+      } catch (error) {
+        console.error('❌ Error getting initial session:', error)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     getInitialSession()
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // console.log('🔄 Auth state change:', event, session?.user?.email || 'no user');
+      
       if (event === 'SIGNED_IN' && session?.user) {
-        console.log('✅ User signed in:', session.user.email);
-      } else if (event === 'SIGNED_OUT') {
-        console.log('👋 User signed out');
-      }
-      
-      // Handle sign out events specifically
-      if (event === 'SIGNED_OUT') {
-        setUser(null)
-        setLoading(false)
-        return
-      }
-      
-      if (session?.user) {
+        // console.log('✅ User signed in:', session.user.email);
         await fetchUserProfile(session.user)
-        // Initialize trial for new users
-        await TrialService.initializeTrial(
+        // Initialize trial for new users (don't wait for this to complete)
+        TrialService.initializeTrial(
           session.user.id, 
           session.user.email || undefined, 
           session.user.user_metadata?.name || undefined
-        )
-      } else {
+        ).catch(err => console.warn('Trial initialization failed:', err))
+      } else if (event === 'SIGNED_OUT') {
+        // console.log('👋 User signed out');
+        setUser(null)
+        setLoading(false)
+        return
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        // console.log('🔄 Token refreshed for:', session.user.email);
+        // Don't clear user on token refresh - just update if needed
+        if (!user || user.id !== session.user.id) {
+          await fetchUserProfile(session.user)
+        }
+      } else if (session?.user) {
+        // Handle other events with valid session
+        await fetchUserProfile(session.user)
+      } else if ((event as string) === 'SIGNED_OUT') {
+        // Only clear user on explicit sign out
         setUser(null)
       }
+      // Don't clear user on other events like token refresh failures
       setLoading(false)
     })
 
     return () => subscription.unsubscribe()
   }, [])
+  
+  // Periodic session check to ensure user stays logged in
+  useEffect(() => {
+    if (!user) return
+    
+    const sessionCheckInterval = setInterval(async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.warn('⚠️ Session check failed:', error)
+          return
+        }
+        
+        if (!session?.user) {
+          console.log('🔄 Session lost, attempting recovery...')
+          const recovered = await attemptSessionRecovery()
+          if (!recovered) {
+            console.log('❌ Session recovery failed, user will need to log in again')
+            // Don't immediately clear user - let the auth state change handler deal with it
+          }
+        } else {
+          console.log('✅ Session is valid for:', session.user.email)
+        }
+      } catch (error) {
+        console.error('❌ Session check error:', error)
+      }
+    }, 60000) // Check every minute
+    
+    return () => clearInterval(sessionCheckInterval)
+  }, [user])
 
   const fetchUserProfile = async (authUser: User) => {
     try {
+      // Check cache first
+      const cached = profileCache.get(authUser.id)
+      if (cached && Date.now() - cached.timestamp < PROFILE_CACHE_DURATION) {
+        // console.log('📦 Using cached user profile for:', authUser.id)
+        setUser(cached.data)
+        return
+      }
+      
+        // console.log('🔄 Fetching fresh user profile for:', authUser.id)
       
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -83,25 +173,33 @@ export function useAuth() {
           created_at: authUser.created_at || new Date().toISOString()
         };
         setUser(fallbackUser);
+        // Cache the fallback data
+        profileCache.set(authUser.id, { data: fallbackUser, timestamp: Date.now() })
         return
       }
 
       if (profile && typeof profile === 'object' && profile !== null) {
         const profileData = profile as { id: string; email: string; name: string; created_at: string };
-        setUser({
+        const userData = {
           id: profileData.id,
           email: profileData.email,
           name: profileData.name,
           created_at: profileData.created_at || authUser.created_at || new Date().toISOString()
-        })
+        }
+        setUser(userData)
+        // Cache the profile data
+        profileCache.set(authUser.id, { data: userData, timestamp: Date.now() })
       } else {
         // Fallback if profile is null
-        setUser({
+        const fallbackUser = {
           id: authUser.id,
           email: authUser.email || '',
           name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
           created_at: authUser.created_at || new Date().toISOString()
-        })
+        }
+        setUser(fallbackUser)
+        // Cache the fallback data
+        profileCache.set(authUser.id, { data: fallbackUser, timestamp: Date.now() })
       }
     } catch (error) {
       console.error('❌ useAuth: Network/connection error fetching profile:', error)
@@ -142,6 +240,8 @@ export function useAuth() {
     try {
       // Clear user state immediately
       setUser(null)
+      // Clear profile cache on sign out
+      profileCache.clear()
       
       // Try to sign out from Supabase
       const { error } = await supabase.auth.signOut()
@@ -250,6 +350,7 @@ export function useAuth() {
     signUp,
     signIn,
     signOut,
-    updateProfile
+    updateProfile,
+    attemptSessionRecovery
   }
 }

@@ -64,7 +64,7 @@ export default function Home() {
   const { user, signOut } = useAuth();
   
   // Use trial system
-  const { canAccessFeature, isPaidUser, trialDisplayInfo } = useTrial();
+  const { canAccessFeature, isPaidUser, trialDisplayInfo, loading: trialLoading } = useTrial();
   
   // Helper function to check feature access
   const checkFeatureAccess = async (feature: 'collections' | 'ai_chat' | 'unlimited_parsing', featureName: string) => {
@@ -608,6 +608,13 @@ export default function Home() {
                             <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></div>
                             <span className="text-xs font-medium text-orange-500">
                               CANCELLED
+                            </span>
+                          </div>
+                        ) : trialLoading ? (
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-pulse"></div>
+                            <span className="text-xs text-gray-400">
+                              Loading...
                             </span>
                           </div>
                         ) : (
@@ -1230,6 +1237,11 @@ export default function Home() {
               )}
             </div>
           </div>
+          
+          {/* Premium Upgrade Section - Only on home page */}
+          {!recipe && (
+            <PremiumUpgradeSection />
+          )}
         </div>
       )}
 
@@ -1517,9 +1529,6 @@ export default function Home() {
         isOpen={showUserProfileModal}
         onClose={() => setShowUserProfileModal(false)}
       />
-
-        {/* Premium Upgrade Section - Always present */}
-        <PremiumUpgradeSection />
       </div>
 
       {/* Welcome Trial Modal */}

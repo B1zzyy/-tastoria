@@ -502,30 +502,32 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                 return (
                   <div 
                     key={index} 
-                    className={`flex gap-4 group cursor-pointer transition-all duration-300 ${
+                    className={`p-3 rounded-xl bg-accent/30 hover:bg-accent/50 transition-colors group cursor-pointer ${
                       isCompleted ? 'opacity-70' : ''
                     }`}
                     onClick={() => toggleStep(index)}
                   >
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm transition-all duration-300 group-hover:scale-110 ${
-                      isCompleted 
-                        ? 'bg-green-500 text-white' 
-                        : 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground'
-                    }`}>
-                      {isCompleted ? (
-                        <Check className="w-4 h-4" />
-                      ) : (
-                        index + 1
-                      )}
-                    </div>
-                    <div className="flex-1 pt-1">
-                      <p className={`leading-relaxed font-medium transition-all duration-300 ${
+                    <div className="flex gap-4">
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm transition-all duration-300 group-hover:scale-110 ${
                         isCompleted 
-                          ? 'text-muted-foreground' 
-                          : 'text-card-foreground'
+                          ? 'bg-green-500 text-white' 
+                          : 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground'
                       }`}>
-                        {convertedInstruction}
-                      </p>
+                        {isCompleted ? (
+                          <Check className="w-4 h-4" />
+                        ) : (
+                          index + 1
+                        )}
+                      </div>
+                      <div className="flex-1 pt-1">
+                        <p className={`leading-relaxed font-medium transition-all duration-300 ${
+                          isCompleted 
+                            ? 'text-muted-foreground' 
+                            : 'text-card-foreground'
+                        }`}>
+                          {convertedInstruction}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 );

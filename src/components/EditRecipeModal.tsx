@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Image as ImageIcon, Instagram, Trash2, Plus, GripVertical } from 'lucide-react';
 import Image from 'next/image';
+import { supabase } from '@/lib/supabase';
 
 interface EditRecipeModalProps {
   isOpen: boolean;
@@ -72,10 +73,15 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
   const [selectedPreviewType, setSelectedPreviewType] = useState<'default' | 'emoji' | 'image'>(
     recipe.metadata?.customPreview?.type || 'default'
   );
-  const [selectedEmoji, setSelectedEmoji] = useState(recipe.metadata?.customPreview?.value || '🍕');
+  const [selectedEmoji, setSelectedEmoji] = useState(
+    recipe.metadata?.customPreview?.type === 'emoji' ? recipe.metadata?.customPreview?.value || '🍕' : '🍕'
+  );
   const [selectedGradient, setSelectedGradient] = useState(recipe.metadata?.customPreview?.gradient || 'from-yellow-400 to-orange-500');
-  const [imageUrl, setImageUrl] = useState(recipe.metadata?.customPreview?.value || '');
+  const [imageUrl, setImageUrl] = useState(
+    recipe.metadata?.customPreview?.type === 'image' ? recipe.metadata?.customPreview?.value || '' : ''
+  );
   const [previewUrl, setPreviewUrl] = useState('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [customGradientStart, setCustomGradientStart] = useState('#fbbf24'); // yellow-400
   const [customGradientEnd, setCustomGradientEnd] = useState('#f97316'); // orange-500
   const [showCustomGradient, setShowCustomGradient] = useState(false);
@@ -122,7 +128,9 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
   useEffect(() => {
     setTitle(recipe.title);
     setSelectedPreviewType(recipe.metadata?.customPreview?.type || 'default');
-    setSelectedEmoji(recipe.metadata?.customPreview?.value || '🍕');
+    setSelectedEmoji(
+      recipe.metadata?.customPreview?.type === 'emoji' ? recipe.metadata?.customPreview?.value || '🍕' : '🍕'
+    );
     
     const gradient = recipe.metadata?.customPreview?.gradient || 'from-yellow-400 to-orange-500';
     setSelectedGradient(gradient);
@@ -450,35 +458,143 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
     onClose();
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Image compression function
+  const compressImage = (file: File, maxWidth: number = 1200, quality: number = 0.8): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new window.Image();
+
+      img.onload = () => {
+        // Calculate new dimensions
+        let { width, height } = img;
+        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        // Set canvas dimensions
+        canvas.width = width;
+        canvas.height = height;
+
+        // Draw and compress
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Canvas to blob conversion failed'));
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+
+      img.onerror = () => reject(new Error('Image loading failed'));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+    if (!file) return;
+
+    // Validate file type
+    const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    
+    if (!validImageTypes.includes(file.type)) {
+      alert('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+      e.target.value = ''; // Clear the input
+      return;
+    }
+    
+    // Validate file size (limit to 20MB before compression)
+    const maxSize = 20 * 1024 * 1024; // 20MB
+    if (file.size > maxSize) {
+      alert('Image file is too large. Please select an image smaller than 20MB.');
+      e.target.value = ''; // Clear the input
+      return;
+    }
+    
+    // Clean up previous object URL to prevent memory leaks
+    if (previewUrl && previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    
+    // Create object URL for immediate preview
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+    setImageUrl(objectUrl); // Set for immediate preview
+    
+    // Upload to Supabase Storage
+    try {
+      setIsUploadingImage(true);
       
-      if (!validImageTypes.includes(file.type)) {
-        alert('Please select a valid image file (JPEG, PNG, GIF, WebP, or SVG)');
-        e.target.value = ''; // Clear the input
-        return;
+      // Compress the image
+      const compressedFile = await compressImage(file, 1200, 0.8);
+      
+      console.log(`Original size: ${(file.size / 1024 / 1024).toFixed(2)}MB, Compressed size: ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+      
+      // Generate unique filename
+      const fileExt = 'jpg'; // Always use jpg for compressed images
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `recipe-images/${fileName}`;
+
+      // Upload compressed image to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('recipe-images')
+        .upload(filePath, compressedFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('Supabase upload error:', error);
+        console.error('Error details:', error);
+        console.error('Error message:', error.message);
+        
+        // Check for common error types
+        if (error.message?.includes('not found') || error.message?.includes('404')) {
+          throw new Error('Storage bucket "recipe-images" not found. Please create it in your Supabase dashboard.');
+        } else if (error.message?.includes('row-level security policy')) {
+          throw new Error('Permission denied. Please check your Supabase RLS policies for the recipe-images bucket.');
+        } else if (error.message?.includes('JWT')) {
+          throw new Error('Authentication error. Please make sure you are logged in.');
+        } else {
+          throw new Error(`Upload failed: ${error.message}`);
+        }
       }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('recipe-images')
+        .getPublicUrl(filePath);
+
+      // Update with the actual Supabase URL
+      setImageUrl(publicUrl);
+      setPreviewUrl(publicUrl);
       
-      // Validate file size (optional - limit to 10MB)
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxSize) {
-        alert('Image file is too large. Please select an image smaller than 10MB.');
-        e.target.value = ''; // Clear the input
-        return;
-      }
+      // Clean up the blob URL
+      URL.revokeObjectURL(objectUrl);
       
-      // Clean up previous object URL to prevent memory leaks
-      if (previewUrl && previewUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(previewUrl);
-      }
-      
-      // Create object URL for preview (much more performant)
-      const objectUrl = URL.createObjectURL(file);
-      setPreviewUrl(objectUrl);
-      setImageUrl(objectUrl); // Store the object URL
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      alert(`Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setPreviewUrl('');
+      setImageUrl(recipe.image || '');
+    } finally {
+      setIsUploadingImage(false);
+      // Reset file input
+      e.target.value = '';
     }
   };
 
@@ -585,6 +701,7 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                 <label className="block text-label text-card-foreground mb-3">
                   Preview Style:
                 </label>
+                
                 
                 {/* Preview Options - 3 Circles */}
                 <div className="flex items-center justify-center gap-6">
@@ -861,43 +978,61 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                       transition={{ duration: 0.3, ease: 'easeInOut' }}
                       className="mt-4 p-4 bg-accent/20 rounded-xl border border-white/10 space-y-3"
                     >
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleFileUpload(e)}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        id="image-upload"
-                      />
-                      <label
-                        htmlFor="image-upload"
-                        className="flex items-center justify-center w-full px-4 py-3 bg-background border-2 border-dashed border-border rounded-xl text-card-foreground hover:border-primary/50 transition-colors cursor-pointer"
-                      >
-                        <svg className="w-5 h-5 mr-2 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Choose Image
-                      </label>
-                    </div>
-                    
-                    {/* Image Preview */}
-                    {previewUrl && (
-                      <div>
-                        <label className="block text-label text-card-foreground mb-2">
-                          Preview:
-                        </label>
-                        <div className="w-16 h-16 rounded-lg overflow-hidden border border-border">
-                          <Image
-                            src={previewUrl}
-                            alt="Preview"
-                            width={64}
-                            height={64}
-                            className="w-full h-full object-cover"
-                            onError={() => setPreviewUrl('')}
-                          />
+                    {/* Large Clickable Image Circle */}
+                    <div className="flex justify-center">
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileUpload(e)}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                          id="image-upload"
+                          disabled={isUploadingImage}
+                        />
+                        <div className={`relative w-48 h-32 rounded-xl overflow-hidden border-4 transition-all duration-200 ${
+                          isUploadingImage 
+                            ? 'border-primary/50 cursor-not-allowed' 
+                            : 'border-border hover:border-primary/50 cursor-pointer'
+                        }`}>
+                          {previewUrl ? (
+                            <Image
+                              src={previewUrl}
+                              alt="Recipe preview"
+                              fill
+                              className="object-cover"
+                              onError={() => setPreviewUrl('')}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-muted/30 to-muted/50 flex items-center justify-center">
+                              <svg className="w-12 h-12 text-muted-foreground/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                          )}
+                          
+                          {/* Edit Icon Overlay */}
+                          {!isUploadingImage && (
+                            <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                              <div className="bg-white/90 rounded-full p-2">
+                                <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Loading Overlay */}
+                          {isUploadingImage && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                              <div className="text-center text-white">
+                                <div className="w-8 h-8 mx-auto mb-2 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <p className="text-sm">Uploading...</p>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    )}
+                    </div>
                     </motion.div>
                   )}
                 </AnimatePresence>

@@ -50,6 +50,12 @@ class RecipeCacheService {
   // Load cache from localStorage
   private loadFromStorage(): void {
     try {
+      // Check if we're in the browser environment
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        this.cache = {};
+        return;
+      }
+      
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (stored) {
         this.cache = JSON.parse(stored);
@@ -63,6 +69,11 @@ class RecipeCacheService {
   // Save cache to localStorage
   private saveToStorage(): void {
     try {
+      // Check if we're in the browser environment
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        return;
+      }
+      
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.cache));
     } catch (error) {
       console.warn('Failed to save recipe cache to storage:', error);

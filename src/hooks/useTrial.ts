@@ -35,12 +35,21 @@ export function useTrial() {
           console.warn('Trial initialization failed:', err)
         )
         
-        // Get trial status
-        const status = await TrialService.getTrialStatus(user.id)
-        setTrialStatus(status)
+        // Add timeout to prevent infinite loading
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Trial status request timed out')), 10000)
+        )
         
-        // Get display info
-        const displayInfo = await TrialService.getTrialDisplayInfo(user.id)
+        // Get both trial status and display info in parallel to reduce database calls
+        const [status, displayInfo] = await Promise.race([
+          Promise.all([
+            TrialService.getTrialStatus(user.id),
+            TrialService.getTrialDisplayInfo(user.id)
+          ]),
+          timeoutPromise
+        ]) as [any, any]
+        
+        setTrialStatus(status)
         setTrialDisplayInfo(displayInfo)
       } catch (error) {
         console.warn('Error loading trial status, using defaults:', error)

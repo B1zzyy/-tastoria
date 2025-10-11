@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Search, Link2, Globe, Instagram } from 'lucide-react';
+import { Search, Link2, Globe, Instagram, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
 import GradientText from './GradientText';
 
@@ -172,6 +172,15 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
         </div>
       </div>
 
+      {/* Instagram Info Text - Only show when Instagram is selected */}
+      {sourceType === 'instagram' && (
+        <div className="text-center px-4">
+          <p className="text-xs text-muted-foreground">
+            If the caption doesn't include instructions, we'll generate some for you. You can always edit them after you save the recipe to match the reel perfectly.
+          </p>
+        </div>
+      )}
+
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           {sourceType === 'instagram' ? (
@@ -184,9 +193,14 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder={sourceType === 'instagram' ? "Paste an Instagram reel or post URL" : "Paste a recipe URL to remove the clutter"}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && url.trim() && !loading) {
+              handleSubmit(e);
+            }
+          }}
+          placeholder={sourceType === 'instagram' ? "instagram.com/reel/..." : "bbcgoodfood.com/recipes/..."}
           className={cn(
-            "w-full pl-10 pr-4 py-4 text-lg rounded-xl border border-input bg-background text-foreground",
+            "w-full pl-10 pr-12 py-4 text-lg rounded-xl border border-input bg-background text-foreground",
             "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent",
             "transition-all duration-200 hover:border-ring/50 shadow-sm"
           )}
@@ -194,39 +208,22 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
           required
           data-tutorial="url-input"
         />
+        <button
+          type="submit"
+          disabled={!url.trim() || loading}
+          className={cn(
+            "absolute inset-y-0 right-0 flex items-center justify-center w-16 rounded-r-xl transition-all duration-200",
+            "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary"
+          )}
+          data-tutorial="parse-button"
+        >
+          {loading ? (
+            <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+          ) : (
+            <Send className="w-5 h-5" />
+          )}
+        </button>
       </div>
-      
-      <button
-        type="submit"
-        disabled={!url.trim() || loading}
-        className={cn(
-          "w-full flex items-center justify-center gap-3 px-8 py-4 text-lg rounded-xl font-semibold transition-all duration-200",
-          "bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-          "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary",
-          "shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-        )}
-        data-tutorial="parse-button"
-      >
-        {loading ? (
-          <GradientText
-            colors={["#f97316", "#ffffff", "#6b7280", "#374151", "#f97316", "#6b7280"]}
-            animationSpeed={10}
-            showBorder={false}
-            className="text-lg font-semibold"
-          >
-            Parsing Recipe...
-          </GradientText>
-        ) : (
-          <>
-            {sourceType === 'instagram' ? (
-              <Instagram className="w-6 h-6" />
-            ) : (
-              <Search className="w-6 h-6" />
-            )}
-            {sourceType === 'instagram' ? 'Get Recipe' : 'Get Recipe'}
-          </>
-        )}
-      </button>
     </form>
   );
 }

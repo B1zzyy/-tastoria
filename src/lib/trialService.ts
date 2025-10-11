@@ -20,7 +20,7 @@ export interface UserProfile {
 export class TrialService {
   private static readonly TRIAL_DURATION_DAYS = 10 // Change to 0.001 for testing (1 minute)
   private static cache = new Map<string, { data: TrialStatus; timestamp: number }>();
-  private static readonly CACHE_DURATION = 60000; // 1 minute cache
+  private static readonly CACHE_DURATION = 1800000; // 30 minutes cache (increased from 10 minutes)
 
   /**
    * Get trial status for a user
@@ -29,8 +29,11 @@ export class TrialService {
     // Check cache first
     const cached = this.cache.get(userId);
     if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      // console.log('📦 Using cached trial status for user:', userId);
       return cached.data;
     }
+    
+      // console.log('🔄 Fetching fresh trial status for user:', userId);
     
     try {
         const { data: profile, error } = await supabase
@@ -106,6 +109,12 @@ export class TrialService {
         return trialResult;
     } catch (error) {
       console.error('❌ Network/connection error getting trial status:', error)
+      // Return cached data if available, even if expired, to prevent loading loops
+      const expiredCache = this.cache.get(userId);
+      if (expiredCache) {
+        console.log('⚠️ Using expired cache due to network error');
+        return expiredCache.data;
+      }
       return this.getDefaultTrialStatus()
     }
   }

@@ -780,7 +780,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                                   setError('Failed to open subscription management')
                                 }
                               }}
-                              className="w-full mt-4 px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-sm font-medium"
+                              className="w-full mt-4 px-4 py-2 bg-primary/10 border border-primary/20 text-primary rounded-lg hover:bg-primary/20 transition-colors text-sm font-medium"
                             >
                               Manage Subscription
                             </button>
