@@ -75,7 +75,7 @@ export function useAuth() {
       console.log('✅ useAuth: Using fallback user data:', fallbackUser);
       setUser(fallbackUser);
     }
-  }, [])
+  }, [profileCache])
 
   // Session recovery mechanism
   const attemptSessionRecovery = useCallback(async () => {
