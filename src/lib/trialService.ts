@@ -23,6 +23,14 @@ export class TrialService {
   private static readonly CACHE_DURATION = 1800000; // 30 minutes cache (increased from 10 minutes)
 
   /**
+   * Clear cache for testing
+   */
+  static clearCache(): void {
+    this.cache.clear();
+    console.log('🧹 Trial cache cleared for testing');
+  }
+
+  /**
    * Get trial status for a user
    */
   static async getTrialStatus(userId: string): Promise<TrialStatus> {
@@ -94,7 +102,7 @@ export class TrialService {
         const now = new Date()
         const daysSinceStart = Math.floor((now.getTime() - trialStart.getTime()) / (1000 * 60 * 60 * 24))
         const daysRemaining = Math.max(0, this.TRIAL_DURATION_DAYS - daysSinceStart)
-        const isTrialActive = daysRemaining > 0
+        const isTrialActive = daysRemaining > 0.01 // Consider expired if less than 0.01 days (about 14 minutes)
 
         const trialResult = {
           isTrialActive,

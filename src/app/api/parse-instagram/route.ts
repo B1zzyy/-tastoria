@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Recipe } from '@/lib/recipe-parser';
 import { parseRecipeWithGemini } from '@/lib/geminiParser';
+import { requirePremiumAccess } from '@/lib/authMiddleware';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Decode HTML entities
@@ -532,6 +533,12 @@ async function scrapeInstagramPost(url: string): Promise<{ caption: string; imag
 
 export async function POST(request: NextRequest) {
   try {
+    // Require premium access
+    const authResult = await requirePremiumAccess(request);
+    if (authResult instanceof NextResponse) {
+      return authResult; // Return error response
+    }
+    
     const { url } = await request.json();
 
     if (!url || typeof url !== 'string') {

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Bot, User, Sparkles } from 'lucide-react';
 import { Recipe } from '@/lib/recipe-parser';
+import { supabase } from '@/lib/supabase';
 import SplitText from './SplitText';
 import ReactMarkdown from 'react-markdown';
 
@@ -123,6 +124,7 @@ ${recipe.difficulty ? `Difficulty: ${recipe.difficulty}` : ''}
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
         body: JSON.stringify({
           message: inputValue.trim(),
@@ -132,7 +134,16 @@ ${recipe.difficulty ? `Difficulty: ${recipe.difficulty}` : ''}
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get AI response');
+        const errorData = await response.json().catch(() => ({}));
+        
+        // Handle authentication and authorization errors
+        if (response.status === 401) {
+          throw new Error('Please log in to use AI chat');
+        } else if (response.status === 403) {
+          throw new Error('Premium subscription required for AI chat');
+        }
+        
+        throw new Error(errorData.error || 'Failed to get AI response');
       }
 
       const data = await response.json();

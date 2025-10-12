@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseRecipeWithGemini } from '@/lib/geminiParser';
+import { requirePremiumAccess } from '@/lib/authMiddleware';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 export async function POST(request: NextRequest) {
   try {
+    // Require premium access
+    const authResult = await requirePremiumAccess(request);
+    if (authResult instanceof NextResponse) {
+      return authResult; // Return error response
+    }
+    
     const { url } = await request.json();
     
     if (!url) {

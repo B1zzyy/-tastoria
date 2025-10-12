@@ -412,6 +412,7 @@ export default function Home() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
         body: JSON.stringify({ url }),
         signal: abortController.signal, // Add abort signal
@@ -423,6 +424,16 @@ export default function Home() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle authentication and authorization errors
+        if (response.status === 401) {
+          setShowAuthModal(true);
+          throw new Error('Please log in to parse recipes');
+        } else if (response.status === 403) {
+          setPaywallFeature('Recipe Parsing');
+          setShowPaywall(true);
+          throw new Error('Premium subscription required for recipe parsing');
+        }
+        
         // Handle Instagram fallback mode
         if (response.status === 422 && data.fallbackMode) {
           setError(`${data.error}\n\n${data.caption ? 'Caption preview: ' + data.caption : ''}`);

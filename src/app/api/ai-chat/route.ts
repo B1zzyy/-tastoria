@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { requirePremiumAccess } from '@/lib/authMiddleware';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(request: NextRequest) {
   try {
+    // Require premium access
+    const authResult = await requirePremiumAccess(request);
+    if (authResult instanceof NextResponse) {
+      return authResult; // Return error response
+    }
+    
     const { message, recipeContext, conversationHistory = [] } = await request.json();
 
     if (!message || !recipeContext) {

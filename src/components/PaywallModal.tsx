@@ -12,6 +12,7 @@ export function PaywallModal({ isOpen, feature }: PaywallModalProps) {
   const { user } = useAuth()
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly')
 
   if (!isOpen) return null
 
@@ -44,6 +45,7 @@ export function PaywallModal({ isOpen, feature }: PaywallModalProps) {
         body: JSON.stringify({
           userId: user.id,
           userEmail: user.email,
+          planType: selectedPlan,
         }),
       })
 
@@ -102,19 +104,57 @@ export function PaywallModal({ isOpen, feature }: PaywallModalProps) {
           </p>
         </div>
 
-        {/* Pricing */}
+        {/* Subscription Options */}
         <div className="px-6 pb-4">
-          <div className="bg-accent/50 border border-border rounded-xl p-4">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <span className="text-3xl font-bold text-foreground">$6.99</span>
-                <span className="text-muted-foreground">/month</span>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Monthly Option */}
+            <button
+              onClick={() => setSelectedPlan('monthly')}
+              className={`relative bg-accent/50 border-2 rounded-xl p-4 transition-all duration-200 ${
+                selectedPlan === 'monthly' 
+                  ? 'border-primary' 
+                  : 'border-border/30 hover:border-primary/50'
+              }`}
+            >
+              {selectedPlan === 'monthly' && (
+                <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                  <Check className="w-4 h-4 text-black" />
+                </div>
+              )}
+              <div className="text-center">
+                <h3 className="text-sm font-semibold text-foreground mb-1">Monthly</h3>
+                <p className="text-xl font-bold text-foreground">$6.99</p>
+                <p className="text-xs text-muted-foreground">/month</p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Cancel anytime • No additional fees
-              </p>
-            </div>
+            </button>
+
+            {/* Yearly Option */}
+            <button
+              onClick={() => setSelectedPlan('yearly')}
+              className={`relative bg-accent/50 border-2 rounded-xl p-4 transition-all duration-200 ${
+                selectedPlan === 'yearly' 
+                  ? 'border-primary' 
+                  : 'border-border/30 hover:border-primary/50'
+              }`}
+            >
+              <div className="absolute top-1 left-1 bg-primary text-black text-xs px-2 py-0.5 rounded-full font-semibold">
+                30% OFF
+              </div>
+              {selectedPlan === 'yearly' && (
+                <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                  <Check className="w-4 h-4 text-black" />
+                </div>
+              )}
+              <div className="text-center">
+                <h3 className="text-sm font-semibold text-foreground mb-1">Yearly</h3>
+                <p className="text-xl font-bold text-foreground">$59.88</p>
+                <p className="text-xs text-muted-foreground">$4.99/month</p>
+              </div>
+            </button>
           </div>
+          <p className="text-xs text-muted-foreground text-center mt-3">
+            Cancel anytime • No additional fees
+          </p>
         </div>
 
         {/* Features */}
@@ -153,7 +193,7 @@ export function PaywallModal({ isOpen, feature }: PaywallModalProps) {
             ) : (
               <>
                 <Sparkles className="w-5 h-5" />
-                Start Premium Subscription
+                {selectedPlan === 'yearly' ? 'Start Yearly Subscription' : 'Start Monthly Subscription'}
               </>
             )}
           </button>
