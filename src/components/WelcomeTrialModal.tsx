@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Clock, Star, Check } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'

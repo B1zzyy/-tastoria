@@ -47,7 +47,7 @@ export function useTrial() {
             TrialService.getTrialDisplayInfo(user.id)
           ]),
           timeoutPromise
-        ]) as [any, any]
+        ]) as [TrialStatus, TrialDisplayInfo]
         
         setTrialStatus(status)
         setTrialDisplayInfo(displayInfo)

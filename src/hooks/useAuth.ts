@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { TrialService } from '@/lib/trialService'
 import type { User } from '@supabase/supabase-js'
@@ -18,8 +18,67 @@ export function useAuth() {
   const profileCache = new Map<string, { data: AuthUser; timestamp: number }>()
   const PROFILE_CACHE_DURATION = 300000 // 5 minutes
   
+  // Fetch user profile function
+  const fetchUserProfile = useCallback(async (authUser: User) => {
+    try {
+      // Check cache first
+      const cached = profileCache.get(authUser.id)
+      if (cached && Date.now() - cached.timestamp < PROFILE_CACHE_DURATION) {
+        // console.log('📦 Using cached user profile for:', authUser.id)
+        setUser(cached.data)
+        return
+      }
+      
+        // console.log('🔄 Fetching fresh user profile for:', authUser.id)
+      
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single()
+
+      if (error) {
+        console.warn('Profile not found, using auth user data')
+        // Fallback to auth user data if profile doesn't exist
+        const fallbackUser = {
+          id: authUser.id,
+          email: authUser.email || '',
+          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+          created_at: authUser.created_at || new Date().toISOString()
+        };
+        setUser(fallbackUser);
+        // Cache the fallback data
+        profileCache.set(authUser.id, { data: fallbackUser, timestamp: Date.now() })
+        return
+      }
+
+      if (profile) {
+        const userData = {
+          id: profile.id,
+          email: profile.email || authUser.email || '',
+          name: profile.name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+          created_at: profile.created_at || authUser.created_at || new Date().toISOString()
+        };
+        setUser(userData);
+        // Cache the fresh data
+        profileCache.set(authUser.id, { data: userData, timestamp: Date.now() })
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error)
+      // Fallback to auth user data on error
+      const fallbackUser = {
+        id: authUser.id,
+        email: authUser.email || '',
+        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+        created_at: authUser.created_at || new Date().toISOString()
+      };
+      console.log('✅ useAuth: Using fallback user data:', fallbackUser);
+      setUser(fallbackUser);
+    }
+  }, [])
+
   // Session recovery mechanism
-  const attemptSessionRecovery = async () => {
+  const attemptSessionRecovery = useCallback(async () => {
     try {
       console.log('🔄 Attempting session recovery...')
       const { data: { session }, error } = await supabase.auth.getSession()
@@ -40,7 +99,7 @@ export function useAuth() {
       console.error('❌ Session recovery error:', error)
       return false
     }
-  }
+  }, [fetchUserProfile])
 
   useEffect(() => {
     // Get initial session
@@ -112,7 +171,7 @@ export function useAuth() {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [fetchUserProfile, user])
   
   // Periodic session check to ensure user stays logged in
   useEffect(() => {
@@ -143,77 +202,8 @@ export function useAuth() {
     }, 60000) // Check every minute
     
     return () => clearInterval(sessionCheckInterval)
-  }, [user])
+  }, [user, attemptSessionRecovery])
 
-  const fetchUserProfile = async (authUser: User) => {
-    try {
-      // Check cache first
-      const cached = profileCache.get(authUser.id)
-      if (cached && Date.now() - cached.timestamp < PROFILE_CACHE_DURATION) {
-        // console.log('📦 Using cached user profile for:', authUser.id)
-        setUser(cached.data)
-        return
-      }
-      
-        // console.log('🔄 Fetching fresh user profile for:', authUser.id)
-      
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single()
-
-      if (error) {
-        console.warn('Profile not found, using auth user data')
-        // Fallback to auth user data if profile doesn't exist
-        const fallbackUser = {
-          id: authUser.id,
-          email: authUser.email || '',
-          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
-          created_at: authUser.created_at || new Date().toISOString()
-        };
-        setUser(fallbackUser);
-        // Cache the fallback data
-        profileCache.set(authUser.id, { data: fallbackUser, timestamp: Date.now() })
-        return
-      }
-
-      if (profile && typeof profile === 'object' && profile !== null) {
-        const profileData = profile as { id: string; email: string; name: string; created_at: string };
-        const userData = {
-          id: profileData.id,
-          email: profileData.email,
-          name: profileData.name,
-          created_at: profileData.created_at || authUser.created_at || new Date().toISOString()
-        }
-        setUser(userData)
-        // Cache the profile data
-        profileCache.set(authUser.id, { data: userData, timestamp: Date.now() })
-      } else {
-        // Fallback if profile is null
-        const fallbackUser = {
-          id: authUser.id,
-          email: authUser.email || '',
-          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
-          created_at: authUser.created_at || new Date().toISOString()
-        }
-        setUser(fallbackUser)
-        // Cache the fallback data
-        profileCache.set(authUser.id, { data: fallbackUser, timestamp: Date.now() })
-      }
-    } catch (error) {
-      console.error('❌ useAuth: Network/connection error fetching profile:', error)
-      // Fallback to auth user data on any error
-      const fallbackUser = {
-        id: authUser.id,
-        email: authUser.email || '',
-        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
-        created_at: authUser.created_at || new Date().toISOString()
-      };
-      console.log('✅ useAuth: Using fallback user data:', fallbackUser);
-      setUser(fallbackUser);
-    }
-  }
 
   const signUp = async (email: string, password: string, name: string) => {
     const { data, error } = await supabase.auth.signUp({
