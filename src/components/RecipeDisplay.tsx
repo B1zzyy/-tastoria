@@ -203,9 +203,9 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                       <div className="text-8xl md:text-9xl">
                         {customPreview.value}
                       </div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                       <div className="absolute bottom-0 left-0 right-0 p-6">
-                        <h1 className="text-h1 text-white">
+                        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight tracking-tight">
                           {recipe.title}
                         </h1>
                       </div>
@@ -230,9 +230,9 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                   <div className="text-8xl md:text-9xl">
                     {customPreview.value}
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <h1 className="text-h1 text-white">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight tracking-tight">
                       {recipe.title}
                     </h1>
                   </div>
@@ -259,9 +259,9 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                     className="object-cover"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 66vw, 66vw"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <h1 className="text-h1 text-white">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight tracking-tight">
                       {recipe.title}
                     </h1>
                   </div>
@@ -289,9 +289,9 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                     className="object-cover"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 66vw, 66vw"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <h1 className="text-h1 text-white">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight tracking-tight">
                       {recipe.title}
                     </h1>
                   </div>
@@ -315,9 +315,9 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                   {/* Instagram logo - same as SavedRecipes default */}
                   <Instagram className="w-16 h-16 sm:w-20 sm:h-20 text-white" />
                   
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <h1 className="text-h1 text-white">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight tracking-tight">
                       {recipe.title}
                     </h1>
                   </div>
@@ -338,7 +338,7 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
           
           {!recipe.image && !recipe.metadata?.customPreview && (
             <div className="p-6">
-              <h1 className="text-h1 text-card-foreground">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-card-foreground leading-tight tracking-tight">
                 {recipe.title}
               </h1>
             </div>

@@ -1093,7 +1093,7 @@ export default function Home() {
 
               {/* Mobile Heading */}
               <div className="text-left mb-8">
-                <h1 className="text-4xl font-bold text-foreground mb-4 leading-tight">
+                <h1 className="text-4xl font-bold text-foreground mb-4 leading-tight tracking-tight">
                   Clear away the clutter
                   <br />
                   <BlurText 
