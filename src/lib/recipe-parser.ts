@@ -32,6 +32,11 @@ function decodeHtmlEntities(text: string): string {
   });
 }
 
+export interface IngredientSection {
+  title?: string;
+  ingredients: string[];
+}
+
 export interface Recipe {
   id?: string;
   title: string;
@@ -41,7 +46,7 @@ export interface Recipe {
   cookTime?: string;
   totalTime?: string;
   servings?: string;
-  ingredients: string[];
+  ingredients: string[] | IngredientSection[];
   instructions: string[];
   instagramUrl?: string; // For Instagram video popup
   nutrition?: {

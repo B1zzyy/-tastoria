@@ -163,11 +163,11 @@ export default function RecipeSkeleton() {
             />
           </div>
           
-          <div className="space-y-2 sm:space-y-3">
-            {[1, 2, 3, 4, 5, 6].map((item) => (
+          <div className="space-y-4 sm:space-y-6">
+            {/* First section */}
+            <div className="space-y-2 sm:space-y-3">
               <motion.div
-                key={item}
-                className="p-2 sm:p-3 rounded-xl bg-accent/30 overflow-hidden"
+                className="relative mb-4"
                 animate={{
                   opacity: [0.3, 0.6, 0.3],
                 }}
@@ -175,19 +175,73 @@ export default function RecipeSkeleton() {
                   duration: 2,
                   repeat: Infinity,
                   ease: "easeInOut",
-                  delay: item * 0.1
+                  delay: 0.1
                 }}
               >
-                <div className={`h-3 sm:h-4 bg-muted-foreground/20 rounded ${
-                  item === 1 ? 'w-1/3 max-w-32' :
-                  item === 2 ? 'w-2/3 max-w-48' :
-                  item === 3 ? 'w-3/4 max-w-52' :
-                  item === 4 ? 'w-4/5 max-w-56' :
-                  item === 5 ? 'w-5/6 max-w-60' :
-                  'w-full max-w-64'
-                }`} />
+                <div className="absolute inset-0 bg-gradient-to-r from-muted-foreground/10 via-muted-foreground/5 to-transparent rounded-lg"></div>
+                <div className="relative h-4 sm:h-5 bg-muted-foreground/20 rounded-lg w-1/3 max-w-32 px-4 py-3 bg-card/80 border border-muted-foreground/20 shadow-sm"></div>
               </motion.div>
-            ))}
+              {[1, 2, 3].map((item) => (
+                <motion.div
+                  key={item}
+                  className="p-2 sm:p-3 rounded-xl bg-accent/30 overflow-hidden"
+                  animate={{
+                    opacity: [0.3, 0.6, 0.3],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: item * 0.1 + 0.2
+                  }}
+                >
+                  <div className={`h-3 sm:h-4 bg-muted-foreground/20 rounded ${
+                    item === 1 ? 'w-1/3 max-w-32' :
+                    item === 2 ? 'w-2/3 max-w-48' :
+                    'w-3/4 max-w-52'
+                  }`} />
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Second section */}
+            <div className="space-y-2 sm:space-y-3">
+              <motion.div
+                className="relative mb-4"
+                animate={{
+                  opacity: [0.3, 0.6, 0.3],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 0.5
+                }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-muted-foreground/10 via-muted-foreground/5 to-transparent rounded-lg"></div>
+                <div className="relative h-4 sm:h-5 bg-muted-foreground/20 rounded-lg w-1/4 max-w-28 px-4 py-3 bg-card/80 border border-muted-foreground/20 shadow-sm"></div>
+              </motion.div>
+              {[1, 2].map((item) => (
+                <motion.div
+                  key={item}
+                  className="p-2 sm:p-3 rounded-xl bg-accent/30 overflow-hidden"
+                  animate={{
+                    opacity: [0.3, 0.6, 0.3],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: item * 0.1 + 0.6
+                  }}
+                >
+                  <div className={`h-3 sm:h-4 bg-muted-foreground/20 rounded ${
+                    item === 1 ? 'w-2/3 max-w-48' :
+                    'w-4/5 max-w-56'
+                  }`} />
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
 

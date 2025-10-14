@@ -269,7 +269,7 @@ export async function updateRecipeInstructions(
 
 export async function updateRecipeIngredients(
   recipeId: string, 
-  ingredients: string[]
+  ingredients: string[] | Recipe['ingredients']
 ): Promise<{ data: SavedRecipe | null, error: unknown }> {
   try {
     const { data: { user } } = await supabase.auth.getUser()

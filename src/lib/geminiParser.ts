@@ -4,9 +4,14 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+export interface IngredientSection {
+  title?: string;
+  ingredients: string[];
+}
+
 export interface Recipe {
   title: string;
-  ingredients: string[];
+  ingredients: string[] | IngredientSection[];
   instructions: string[];
   prepTime?: string;
   cookTime?: string;
@@ -39,6 +44,12 @@ EXTRACTION RULES:
 3. If information is missing, provide reasonable estimates
 4. Do NOT change ingredient names or descriptions that are provided
 
+INGREDIENT SECTIONS:
+- If ingredients are grouped by sections (e.g., "For the sauce:", "For the main dish:", "For the marinade:"), organize them into sections
+- Use the exact section titles as written (e.g., "For the sauce", "For the main dish")
+- If no sections are detected, return ingredients as a simple array
+- Section format: {"title": "Section Name", "ingredients": ["ingredient1", "ingredient2"]}
+
 Content to parse:
 ${content}
 
@@ -64,7 +75,7 @@ DEFAULT VALUES FOR MISSING FIELDS:
 Return ONLY a JSON object with these exact fields:
 {
   "title": "recipe title (exact if provided, estimated if missing)",
-  "ingredients": ["ingredient text as written or estimated"],
+  "ingredients": ["ingredient text as written or estimated"] OR [{"title": "Section Name", "ingredients": ["ingredient1", "ingredient2"]}],
   "instructions": ["complete cooking steps without numbers"],
   "prepTime": "prep time with units",
   "cookTime": "cook time with units", 

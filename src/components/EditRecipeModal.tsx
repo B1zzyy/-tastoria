@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Image as ImageIcon, Instagram, Trash2, Plus, GripVertical } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
+import { IngredientSection } from '@/lib/recipe-parser';
 
 interface EditRecipeModalProps {
   isOpen: boolean;
@@ -13,7 +14,7 @@ interface EditRecipeModalProps {
     id: string;
     title: string;
     image: string;
-    ingredients: string[];
+    ingredients: string[] | IngredientSection[];
     instructions: string[];
     metadata?: {
       customPreview?: {
@@ -25,7 +26,7 @@ interface EditRecipeModalProps {
   };
   onSave: (updates: {
     title: string;
-    ingredients: string[];
+    ingredients: string[] | IngredientSection[];
     instructions: string[];
     customPreview: { type: 'emoji' | 'image'; value: string; gradient?: string } | null;
   }) => void;
@@ -164,11 +165,24 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
     setInstructionKeys(instructionKeysArray);
     
     
-    // Initialize ingredients
-    const ingredients = [...recipe.ingredients];
-    setEditableIngredients(ingredients);
-    const ingredientKeysArray = ingredients.map((_, index) => `ingredient-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${Math.random().toString(36).substr(2, 9)}`);
-    setIngredientKeys(ingredientKeysArray);
+  // Initialize ingredients - flatten sections for editing
+  const ingredients = (() => {
+    if (Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0) {
+      const firstIngredient = recipe.ingredients[0];
+      if (typeof firstIngredient === 'object' && 'ingredients' in firstIngredient) {
+        // It's a sectioned format, flatten it for editing
+        const sections = recipe.ingredients as IngredientSection[];
+        return sections.flatMap(section => 
+          section.title ? [`--- ${section.title} ---`, ...section.ingredients] : section.ingredients
+        );
+      }
+    }
+    return [...(recipe.ingredients as string[])];
+  })();
+  
+  setEditableIngredients(ingredients);
+  const ingredientKeysArray = ingredients.map((_, index) => `ingredient-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${Math.random().toString(36).substr(2, 9)}`);
+  setIngredientKeys(ingredientKeysArray);
     
   }, [recipe]);
 
@@ -449,9 +463,55 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
     const filteredInstructions = editableInstructions.filter(instruction => instruction.trim() !== '');
     const filteredIngredients = editableIngredients.filter(ingredient => ingredient.trim() !== '');
 
+    // Convert flattened ingredients back to sections if they contain section markers
+    const processedIngredients = (() => {
+      const sections: IngredientSection[] = [];
+      let currentSection: IngredientSection | null = null;
+      
+      for (const ingredient of filteredIngredients) {
+        if (ingredient.startsWith('--- ') && ingredient.endsWith(' ---')) {
+          // This is a section header
+          if (currentSection) {
+            sections.push(currentSection);
+          }
+          currentSection = {
+            title: ingredient.replace(/^--- | ---$/g, ''),
+            ingredients: []
+          };
+        } else {
+          // This is a regular ingredient
+          if (currentSection) {
+            currentSection.ingredients.push(ingredient);
+          } else {
+            // No current section, create a default one
+            if (sections.length === 0) {
+              sections.push({ ingredients: [] });
+            }
+            sections[0].ingredients.push(ingredient);
+          }
+        }
+      }
+      
+      if (currentSection) {
+        sections.push(currentSection);
+      }
+      
+      // If no sections were created, return as simple array
+      if (sections.length === 0) {
+        return filteredIngredients;
+      }
+      
+      // If only one section with no title, return as simple array
+      if (sections.length === 1 && !sections[0].title) {
+        return sections[0].ingredients;
+      }
+      
+      return sections;
+    })();
+
     onSave({
       title: title.trim(),
-      ingredients: filteredIngredients,
+      ingredients: processedIngredients,
       instructions: filteredInstructions,
       customPreview
     });

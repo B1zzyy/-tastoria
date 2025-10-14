@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Recipe } from '@/lib/recipe-parser';
-import { convertIngredients, convertTemperature, type UnitSystem } from '@/lib/unitConverter';
+import { convertIngredients, convertIngredientSections, convertTemperature, type UnitSystem, type IngredientSection, type ConvertedIngredientSection } from '@/lib/unitConverter';
 import { updateRecipeInstructions } from '@/lib/recipeService';
 import UnitToggle from './UnitToggle';
 
@@ -424,17 +424,57 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
           </div>
           
           {recipe.ingredients.length > 0 ? (
-            <div className="space-y-3">
-              {convertIngredients(recipe.ingredients, unitSystem).map((convertedIngredient, index) => (
-                 <div
-                   key={index}
-                   className="p-3 rounded-xl bg-accent/30 hover:bg-accent/50 transition-colors group"
-                 >
-                   <span className="text-card-foreground leading-relaxed font-medium">
-                     {convertedIngredient.converted}
-                   </span>
-                 </div>
-              ))}
+            <div className="space-y-6">
+              {(() => {
+                // Check if ingredients are in sections format
+                const firstIngredient = recipe.ingredients[0];
+                const isSectioned = typeof firstIngredient === 'object' && 'ingredients' in firstIngredient;
+                
+                if (isSectioned) {
+                  const sections = recipe.ingredients as IngredientSection[];
+                  const convertedSections = convertIngredientSections(sections, unitSystem);
+                  
+                  return convertedSections.map((section, sectionIndex) => (
+                    <div key={sectionIndex} className="space-y-3">
+                      {section.title && (
+                        <div className="relative mb-4">
+                          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-lg"></div>
+                          <h3 className="relative text-lg font-bold text-card-foreground px-4 py-3 bg-card/80 backdrop-blur-sm border border-primary/20 rounded-lg shadow-sm">
+                            {section.title}
+                          </h3>
+                        </div>
+                      )}
+                      <div className="space-y-3">
+                        {section.ingredients.map((convertedIngredient, index) => (
+                          <div
+                            key={index}
+                            className="p-3 rounded-xl bg-accent/30 hover:bg-accent/50 transition-colors group"
+                          >
+                            <span className="text-card-foreground leading-relaxed font-medium">
+                              {convertedIngredient.converted}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ));
+                } else {
+                  // Handle simple string array
+                  const ingredients = recipe.ingredients as string[];
+                  const convertedIngredients = convertIngredients(ingredients, unitSystem);
+                  
+                  return convertedIngredients.map((convertedIngredient, index) => (
+                    <div
+                      key={index}
+                      className="p-3 rounded-xl bg-accent/30 hover:bg-accent/50 transition-colors group"
+                    >
+                      <span className="text-card-foreground leading-relaxed font-medium">
+                        {convertedIngredient.converted}
+                      </span>
+                    </div>
+                  ));
+                }
+              })()}
             </div>
           ) : (
             <div className="text-center py-8">
@@ -463,29 +503,6 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
             </div>
             
             
-            {recipe.instructions.length > 0 && completedSteps.size > 0 && (
-              <div className="flex flex-col items-end gap-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="flex items-center gap-1">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span className="font-medium text-green-600">
-                      {completedSteps.size}
-                    </span>
-                  </div>
-                  <span className="text-muted-foreground">of {recipe.instructions.length}</span>
-                </div>
-                
-                {/* Progress Bar */}
-                <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-500 ease-out"
-                    style={{ 
-                      width: `${(completedSteps.size / recipe.instructions.length) * 100}%` 
-                    }}
-                  />
-                </div>
-              </div>
-            )}
           </div>
           
           {recipe.instructions.length > 0 ? (

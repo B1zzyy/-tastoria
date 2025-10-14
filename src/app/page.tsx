@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Recipe } from '@/lib/recipe-parser';
+import { Recipe, IngredientSection } from '@/lib/recipe-parser';
 import RecipeForm, { type SourceType } from '@/components/RecipeForm';
 import RecipeDisplay from '@/components/RecipeDisplay';
 import RecipeSkeleton from '@/components/RecipeSkeleton';
@@ -1362,7 +1362,7 @@ export default function Home() {
               
               // Update ingredients if changed
               if (JSON.stringify(updates.ingredients) !== JSON.stringify(recipe.ingredients)) {
-                const { error: ingredientsError } = await updateRecipeIngredients(currentSavedRecipeId, updates.ingredients);
+                const { error: ingredientsError } = await updateRecipeIngredients(currentSavedRecipeId, updates.ingredients as string[] | IngredientSection[]);
                 if (ingredientsError) {
                   console.error('Failed to update ingredients:', ingredientsError);
                   return;
