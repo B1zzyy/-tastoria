@@ -85,9 +85,11 @@ export default function LiquidEther({
       }
       init(container) {
         this.container = container;
-        this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        // Reduce pixel ratio on mobile devices for better performance
+        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        this.pixelRatio = isMobile ? Math.min(window.devicePixelRatio || 1, 1) : Math.min(window.devicePixelRatio || 1, 2);
         this.resize();
-        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        this.renderer = new THREE.WebGLRenderer({ antialias: !isMobile, alpha: true });
         this.renderer.autoClear = false;
         this.renderer.setClearColor(new THREE.Color(0x000000), 0);
         this.renderer.setPixelRatio(this.pixelRatio);
@@ -751,7 +753,9 @@ export default function LiquidEther({
       }
       getFloatType() {
         const isIOS = /(iPad|iPhone|iPod)/i.test(navigator.userAgent);
-        return isIOS ? THREE.HalfFloatType : THREE.FloatType;
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        const isMobile = isIOS || isAndroid;
+        return isMobile ? THREE.HalfFloatType : THREE.FloatType;
       }
       createAllFBO() {
         const type = this.getFloatType();
@@ -932,6 +936,12 @@ export default function LiquidEther({
         };
         document.addEventListener('visibilitychange', this._onVisibility);
         this.running = false;
+        
+        // Performance optimization: Limit frame rate on mobile
+        this.isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        this.lastFrameTime = 0;
+        this.targetFPS = this.isMobile ? 30 : 60; // 30 FPS on mobile, 60 FPS on desktop
+        this.frameInterval = 1000 / this.targetFPS;
       }
       init() {
         this.props.$wrapper.prepend(Common.renderer.domElement);
@@ -949,7 +959,16 @@ export default function LiquidEther({
       }
       loop() {
         if (!this.running) return; // safety
-        this.render();
+        
+        const now = performance.now();
+        const deltaTime = now - this.lastFrameTime;
+        
+        // Only render if enough time has passed (frame rate limiting)
+        if (deltaTime >= this.frameInterval) {
+          this.render();
+          this.lastFrameTime = now;
+        }
+        
         rafRef.current = requestAnimationFrame(this._loop);
       }
       start() {

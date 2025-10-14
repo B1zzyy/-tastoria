@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { TrialService } from '@/lib/trialService'
-import { FingerprintService } from '@/lib/fingerprintService'
 import type { User } from '@supabase/supabase-js'
 
 export interface AuthUser {
@@ -119,12 +118,10 @@ export function useAuth() {
           // console.log('✅ Found existing session for:', session.user.email)
           await fetchUserProfile(session.user)
           // Initialize trial for new users (don't wait for this to complete)
-          const fingerprintData = FingerprintService.getClientFingerprint()
           TrialService.initializeTrial(
             session.user.id, 
             session.user.email || undefined, 
-            session.user.user_metadata?.name || undefined,
-            fingerprintData
+            session.user.user_metadata?.name || undefined
           ).catch(err => console.warn('Trial initialization failed:', err))
         } else {
           console.log('ℹ️ No existing session found')
@@ -146,12 +143,10 @@ export function useAuth() {
         // console.log('✅ User signed in:', session.user.email);
         await fetchUserProfile(session.user)
         // Initialize trial for new users (don't wait for this to complete)
-        const fingerprintData = FingerprintService.getClientFingerprint()
         TrialService.initializeTrial(
           session.user.id, 
           session.user.email || undefined, 
-          session.user.user_metadata?.name || undefined,
-          fingerprintData
+          session.user.user_metadata?.name || undefined
         ).catch(err => console.warn('Trial initialization failed:', err))
       } else if (event === 'SIGNED_OUT') {
         // console.log('👋 User signed out');
