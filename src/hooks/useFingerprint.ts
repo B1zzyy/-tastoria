@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { FingerprintService, type FingerprintData } from '@/lib/fingerprintService'
+import { FingerprintService } from '@/lib/fingerprintService'
 
 export interface FingerprintResult {
   fingerprint: string

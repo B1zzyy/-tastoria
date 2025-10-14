@@ -69,7 +69,7 @@ export class FingerprintService {
   ): Promise<FingerprintResult> {
     try {
       // Check if this fingerprint has already used a trial
-      const { data: fingerprintData, error: fingerprintError } = await supabase
+      const { data: fingerprintData } = await supabase
         .from('trial_fingerprints')
         .select('*')
         .eq('fingerprint_hash', fingerprint)
@@ -85,7 +85,7 @@ export class FingerprintService {
       }
 
       // Check if this IP address has already used a trial
-      const { data: ipData, error: ipError } = await supabase
+      const { data: ipData } = await supabase
         .from('trial_fingerprints')
         .select('*')
         .eq('ip_address', ipAddress)

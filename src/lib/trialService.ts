@@ -131,7 +131,7 @@ export class TrialService {
   /**
    * Check if user is eligible for trial based on fingerprint
    */
-  static async checkTrialEligibility(fingerprintData: any): Promise<{ isEligible: boolean; reason?: string }> {
+  static async checkTrialEligibility(fingerprintData: import('./fingerprintService').FingerprintData): Promise<{ isEligible: boolean; reason?: string }> {
     try {
       const fingerprint = FingerprintService.generateFingerprint(fingerprintData)
       
@@ -154,7 +154,7 @@ export class TrialService {
   /**
    * Initialize trial for a new user
    */
-  static async initializeTrial(userId: string, userEmail?: string, userName?: string, fingerprintData?: any): Promise<void> {
+  static async initializeTrial(userId: string, userEmail?: string, userName?: string, fingerprintData?: import('./fingerprintService').FingerprintData): Promise<void> {
     try {
       // First check if profile already exists
       const { data: existingProfile } = await supabase
