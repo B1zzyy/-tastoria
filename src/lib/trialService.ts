@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { FingerprintService } from './fingerprintService'
 
 export interface TrialStatus {
   isTrialActive: boolean
@@ -128,9 +129,32 @@ export class TrialService {
   }
 
   /**
+   * Check if user is eligible for trial based on fingerprint
+   */
+  static async checkTrialEligibility(fingerprintData: any): Promise<{ isEligible: boolean; reason?: string }> {
+    try {
+      const fingerprint = FingerprintService.generateFingerprint(fingerprintData)
+      
+      // Get IP address (this would need to be passed from the client)
+      const ipAddress = fingerprintData.ipAddress || 'unknown'
+      
+      const result = await FingerprintService.checkTrialEligibility(fingerprint, ipAddress)
+      
+      return {
+        isEligible: result.isEligible,
+        reason: result.reason
+      }
+    } catch (error) {
+      console.error('Error checking trial eligibility:', error)
+      // Fail open - allow trial if there's an error
+      return { isEligible: true }
+    }
+  }
+
+  /**
    * Initialize trial for a new user
    */
-  static async initializeTrial(userId: string, userEmail?: string, userName?: string): Promise<void> {
+  static async initializeTrial(userId: string, userEmail?: string, userName?: string, fingerprintData?: any): Promise<void> {
     try {
       // First check if profile already exists
       const { data: existingProfile } = await supabase
@@ -161,6 +185,23 @@ export class TrialService {
 
         if (error) {
           console.error('Error initializing trial:', error)
+        } else if (fingerprintData) {
+          // Record fingerprint usage for trial
+          try {
+            const fingerprint = FingerprintService.generateFingerprint(fingerprintData)
+            const ipAddress = fingerprintData.ipAddress || 'unknown'
+            
+            await FingerprintService.recordTrialUsage(
+              fingerprint,
+              ipAddress,
+              userId,
+              fingerprintData.userAgent,
+              fingerprintData.screenResolution,
+              fingerprintData.timezone
+            )
+          } catch (fingerprintError) {
+            console.error('Error recording fingerprint:', fingerprintError)
+          }
         }
       }
     } catch (error) {
