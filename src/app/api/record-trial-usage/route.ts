@@ -19,7 +19,6 @@ export async function POST(request: NextRequest) {
     // Get client IP address
     const ipAddress = request.headers.get('x-forwarded-for') || 
                      request.headers.get('x-real-ip') || 
-                     request.ip || 
                      'unknown'
 
     // Generate fingerprint
