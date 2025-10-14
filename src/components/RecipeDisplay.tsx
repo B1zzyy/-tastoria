@@ -6,7 +6,7 @@ import { convertIngredients, convertTemperature, type UnitSystem } from '@/lib/u
 import { updateRecipeInstructions } from '@/lib/recipeService';
 import UnitToggle from './UnitToggle';
 
-import { Clock, Users, Star, ChefHat, List, BookOpen, Check, ExternalLink, X, GripVertical, Plus, Instagram } from 'lucide-react';
+import { Clock, Users, Star, ChefHat, List, BookOpen, Check, ExternalLink, X, GripVertical, Plus, Instagram, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import Confetti from './Confetti';
@@ -456,9 +456,7 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
               <h2 className="text-xl font-bold text-card-foreground">Instructions</h2>
               {recipe.metadata?.instructionsGenerated && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ backgroundColor: '#ffe0c2' }}>
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#393028' }}>
-                    <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-                  </svg>
+                  <Sparkles className="w-3.5 h-3.5" style={{ color: '#393028' }} />
                   <span className="text-xs font-medium" style={{ color: '#393028' }}>AI Instructions</span>
                 </div>
               )}
@@ -507,7 +505,7 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                     }`}
                     onClick={() => toggleStep(index)}
                   >
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 items-start">
                       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm transition-all duration-300 group-hover:scale-110 ${
                         isCompleted 
                           ? 'bg-green-500 text-white' 
@@ -519,7 +517,7 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                           index + 1
                         )}
                       </div>
-                      <div className="flex-1 pt-1">
+                      <div className="flex-1 flex items-center">
                         <p className={`leading-relaxed font-medium transition-all duration-300 ${
                           isCompleted 
                             ? 'text-muted-foreground' 

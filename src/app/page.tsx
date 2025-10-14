@@ -6,9 +6,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Recipe } from '@/lib/recipe-parser';
 import RecipeForm, { type SourceType } from '@/components/RecipeForm';
 import RecipeDisplay from '@/components/RecipeDisplay';
+import RecipeSkeleton from '@/components/RecipeSkeleton';
 import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useTrial } from '@/hooks/useTrial';
+import { useToast } from '@/components/ToastProvider';
 import { isRecipeSaved, updateRecipeTitle, updateRecipeCustomPreview, updateRecipeInstructions, updateRecipeIngredients } from '@/lib/recipeService';
 import { deleteRecipeFromAllCollections } from '@/lib/collectionsService';
 import SavedRecipes from '@/components/SavedRecipes';
@@ -16,7 +18,7 @@ import CollectionModal from '@/components/CollectionModal';
 import EditRecipeModal from '@/components/EditRecipeModal';
 import BlurText from '../components/BlurText';
 import LiquidEther from '../components/LiquidEther';
-import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck, HelpCircle } from 'lucide-react';
+import { ChevronDown, LogOut, User, Bookmark, BookmarkCheck, HelpCircle, Link } from 'lucide-react';
 import '@/lib/keepAlive'; // Import to initialize keep-alive service
 import TutorialOverlay from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
@@ -31,11 +33,13 @@ import { generateShortRecipeShareUrl, getSharedRecipeFromUrl } from '@/lib/urlSh
 import { PaymentService } from '@/lib/paymentService';
 import { supabase } from '@/lib/supabase';
 import Footer from '@/components/Footer';
+import { ToastContainer } from '@/components/Toast';
 
 
 export default function Home() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Tutorial system
@@ -66,6 +70,9 @@ export default function Home() {
   // Use trial system
   const { canAccessFeature, isPaidUser, trialDisplayInfo, loading: trialLoading } = useTrial();
   
+  // Use toast notifications
+  const { toasts, toast, removeToast } = useToast();
+  
   // Helper function to check feature access
   const checkFeatureAccess = async (feature: 'collections' | 'ai_chat' | 'unlimited_parsing', featureName: string) => {
     if (!user) {
@@ -86,6 +93,21 @@ export default function Home() {
   useEffect(() => {
     console.log('User state changed:', user);
   }, [user]);
+
+  // Handle skeleton loading delay
+  useEffect(() => {
+    if (loading) {
+      // Show skeleton after 500ms delay
+      const timer = setTimeout(() => {
+        setShowSkeleton(true);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    } else {
+      // Reset skeleton when loading stops
+      setShowSkeleton(false);
+    }
+  }, [loading]);
 
   // Auto-show paywall for expired trials
   useEffect(() => {
@@ -324,7 +346,7 @@ export default function Home() {
       
       if (error) {
         console.error('Failed to delete recipe:', error);
-        // You could show an error toast here
+        toast.error("Failed to remove recipe", "Please try again");
       } else {
         // Successfully deleted - redirect to home screen
         setIsRecipeCurrentlySaved(false);
@@ -332,6 +354,10 @@ export default function Home() {
         setRecipe(null);
         setCurrentRecipeUrl('');
         setError(null);
+        
+        // Show success toast
+        toast.success("Recipe removed from collections");
+        
         console.log('Recipe deleted successfully from all collections - redirected to home');
       }
     } catch (error) {
@@ -681,8 +707,8 @@ export default function Home() {
       </div>
 
       
-      {/* Top Navigation Bar - Only show when recipe is displayed or during tutorial */}
-      {(recipe || (tutorial.isActive && tutorial.currentStep?.id === 'save-recipe')) && (
+      {/* Top Navigation Bar - Only show when recipe is displayed, skeleton loading, or during tutorial */}
+      {(recipe || showSkeleton || (tutorial.isActive && tutorial.currentStep?.id === 'save-recipe')) && (
         <>
           {/* Mobile Navigation */}
           <nav className="md:hidden sticky top-0 z-50 bg-background border-b border-border">
@@ -692,6 +718,8 @@ export default function Home() {
                 onClick={() => {
                   setRecipe(null);
                   setError(null);
+                  setLoading(false);
+                  setShowSkeleton(false);
                 }}
                 className="p-2 hover:bg-accent rounded-lg transition-colors"
                 aria-label="Go back"
@@ -703,8 +731,8 @@ export default function Home() {
 
               {/* Right - Action Icons */}
               <div className="flex items-center gap-1">
-                {/* Save Button - Only show when user is logged in */}
-                {user && (
+                {/* Save Button - Only show when user is logged in and not showing skeleton */}
+                {user && !showSkeleton && (
                   <button
                     onClick={isRecipeCurrentlySaved ? handleDeleteRecipe : handleSaveRecipe}
                     disabled={tutorial.isActive && tutorial.currentStep?.id === 'save-recipe'}
@@ -725,8 +753,8 @@ export default function Home() {
                   </button>
                 )}
 
-                {/* Edit Button - Show when recipe is saved */}
-                {isRecipeCurrentlySaved && (
+                {/* Edit Button - Show when recipe is saved and not showing skeleton */}
+                {isRecipeCurrentlySaved && !showSkeleton && (
                   <button 
                     onClick={() => setShowEditModal(true)} 
                     className="p-2 hover:bg-accent rounded-lg transition-colors" 
@@ -745,37 +773,20 @@ export default function Home() {
                         // Generate shortened shareable URL with recipe data encoded
                         const shareUrl = await generateShortRecipeShareUrl(recipe);
                         
-                        if (navigator.share) {
-                          await navigator.share({
-                            title: `${recipe.title} - Tastoria`,
-                            text: `Check out this clean, easy-to-follow recipe: ${recipe.title}`,
-                            url: shareUrl
-                          });
-                        } else {
-                          // Fallback: copy to clipboard
-                          await navigator.clipboard.writeText(shareUrl);
-                          // Could show a toast notification here
-                        }
+                        // Always copy to clipboard and show toast
+                        await navigator.clipboard.writeText(shareUrl);
+                        toast.info("Recipe link copied to clipboard");
                       }
                     } catch (error) {
-                      console.log('Share failed:', error);
-                      // Fallback: try to copy to clipboard
-                      try {
-                        if (recipe) {
-                          const shareUrl = await generateShortRecipeShareUrl(recipe);
-                          await navigator.clipboard.writeText(shareUrl);
-                        }
-                      } catch (clipboardError) {
-                        console.log('Clipboard fallback failed:', clipboardError);
-                      }
+                      console.log('Failed to copy recipe link:', error);
+                      toast.error("Failed to copy link", "Please try again");
                     }
                   }}
                   className="p-2 hover:bg-accent rounded-lg transition-colors" 
-                  aria-label="Share recipe"
+                  aria-label="Copy recipe link"
+                  title="Copy recipe link"
                 >
-                  <svg className="w-6 h-6 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                  </svg>
+                  <Link className="w-6 h-6 text-foreground" />
                 </button>
               </div>
         </div>
@@ -789,6 +800,8 @@ export default function Home() {
                   onClick={() => {
                     setRecipe(null);
                     setError(null);
+                    setLoading(false);
+                    setShowSkeleton(false);
                   }}
                   className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                 >
@@ -806,8 +819,8 @@ export default function Home() {
                 
 
                 <div className="flex items-center gap-4">
-                  {/* Save Button - Only show when user is logged in and not viewing from saved recipes */}
-                  {user && (
+                  {/* Save Button - Only show when user is logged in and not showing skeleton */}
+                  {user && !showSkeleton && (
                     <button
                       onClick={isRecipeCurrentlySaved ? handleDeleteRecipe : handleSaveRecipe}
                       disabled={tutorial.isActive && tutorial.currentStep?.id === 'save-recipe'}
@@ -828,8 +841,8 @@ export default function Home() {
                     </button>
                   )}
 
-                  {/* Edit Button - Show when recipe is saved */}
-                  {isRecipeCurrentlySaved && (
+                  {/* Edit Button - Show when recipe is saved and not showing skeleton */}
+                  {isRecipeCurrentlySaved && !showSkeleton && (
                     <button 
                       onClick={() => setShowEditModal(true)} 
                       className="p-2 hover:bg-accent rounded-lg transition-colors" 
@@ -842,7 +855,7 @@ export default function Home() {
                     </button>
                   )}
 
-                  {/* Share Button */}
+                  {/* Copy Link Button */}
                   <button 
                     onClick={async () => {
                       try {
@@ -850,38 +863,20 @@ export default function Home() {
                           // Generate shortened shareable URL with recipe data encoded
                           const shareUrl = await generateShortRecipeShareUrl(recipe);
                           
-                          if (navigator.share) {
-                            await navigator.share({
-                              title: `${recipe.title} - Tastoria`,
-                              text: `Check out this clean, easy-to-follow recipe: ${recipe.title}`,
-                              url: shareUrl
-                            });
-                          } else {
-                            // Fallback: copy to clipboard
-                            await navigator.clipboard.writeText(shareUrl);
-                            // Could show a toast notification here
-                          }
+                          // Always copy to clipboard and show toast
+                          await navigator.clipboard.writeText(shareUrl);
+                          toast.info("Recipe link copied to clipboard");
                         }
                       } catch (error) {
-                        console.log('Share failed:', error);
-                        // Fallback: try to copy to clipboard
-                        try {
-                          if (recipe) {
-                            const shareUrl = await generateShortRecipeShareUrl(recipe);
-                            await navigator.clipboard.writeText(shareUrl);
-                          }
-                        } catch (clipboardError) {
-                          console.log('Clipboard fallback failed:', clipboardError);
-                        }
+                        console.log('Failed to copy recipe link:', error);
+                        toast.error("Failed to copy link", "Please try again");
                       }
                     }}
                     className="p-2 hover:bg-accent rounded-lg transition-colors" 
-                    aria-label="Share recipe"
-                    title="Share recipe"
+                    aria-label="Copy recipe link"
+                    title="Copy recipe link"
                   >
-                    <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                    </svg>
+                    <Link className="w-5 h-5 text-foreground" />
                   </button>
 
 
@@ -1013,8 +1008,8 @@ export default function Home() {
         </>
       )}
 
-      {/* Hero Section - Only show when no recipe */}
-      {!recipe && (
+      {/* Hero Section - Only show when no recipe and not showing skeleton */}
+      {!recipe && !showSkeleton && (
         <div className="flex flex-col min-h-screen relative">
           {/* LiquidEther Background */}
           <div className="absolute inset-0 z-0 md:pointer-events-auto pointer-events-none">
@@ -1256,6 +1251,22 @@ export default function Home() {
         </div>
       )}
 
+      {/* Skeleton Loading State */}
+      <AnimatePresence>
+        {showSkeleton && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="container mx-auto px-4 py-8"
+          >
+            <div className="max-w-6xl mx-auto">
+              <RecipeSkeleton />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Error State */}
       {error && (
@@ -1267,7 +1278,7 @@ export default function Home() {
       )}
 
       {/* Recipe Display */}
-      {recipe && !loading && (
+      {recipe && !showSkeleton && (
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-6xl mx-auto">
             <RecipeDisplay 
@@ -1288,9 +1299,15 @@ export default function Home() {
           onClose={() => setShowCollectionModal(false)}
           recipe={recipe}
           recipeUrl={currentRecipeUrl}
-          onSaved={async () => {
+          onSaved={async (collectionName?: string) => {
             setIsRecipeCurrentlySaved(true);
             setShowCollectionModal(false);
+            
+            // Show success toast
+            toast.success(
+              "Recipe saved successfully",
+              collectionName ? `Added to ${collectionName}` : undefined
+            );
             
             // After saving, enable edit mode and get the saved recipe ID
             
@@ -1385,9 +1402,13 @@ export default function Home() {
                 } : null);
               }
               
+              // Show success toast
+              toast.success("Recipe updated successfully");
+              
               setShowEditModal(false);
             } catch (error) {
               console.error('Error updating recipe:', error);
+              toast.error("Failed to update recipe", "Please try again");
             }
           }}
         />
@@ -1502,8 +1523,8 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* AI Chat Button - Only show when viewing a recipe or during tutorial */}
-      {(recipe || (tutorial.isActive && tutorial.currentStep?.id === 'ai-chat')) && (
+      {/* AI Chat Button - Only show when viewing a recipe (not showing skeleton) or during tutorial */}
+      {((recipe && !showSkeleton) || (tutorial.isActive && tutorial.currentStep?.id === 'ai-chat')) && (
         <AIChatButton 
           onClick={async () => {
             // Don't open chat during tutorial
@@ -1550,6 +1571,9 @@ export default function Home() {
 
       {/* Footer */}
       <Footer />
+
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
 
     </div>
   );

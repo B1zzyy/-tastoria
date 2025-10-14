@@ -11,7 +11,7 @@ interface CollectionModalProps {
   onClose: () => void;
   recipe: Recipe;
   recipeUrl: string;
-  onSaved: () => void;
+  onSaved: (collectionName?: string) => void;
 }
 
 export default function CollectionModal({ isOpen, onClose, recipe, recipeUrl, onSaved }: CollectionModalProps) {
@@ -78,7 +78,9 @@ export default function CollectionModal({ isOpen, onClose, recipe, recipeUrl, on
     if (error) {
       setError(error.message);
     } else {
-      onSaved();
+      // Find the collection name to pass to the callback
+      const collection = collections.find(c => c.id === selectedCollectionId);
+      onSaved(collection?.name);
       onClose();
     }
     
