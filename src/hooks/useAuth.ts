@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { TrialService } from '@/lib/trialService'
 import type { User } from '@supabase/supabase-js'
@@ -15,14 +15,14 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
   
   // Cache for user profiles to prevent repeated database calls
-  const profileCache = new Map<string, { data: AuthUser; timestamp: number }>()
+  const profileCache = useRef(new Map<string, { data: AuthUser; timestamp: number }>())
   const PROFILE_CACHE_DURATION = 300000 // 5 minutes
-  
+
   // Fetch user profile function
   const fetchUserProfile = useCallback(async (authUser: User) => {
     try {
       // Check cache first
-      const cached = profileCache.get(authUser.id)
+      const cached = profileCache.current.get(authUser.id)
       if (cached && Date.now() - cached.timestamp < PROFILE_CACHE_DURATION) {
         // console.log('📦 Using cached user profile for:', authUser.id)
         setUser(cached.data)
@@ -48,7 +48,7 @@ export function useAuth() {
         };
         setUser(fallbackUser);
         // Cache the fallback data
-        profileCache.set(authUser.id, { data: fallbackUser, timestamp: Date.now() })
+        profileCache.current.set(authUser.id, { data: fallbackUser, timestamp: Date.now() })
         return
       }
 
@@ -61,7 +61,7 @@ export function useAuth() {
         };
         setUser(userData);
         // Cache the fresh data
-        profileCache.set(authUser.id, { data: userData, timestamp: Date.now() })
+        profileCache.current.set(authUser.id, { data: userData, timestamp: Date.now() })
       }
     } catch (error) {
       console.error('Error fetching user profile:', error)
@@ -231,7 +231,7 @@ export function useAuth() {
       // Clear user state immediately
       setUser(null)
       // Clear profile cache on sign out
-      profileCache.clear()
+      profileCache.current.clear()
       
       // Try to sign out from Supabase
       const { error } = await supabase.auth.signOut()

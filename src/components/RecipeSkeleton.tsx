@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Clock, Users, Star, ChefHat, List, BookOpen } from 'lucide-react';
+import { List, BookOpen } from 'lucide-react';
 
 export default function RecipeSkeleton() {
   return (
