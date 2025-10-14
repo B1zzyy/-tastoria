@@ -5,13 +5,12 @@ import { requirePremiumAccess } from '@/lib/authMiddleware'
 export async function POST(request: NextRequest) {
   try {
     // Get user from auth
-    const user = await requirePremiumAccess(request)
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const authResult = await requirePremiumAccess(request)
+    if (authResult instanceof NextResponse) {
+      return authResult
     }
+    
+    const user = authResult
 
     const body = await request.json()
     const { fingerprintData } = body
