@@ -779,7 +779,7 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                   transition={{ duration: 0.4, delay: 0.3, ease: [0.4, 0, 0.2, 1] }}
                   className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed"
                 >
-                  We've generated cooking instructions for you. Toggle them on above, or save this recipe to create your own step-by-step guide.
+                  We&apos;ve generated cooking instructions for you. Toggle them on above, or save this recipe to create your own step-by-step guide.
                 </motion.p>
               </div>
             </motion.div>
