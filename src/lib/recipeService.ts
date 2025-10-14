@@ -217,11 +217,16 @@ export async function updateRecipeInstructions(
   instructions: string[]
 ): Promise<{ data: SavedRecipe | null, error: unknown }> {
   try {
+    console.log('🔧 updateRecipeInstructions called with:', { recipeId, instructions });
+    
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
+      console.error('❌ User not authenticated');
       return { data: null, error: { message: 'User not authenticated' } }
     }
+
+    console.log('👤 User authenticated:', user.id);
 
     // First get the current recipe data
     const { data: currentRecipe, error: fetchError } = await supabase
@@ -232,18 +237,24 @@ export async function updateRecipeInstructions(
       .single()
 
     if (fetchError) {
+      console.error('❌ Error fetching current recipe:', fetchError);
       return { data: null, error: fetchError }
     }
 
     if (!currentRecipe) {
+      console.error('❌ Recipe not found');
       return { data: null, error: { message: 'Recipe not found' } }
     }
+
+    console.log('📄 Current recipe data:', currentRecipe.recipe_data);
 
     // Update the instructions in the recipe data
     const updatedRecipeData = {
       ...currentRecipe.recipe_data,
       instructions: instructions
     }
+
+    console.log('💾 Updated recipe data:', updatedRecipeData);
 
     // Update the recipe in the database
     const { data, error } = await supabase
@@ -255,14 +266,18 @@ export async function updateRecipeInstructions(
       .single()
 
     if (error) {
+      console.error('❌ Database update error:', error);
       return { data: null, error }
     }
+
+    console.log('✅ Database update successful:', data);
 
     // Invalidate cache after successful update
     recipeCache.invalidate(recipeId)
 
     return { data, error: null }
   } catch (error) {
+    console.error('❌ Exception in updateRecipeInstructions:', error);
     return { data: null, error }
   }
 }

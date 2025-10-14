@@ -29,20 +29,42 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
   const [showEditInstructionsModal, setShowEditInstructionsModal] = useState(false);
   const [editableInstructions, setEditableInstructions] = useState<string[]>([]);
   const [instructionKeys, setInstructionKeys] = useState<string[]>([]);
+  const [showAIInstructions, setShowAIInstructions] = useState(false);
+  const [isEditingInstructions, setIsEditingInstructions] = useState(false);
+  const [newInstruction, setNewInstruction] = useState('');
 
   // Trigger confetti when all steps are completed
   useEffect(() => {
+    // Calculate total instructions (regular + AI instructions if showing)
+    const regularInstructionsCount = recipe.instructions.length;
+    const aiInstructionsCount = (showAIInstructions && recipe.metadata?.aiInstructions) ? recipe.metadata.aiInstructions.length : 0;
+    const totalInstructionsCount = regularInstructionsCount + aiInstructionsCount;
+    
+    // Count completed steps (regular instructions + AI instructions if showing)
+    const completedRegularSteps = Array.from(completedSteps).filter(step => step < 1000).length;
+    const completedAISteps = Array.from(completedSteps).filter(step => step >= 1000).length;
+    const totalCompletedSteps = completedRegularSteps + (showAIInstructions ? completedAISteps : 0);
+    
     console.log('🔍 Confetti check:', {
-      instructionsLength: recipe.instructions.length,
-      completedSteps: completedSteps.size,
-      shouldTrigger: recipe.instructions.length > 0 && completedSteps.size === recipe.instructions.length
+      regularInstructions: regularInstructionsCount,
+      aiInstructions: aiInstructionsCount,
+      totalInstructions: totalInstructionsCount,
+      completedRegular: completedRegularSteps,
+      completedAI: completedAISteps,
+      totalCompleted: totalCompletedSteps,
+      shouldTrigger: totalInstructionsCount > 0 && totalCompletedSteps === totalInstructionsCount
     });
     
-    if (recipe.instructions.length > 0 && completedSteps.size === recipe.instructions.length) {
+    if (totalInstructionsCount > 0 && totalCompletedSteps === totalInstructionsCount) {
       console.log('🎉 Triggering confetti!');
       setShowConfetti(true);
     }
-  }, [completedSteps, recipe.instructions.length]);
+  }, [completedSteps, recipe.instructions.length, showAIInstructions, recipe.metadata?.aiInstructions]);
+
+  // Debug: Log when recipe instructions change
+  useEffect(() => {
+    console.log('📋 RecipeDisplay: Instructions changed:', recipe.instructions);
+  }, [recipe.instructions]);
 
   const toggleStep = (stepIndex: number) => {
     const newCompletedSteps = new Set(completedSteps);
@@ -52,6 +74,57 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
       newCompletedSteps.add(stepIndex);
     }
     setCompletedSteps(newCompletedSteps);
+  };
+
+  const handleAddInstruction = async () => {
+    if (newInstruction.trim()) {
+      const updatedInstructions = [...recipe.instructions, newInstruction.trim()];
+      const updatedRecipe = { ...recipe, instructions: updatedInstructions };
+      
+      // Update local state immediately
+      onUpdateRecipe?.(updatedRecipe);
+      
+      // Close the edit modal immediately for better UX
+      setNewInstruction('');
+      setIsEditingInstructions(false);
+      
+      // Save to database in background if we have a saved recipe ID
+      if (savedRecipeId) {
+        try {
+          console.log('💾 Saving new instruction to database...');
+          const { updateRecipeInstructions } = await import('../lib/recipeService');
+          const { error } = await updateRecipeInstructions(savedRecipeId, updatedInstructions);
+          
+          if (error) {
+            console.error('❌ Failed to save instruction:', error);
+            // Revert local state on error
+            onUpdateRecipe?.(recipe);
+            return;
+          }
+          
+          console.log('✅ Instruction saved to database');
+        } catch (error) {
+          console.error('❌ Error saving instruction:', error);
+          // Revert local state on error
+          onUpdateRecipe?.(recipe);
+          return;
+        }
+      }
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setNewInstruction('');
+    setIsEditingInstructions(false);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAddInstruction();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
   };
 
   // Initialize editable instructions when modal opens (currently unused)
@@ -494,19 +567,100 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                 <BookOpen className="w-5 h-5 text-primary" />
               </div>
               <h2 className="text-xl font-bold text-card-foreground">Instructions</h2>
-              {recipe.metadata?.instructionsGenerated && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ backgroundColor: '#ffe0c2' }}>
-                  <Sparkles className="w-3.5 h-3.5" style={{ color: '#393028' }} />
-                  <span className="text-xs font-medium" style={{ color: '#393028' }}>AI Instructions</span>
-                </div>
+              {recipe.metadata?.instructionsGenerated && recipe.metadata?.aiInstructions && (
+                <button
+                  onClick={() => setShowAIInstructions(!showAIInstructions)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors ${
+                    showAIInstructions 
+                      ? 'bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 border border-purple-200/50 dark:border-purple-700/50' 
+                      : 'bg-muted/50 border border-border hover:bg-muted'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  <span className="text-xs font-medium text-card-foreground">
+                    {showAIInstructions ? 'Hide AI Instructions' : 'Show AI Instructions'}
+                  </span>
+                </button>
               )}
             </div>
-            
-            
           </div>
           
-          {recipe.instructions.length > 0 ? (
-            <div className="space-y-4">
+    {/* Show AI Instructions if toggled on */}
+    <AnimatePresence>
+      {showAIInstructions && recipe.metadata?.aiInstructions && recipe.metadata.aiInstructions.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+          className="mb-6"
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
+            className="flex items-center gap-2 mb-4"
+          >
+            <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <h4 className="text-sm font-medium text-purple-600 dark:text-purple-400">AI-Generated Instructions</h4>
+          </motion.div>
+          <div className="space-y-3">
+            {recipe.metadata.aiInstructions.map((instruction, index) => {
+              const aiStepIndex = index + 1000; // Use high index to avoid conflicts with regular instructions
+              const isCompleted = completedSteps.has(aiStepIndex);
+              
+              return (
+                <motion.div
+                  key={`ai-${index}`}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    duration: 0.4, 
+                    delay: 0.2 + (index * 0.08), 
+                    ease: [0.4, 0, 0.2, 1] 
+                  }}
+                  className={`p-3 rounded-xl border cursor-pointer transition-all duration-200 hover:scale-[1.02] ${
+                    isCompleted 
+                      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/30' 
+                      : 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/30 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+                  }`}
+                  onClick={() => toggleStep(aiStepIndex)}
+                >
+                  <div className="flex gap-3 items-start">
+                    <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                      isCompleted 
+                        ? 'bg-green-100 dark:bg-green-800/50' 
+                        : 'bg-purple-100 dark:bg-purple-800/50'
+                    }`}>
+                      {isCompleted ? (
+                        <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      ) : (
+                        <span className="text-xs font-bold text-purple-600 dark:text-purple-400">{index + 1}</span>
+                      )}
+                    </div>
+                    <p className={`text-sm leading-relaxed transition-colors ${
+                      isCompleted 
+                        ? 'text-green-800 dark:text-green-200' 
+                        : 'text-purple-800 dark:text-purple-200'
+                    }`}>
+                      {instruction}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+          {/* Show regular instructions or empty state */}
+          {recipe.instructions.length > 0 && !showAIInstructions ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+              className="space-y-4"
+            >
               {recipe.instructions.map((instruction, index) => {
                 const isCompleted = completedSteps.has(index);
                 // Convert temperatures in instructions
@@ -547,15 +701,138 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                   </div>
                 );
               })}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="w-12 h-12 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-3">
-                <BookOpen className="w-6 h-6 text-muted-foreground" />
+              
+        {/* Add another instruction button */}
+        {isEditable && !isEditingInstructions && !showAIInstructions && (
+          <button
+            onClick={() => setIsEditingInstructions(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-muted-foreground/40 text-muted-foreground rounded-lg hover:border-muted-foreground/60 hover:text-foreground transition-colors bg-transparent mt-4"
+          >
+            <Plus className="w-4 h-4" />
+            Add Another Instruction
+          </button>
+        )}
+              
+              {/* Inline editing for additional instructions */}
+              {isEditable && isEditingInstructions && (
+                <div className="space-y-3 mt-4">
+                  <div className="p-3 rounded-xl bg-accent/30 border border-border">
+                    <textarea
+                      value={newInstruction}
+                      onChange={(e) => setNewInstruction(e.target.value)}
+                      onKeyDown={handleKeyPress}
+                      placeholder="Enter your instruction here..."
+                      className="w-full bg-transparent border-none outline-none resize-none text-card-foreground placeholder:text-muted-foreground"
+                      rows={3}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={handleCancelEdit}
+                      className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddInstruction}
+                      disabled={!newInstruction.trim()}
+                      className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+    ) : (
+      <div className="py-8 lg:py-0">
+        {/* Show helpful message for unsaved recipes with AI instructions */}
+        <AnimatePresence>
+          {!savedRecipeId && recipe.metadata?.instructionsGenerated && recipe.metadata?.aiInstructions && recipe.metadata.aiInstructions.length > 0 && !showAIInstructions && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+              className="text-center"
+            >
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-50/50 to-pink-50/50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200/30 dark:border-purple-700/30">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
+                  className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-800/50 dark:to-pink-800/50 flex items-center justify-center"
+                >
+                  <Sparkles className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                </motion.div>
+                <motion.h3
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                  className="text-lg font-semibold text-card-foreground mb-2"
+                >
+                  Smart Instructions Ready
+                </motion.h3>
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                  className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed"
+                >
+                  We've generated cooking instructions for you. Toggle them on above, or save this recipe to create your own step-by-step guide.
+                </motion.p>
               </div>
-              <p className="text-muted-foreground italic">No instructions found</p>
-            </div>
+            </motion.div>
           )}
+        </AnimatePresence>
+        
+        {/* Show add instruction button for saved recipes */}
+        {savedRecipeId && !showAIInstructions && (
+          <>
+            {isEditable && !isEditingInstructions && (
+              <button
+                onClick={() => setIsEditingInstructions(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-muted-foreground/40 text-muted-foreground rounded-lg hover:border-muted-foreground/60 hover:text-foreground transition-colors bg-transparent"
+              >
+                <Plus className="w-4 h-4" />
+                Add Instruction
+              </button>
+            )}
+            
+            {isEditable && isEditingInstructions && (
+              <div className="space-y-3">
+                <div className="p-3 rounded-xl bg-accent/30 border border-border">
+                  <textarea
+                    value={newInstruction}
+                    onChange={(e) => setNewInstruction(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    placeholder="Enter your instruction here..."
+                    className="w-full bg-transparent border-none outline-none resize-none text-card-foreground placeholder:text-muted-foreground"
+                    rows={3}
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={handleCancelEdit}
+                    className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddInstruction}
+                    disabled={!newInstruction.trim()}
+                    className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    )}
         </div>
 
       </div>

@@ -30,6 +30,7 @@ export interface Recipe {
   instagramUrl?: string; // For Instagram video popup
   metadata?: {
     instructionsGenerated: boolean;
+    aiInstructions?: string[]; // Store AI-generated instructions separately
   };
 }
 
@@ -140,13 +141,12 @@ Return ONLY the JSON object:`;
     };
 
     // Determine if instructions were AI-generated
-    // Since we're now doing single-step parsing, we need to analyze the content to see if instructions were present
     const finalInstructions = finalRecipe.instructions || [];
     
     let instructionsWereGenerated = false;
+    let aiInstructions: string[] = [];
     
     // Check if the original content had proper cooking instructions
-    // Look for more specific cooking instruction patterns
     const hasProperInstructions = (
       // Look for explicit instruction keywords
       content.toLowerCase().includes('instructions:') ||
@@ -162,9 +162,11 @@ Return ONLY the JSON object:`;
     // If no proper instructions found in content, they were likely generated
     if (!hasProperInstructions) {
       instructionsWereGenerated = true;
+      aiInstructions = [...finalInstructions]; // Store AI instructions separately
     } else if (finalInstructions.length === 1 && finalInstructions[0].length < 50) {
       // Single short instruction is likely a note/tip
       instructionsWereGenerated = true;
+      aiInstructions = [...finalInstructions];
     } else if (finalInstructions.length < 3 && finalInstructions.every((inst: string) => 
       inst.toLowerCase().includes('note') || 
       inst.toLowerCase().includes('tip') || 
@@ -172,17 +174,20 @@ Return ONLY the JSON object:`;
     )) {
       // Less than 3 instructions that are all notes/tips
       instructionsWereGenerated = true;
+      aiInstructions = [...finalInstructions];
     }
 
     console.log('🔍 Instruction analysis:');
     console.log('- Content has proper instructions:', hasProperInstructions);
     console.log('- Final instructions:', finalInstructions);
     console.log('- Were generated:', instructionsWereGenerated);
+    console.log('- AI instructions stored separately:', aiInstructions.length > 0);
 
     const recipe: Recipe = {
       title: finalRecipe.title as string,
       ingredients: Array.isArray(finalRecipe.ingredients) ? finalRecipe.ingredients : [],
-      instructions: Array.isArray(finalRecipe.instructions) ? finalRecipe.instructions : [],
+      // If instructions were AI-generated, show empty instructions by default
+      instructions: instructionsWereGenerated ? [] : (Array.isArray(finalRecipe.instructions) ? finalRecipe.instructions : []),
       prepTime: cleanTimeUnit(finalRecipe.prepTime || ''),
       cookTime: cleanTimeUnit(finalRecipe.cookTime || ''),
       totalTime: cleanTimeUnit(finalRecipe.totalTime || ''),
@@ -190,7 +195,8 @@ Return ONLY the JSON object:`;
       difficulty: finalRecipe.difficulty || '',
       nutrition: finalRecipe.nutrition || {},
       metadata: {
-        instructionsGenerated: instructionsWereGenerated
+        instructionsGenerated: instructionsWereGenerated,
+        aiInstructions: instructionsWereGenerated ? aiInstructions : undefined
       }
     };
 

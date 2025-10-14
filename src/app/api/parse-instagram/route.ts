@@ -619,26 +619,9 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      // Check if we have ingredients but no/missing instructions
-      if (recipe.ingredients && recipe.ingredients.length > 0 && 
-          (!recipe.instructions || recipe.instructions.length === 0 || 
-           recipe.instructions.every(inst => inst.trim().length < 10))) {
-        
-        console.log('🔧 Recipe has ingredients but missing instructions - generating AI instructions...');
-        
-        try {
-          const enhancedRecipe = await generateInstructionsFromIngredients(recipe, postData.caption);
-          if (enhancedRecipe && enhancedRecipe.instructions && enhancedRecipe.instructions.length > 0) {
-            console.log('✅ Successfully generated instructions from ingredients');
-            recipe.instructions = enhancedRecipe.instructions;
-            // Ensure Instagram properties are preserved
-            recipe.image = 'instagram-video';
-            recipe.instagramUrl = cleanUrl;
-          }
-        } catch (error) {
-          console.log('⚠️ Failed to generate instructions:', error);
-        }
-      }
+      // The new logic in parseRecipeWithGemini already handles AI instruction generation
+      // and stores them separately in metadata.aiInstructions
+      // No additional processing needed here
 
       // Note: Instagram URL is handled separately in the frontend
 

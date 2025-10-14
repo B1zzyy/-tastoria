@@ -340,6 +340,12 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
 
       setEditableInstructions(copy);
       setInstructionKeys(keysCopy);
+      
+      console.log('🔄 Instructions reordered:', {
+        from: dragIndex,
+        to: before === "-1" ? "end" : before,
+        newOrder: copy
+      });
     }
   };
 
@@ -509,6 +515,8 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
       return sections;
     })();
 
+    console.log('💾 Saving recipe with instructions:', filteredInstructions);
+    
     onSave({
       title: title.trim(),
       ingredients: processedIngredients,

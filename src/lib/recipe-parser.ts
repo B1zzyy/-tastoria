@@ -70,6 +70,7 @@ export interface Recipe {
   notes?: string;
   metadata?: {
     instructionsGenerated?: boolean; // True if instructions were AI-generated
+    aiInstructions?: string[]; // Store AI-generated instructions separately
     customPreview?: {
       type: 'emoji' | 'image';
       value: string; // emoji string or image URL

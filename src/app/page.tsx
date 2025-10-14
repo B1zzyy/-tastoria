@@ -1371,15 +1371,62 @@ export default function Home() {
                 setRecipe(prev => prev ? { ...prev, ingredients: updates.ingredients } : null);
               }
               
-              // Update instructions if changed
-              if (JSON.stringify(updates.instructions) !== JSON.stringify(recipe.instructions)) {
-                const { error: instructionsError } = await updateRecipeInstructions(currentSavedRecipeId, updates.instructions);
-                if (instructionsError) {
-                  console.error('Failed to update instructions:', instructionsError);
+              // Update instructions if changed (more robust comparison)
+              const instructionsChanged = 
+                updates.instructions.length !== recipe.instructions.length ||
+                updates.instructions.some((instruction, index) => instruction !== recipe.instructions[index]);
+              
+              if (instructionsChanged) {
+                console.log('🔄 Instructions changed, updating...', {
+                  old: recipe.instructions,
+                  new: updates.instructions
+                });
+                
+                try {
+                  console.log('📡 Calling updateRecipeInstructions...');
+                  
+                  // Update local state first for immediate UI feedback
+                  setRecipe(prev => {
+                    if (!prev) return null;
+                    const updated = { ...prev, instructions: updates.instructions };
+                    console.log('🔄 Local state updated immediately:', {
+                      before: prev.instructions,
+                      after: updated.instructions
+                    });
+                    return updated;
+                  });
+                  
+                  // Then update database in background
+                  const { error: instructionsError } = await updateRecipeInstructions(currentSavedRecipeId, updates.instructions);
+                  
+                  if (instructionsError) {
+                    console.error('❌ Failed to update instructions in database:', instructionsError);
+                    // Revert local state on database error
+                    setRecipe(prev => {
+                      if (!prev) return null;
+                      const reverted = { ...prev, instructions: recipe.instructions };
+                      console.log('🔄 Reverted local state due to database error');
+                      return reverted;
+                    });
+                    toast.error("Failed to save instructions", "Please try again");
+                    return;
+                  }
+                  
+                  console.log('✅ Database update successful');
+                } catch (error) {
+                  console.error('❌ Error in instructions update:', error);
+                  // Revert local state on error
+                  setRecipe(prev => {
+                    if (!prev) return null;
+                    const reverted = { ...prev, instructions: recipe.instructions };
+                    console.log('🔄 Reverted local state due to error');
+                    return reverted;
+                  });
+                  toast.error("Failed to update instructions", "Please try again");
                   return;
                 }
-                // Update local recipe state
-                setRecipe(prev => prev ? { ...prev, instructions: updates.instructions } : null);
+              } else {
+                console.log('ℹ️ Instructions unchanged, skipping update');
               }
               
               // Update custom preview if changed
