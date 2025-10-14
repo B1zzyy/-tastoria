@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Recipe } from '@/lib/recipe-parser';
-import { convertIngredients, convertIngredientSections, convertTemperature, type UnitSystem, type IngredientSection, type ConvertedIngredientSection } from '@/lib/unitConverter';
+import { convertIngredients, convertIngredientSections, convertTemperature, type UnitSystem, type IngredientSection } from '@/lib/unitConverter';
 import { updateRecipeInstructions } from '@/lib/recipeService';
 import UnitToggle from './UnitToggle';
 

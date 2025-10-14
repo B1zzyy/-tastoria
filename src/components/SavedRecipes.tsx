@@ -251,9 +251,15 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
     const query = searchQuery.toLowerCase().trim();
     return allRecipes.filter(recipe => 
       recipe.title.toLowerCase().includes(query) ||
-      recipe.recipe_data.ingredients?.some(ingredient => 
-        ingredient.toLowerCase().includes(query)
-      ) ||
+      recipe.recipe_data.ingredients?.some(ingredient => {
+        if (typeof ingredient === 'string') {
+          return ingredient.toLowerCase().includes(query);
+        } else {
+          // Handle IngredientSection
+          return ingredient.title?.toLowerCase().includes(query) ||
+                 ingredient.ingredients.some(ing => ing.toLowerCase().includes(query));
+        }
+      }) ||
       recipe.recipe_data.instructions?.some(instruction => 
         instruction.toLowerCase().includes(query)
       ) ||
