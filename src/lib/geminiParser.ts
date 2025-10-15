@@ -168,49 +168,141 @@ Return ONLY the JSON object:`;
     console.log('🔍 Checking for existing instructions in content...');
     console.log('📝 Content preview:', content.substring(0, 500) + '...');
     
+    // Decode Unicode escape sequences for proper text matching
+    const decodedContent = content.replace(/\\u[\dA-Fa-f]{4}/g, (match) => {
+      return String.fromCharCode(parseInt(match.replace('\\u', ''), 16));
+    });
+    console.log('📝 Decoded content preview:', decodedContent.substring(0, 500) + '...');
+    
     const hasEnglishKeywords = (
-      content.toLowerCase().includes('instructions:') ||
-      content.toLowerCase().includes('directions:') ||
-      content.toLowerCase().includes('method:') ||
-      content.toLowerCase().includes('how to make') ||
-      content.toLowerCase().includes('how to cook')
+      decodedContent.toLowerCase().includes('instructions:') ||
+      decodedContent.toLowerCase().includes('directions:') ||
+      decodedContent.toLowerCase().includes('method:') ||
+      decodedContent.toLowerCase().includes('how to make') ||
+      decodedContent.toLowerCase().includes('how to cook')
     );
     
     const hasBulgarianKeywords = (
-      content.toLowerCase().includes('изпече') ||
-      content.toLowerCase().includes('задуши') ||
-      content.toLowerCase().includes('добави') ||
-      content.toLowerCase().includes('вари') ||
-      content.toLowerCase().includes('запържи') ||
-      content.toLowerCase().includes('оставете') ||
-      content.toLowerCase().includes('нарежете')
+      decodedContent.toLowerCase().includes('изпече') ||
+      decodedContent.toLowerCase().includes('задуши') ||
+      decodedContent.toLowerCase().includes('добави') ||
+      decodedContent.toLowerCase().includes('вари') ||
+      decodedContent.toLowerCase().includes('запържи') ||
+      decodedContent.toLowerCase().includes('оставете') ||
+      decodedContent.toLowerCase().includes('нарежете') ||
+      decodedContent.toLowerCase().includes('смесете') ||
+      decodedContent.toLowerCase().includes('разбъркайте') ||
+      decodedContent.toLowerCase().includes('загрейте') ||
+      decodedContent.toLowerCase().includes('пресейте') ||
+      decodedContent.toLowerCase().includes('намажете') ||
+      decodedContent.toLowerCase().includes('покрийте') ||
+      decodedContent.toLowerCase().includes('сложете') ||
+      decodedContent.toLowerCase().includes('вземете') ||
+      decodedContent.toLowerCase().includes('подгответе') ||
+      decodedContent.toLowerCase().includes('нарежете') ||
+      decodedContent.toLowerCase().includes('накълцайте') ||
+      decodedContent.toLowerCase().includes('измийте') ||
+      decodedContent.toLowerCase().includes('изсущете') ||
+      decodedContent.toLowerCase().includes('сварете') ||
+      decodedContent.toLowerCase().includes('запечете') ||
+      decodedContent.toLowerCase().includes('пържете') ||
+      decodedContent.toLowerCase().includes('тушете') ||
+      decodedContent.toLowerCase().includes('мариновайте') ||
+      decodedContent.toLowerCase().includes('подправете') ||
+      decodedContent.toLowerCase().includes('солете') ||
+      decodedContent.toLowerCase().includes('подправки') ||
+      decodedContent.toLowerCase().includes('минути') ||
+      decodedContent.toLowerCase().includes('часове') ||
+      decodedContent.toLowerCase().includes('градуса') ||
+      decodedContent.toLowerCase().includes('фурна') ||
+      decodedContent.toLowerCase().includes('тиган') ||
+      decodedContent.toLowerCase().includes('капак') ||
+      decodedContent.toLowerCase().includes('слабо') ||
+      decodedContent.toLowerCase().includes('силно') ||
+      decodedContent.toLowerCase().includes('средно')
     );
     
+    // Debug Bulgarian keyword detection
+    console.log('🔍 Bulgarian keyword detection debug:');
+    console.log('- Decoded content contains "изпече":', decodedContent.toLowerCase().includes('изпече'));
+    console.log('- Decoded content contains "оставете":', decodedContent.toLowerCase().includes('оставете'));
+    console.log('- Decoded content contains "нарежете":', decodedContent.toLowerCase().includes('нарежете'));
+    console.log('- Decoded content contains "задушете":', decodedContent.toLowerCase().includes('задушете'));
+    console.log('- Decoded content contains "минути":', decodedContent.toLowerCase().includes('минути'));
+    console.log('- Decoded content contains "фурна":', decodedContent.toLowerCase().includes('фурна'));
+    console.log('- Decoded content sample (first 200 chars):', decodedContent.substring(0, 200));
+    
     const hasSpanishKeywords = (
-      content.toLowerCase().includes('cocinar') ||
-      content.toLowerCase().includes('agregar') ||
-      content.toLowerCase().includes('mezclar') ||
-      content.toLowerCase().includes('freír')
+      decodedContent.toLowerCase().includes('cocinar') ||
+      decodedContent.toLowerCase().includes('agregar') ||
+      decodedContent.toLowerCase().includes('mezclar') ||
+      decodedContent.toLowerCase().includes('freír') ||
+      decodedContent.toLowerCase().includes('hervir') ||
+      decodedContent.toLowerCase().includes('hornear') ||
+      decodedContent.toLowerCase().includes('saltear') ||
+      decodedContent.toLowerCase().includes('revolver') ||
+      decodedContent.toLowerCase().includes('cortar') ||
+      decodedContent.toLowerCase().includes('pelar') ||
+      decodedContent.toLowerCase().includes('batir') ||
+      decodedContent.toLowerCase().includes('servir') ||
+      decodedContent.toLowerCase().includes('minutos') ||
+      decodedContent.toLowerCase().includes('horas') ||
+      decodedContent.toLowerCase().includes('grados') ||
+      decodedContent.toLowerCase().includes('horno') ||
+      decodedContent.toLowerCase().includes('sartén') ||
+      decodedContent.toLowerCase().includes('olla')
     );
     
     const hasFrenchKeywords = (
-      content.toLowerCase().includes('cuire') ||
-      content.toLowerCase().includes('ajouter') ||
-      content.toLowerCase().includes('mélanger') ||
-      content.toLowerCase().includes('faire')
+      decodedContent.toLowerCase().includes('cuire') ||
+      decodedContent.toLowerCase().includes('ajouter') ||
+      decodedContent.toLowerCase().includes('mélanger') ||
+      decodedContent.toLowerCase().includes('faire') ||
+      decodedContent.toLowerCase().includes('bouillir') ||
+      decodedContent.toLowerCase().includes('rôtir') ||
+      decodedContent.toLowerCase().includes('sauter') ||
+      decodedContent.toLowerCase().includes('remuer') ||
+      decodedContent.toLowerCase().includes('couper') ||
+      decodedContent.toLowerCase().includes('éplucher') ||
+      decodedContent.toLowerCase().includes('battre') ||
+      decodedContent.toLowerCase().includes('servir') ||
+      decodedContent.toLowerCase().includes('minutes') ||
+      decodedContent.toLowerCase().includes('heures') ||
+      decodedContent.toLowerCase().includes('degrés') ||
+      decodedContent.toLowerCase().includes('four') ||
+      decodedContent.toLowerCase().includes('poêle') ||
+      decodedContent.toLowerCase().includes('casserole')
     );
     
     const hasNumberedSteps = (
-      content.match(/\d+\.\s*(heat|add|mix|stir|cook|bake|fry|boil|simmer|season|preheat|combine|whisk|beat|fold|pour|drain|serve)/gi) && 
-      content.match(/\d+\.\s*(heat|add|mix|stir|cook|bake|fry|boil|simmer|season|preheat|combine|whisk|beat|fold|pour|drain|serve)/gi)!.length >= 3
+      decodedContent.match(/\d+\.\s*(heat|add|mix|stir|cook|bake|fry|boil|simmer|season|preheat|combine|whisk|beat|fold|pour|drain|serve)/gi) && 
+      decodedContent.match(/\d+\.\s*(heat|add|mix|stir|cook|bake|fry|boil|simmer|season|preheat|combine|whisk|beat|fold|pour|drain|serve)/gi)!.length >= 3
     );
     
     const hasBulgarianSentences = (
-      content.match(/[а-яё]{3,}\s+[а-яё]{3,}\s+[а-яё]{3,}/gi) && 
-      content.match(/[а-яё]{3,}\s+[а-яё]{3,}\s+[а-яё]{3,}/gi)!.length >= 2
+      decodedContent.match(/[а-яё]{3,}\s+[а-яё]{3,}\s+[а-яё]{3,}/gi) && 
+      decodedContent.match(/[а-яё]{3,}\s+[а-яё]{3,}\s+[а-яё]{3,}/gi)!.length >= 2
     );
     
-    const hasProperInstructions = hasEnglishKeywords || hasBulgarianKeywords || hasSpanishKeywords || hasFrenchKeywords || hasNumberedSteps || hasBulgarianSentences;
+    // Additional detection for Bulgarian cooking instructions with numbers and measurements
+    const hasBulgarianCookingInstructions = (
+      decodedContent.match(/\d+[°сc]\s*[а-яё]+/gi) || // Temperature patterns like "200°C"
+      decodedContent.match(/\d+\s*минути/gi) || // Time patterns like "20 минути"
+      decodedContent.match(/\d+\s*часа/gi) || // Time patterns like "2 часа"
+      decodedContent.match(/във\s+фурна/gi) || // "във фурна" (in the oven)
+      decodedContent.match(/на\s+средно/gi) || // "на средно" (on medium)
+      decodedContent.match(/на\s+слабо/gi) || // "на слабо" (on low)
+      decodedContent.match(/на\s+силно/gi) || // "на силно" (on high)
+      decodedContent.match(/под\s+капак/gi) || // "под капак" (covered)
+      decodedContent.match(/до\s+златено/gi) || // "до златено" (until golden)
+      decodedContent.match(/до\s+готово/gi) || // "до готово" (until done)
+      decodedContent.match(/след\s+това/gi) || // "след това" (after that)
+      decodedContent.match(/след\s+което/gi) || // "след което" (after which)
+      decodedContent.match(/за\s+\d+\s*минути/gi) || // "за 20 минути" (for 20 minutes)
+      decodedContent.match(/за\s+\d+\s*часа/gi) // "за 2 часа" (for 2 hours)
+    );
+    
+    const hasProperInstructions = hasEnglishKeywords || hasBulgarianKeywords || hasSpanishKeywords || hasFrenchKeywords || hasNumberedSteps || hasBulgarianSentences || hasBulgarianCookingInstructions;
     
     console.log('🔍 Instruction detection results:');
     console.log('- English keywords:', hasEnglishKeywords);
@@ -219,6 +311,7 @@ Return ONLY the JSON object:`;
     console.log('- French keywords:', hasFrenchKeywords);
     console.log('- Numbered steps:', hasNumberedSteps);
     console.log('- Bulgarian sentences:', hasBulgarianSentences);
+    console.log('- Bulgarian cooking instructions:', hasBulgarianCookingInstructions);
     console.log('- Final result:', hasProperInstructions);
     
     // The key logic: if we detected proper instructions in the ORIGINAL content, they were extracted
@@ -238,12 +331,23 @@ Return ONLY the JSON object:`;
     console.log('- Final instructions:', finalInstructions);
     console.log('- Were generated:', instructionsWereGenerated);
     console.log('- AI instructions stored separately:', aiInstructions.length > 0);
+    console.log('- finalRecipe.instructions:', finalRecipe.instructions);
+    console.log('- finalRecipe.instructions type:', typeof finalRecipe.instructions);
+    console.log('- finalRecipe.instructions isArray:', Array.isArray(finalRecipe.instructions));
+
+    const finalInstructionsArray = instructionsWereGenerated ? [] : (Array.isArray(finalRecipe.instructions) ? finalRecipe.instructions : []);
+    
+    console.log('🔍 Final recipe construction:');
+    console.log('- instructionsWereGenerated:', instructionsWereGenerated);
+    console.log('- finalRecipe.instructions:', finalRecipe.instructions);
+    console.log('- finalInstructionsArray:', finalInstructionsArray);
+    console.log('- finalInstructionsArray length:', finalInstructionsArray.length);
 
     const recipe: Recipe = {
       title: finalRecipe.title as string,
       ingredients: Array.isArray(finalRecipe.ingredients) ? finalRecipe.ingredients : [],
       // If instructions were AI-generated, show empty instructions by default
-      instructions: instructionsWereGenerated ? [] : (Array.isArray(finalRecipe.instructions) ? finalRecipe.instructions : []),
+      instructions: finalInstructionsArray,
       prepTime: cleanTimeUnit(finalRecipe.prepTime || ''),
       cookTime: cleanTimeUnit(finalRecipe.cookTime || ''),
       totalTime: cleanTimeUnit(finalRecipe.totalTime || ''),

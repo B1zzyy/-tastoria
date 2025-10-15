@@ -496,6 +496,10 @@ export default function Home() {
       clearTimeout(timeoutId);
 
       const data = await response.json();
+      
+      console.log('📡 API Response data:', data);
+      console.log('📡 Recipe from API:', data.recipe);
+      console.log('📡 Recipe instructions:', data.recipe?.instructions);
 
       if (!response.ok) {
         // Handle authentication and authorization errors

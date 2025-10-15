@@ -624,7 +624,24 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                 <BookOpen className="w-5 h-5 text-primary" />
               </div>
               <h2 className="text-xl font-bold text-card-foreground">Instructions</h2>
-              {(
+              {/* Only show AI instructions pill when there are no regular instructions OR when AI instructions exist */}
+              {(() => {
+                const hasRegularInstructions = recipe.instructions && recipe.instructions.length > 0;
+                const hasAIInstructions = recipe.metadata?.aiInstructions && recipe.metadata.aiInstructions.length > 0;
+                const shouldShowPill = !hasRegularInstructions || hasAIInstructions;
+                
+                console.log('🔍 AI Instructions Pill Debug:', {
+                  hasRegularInstructions,
+                  hasAIInstructions,
+                  shouldShowPill,
+                  regularInstructionsLength: recipe.instructions?.length || 0,
+                  aiInstructionsLength: recipe.metadata?.aiInstructions?.length || 0,
+                  recipeInstructions: recipe.instructions,
+                  recipeMetadata: recipe.metadata
+                });
+                
+                return shouldShowPill;
+              })() && (
                 <button
                   onClick={() => {
                     // If no AI instructions exist, generate them
@@ -660,8 +677,8 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                 </button>
               )}
             </div>
-          </div>
-          
+            </div>
+            
     {/* Show AI Instructions if toggled on */}
     <AnimatePresence>
       {showAIInstructions && recipe.metadata?.aiInstructions && recipe.metadata.aiInstructions.length > 0 && (
@@ -713,7 +730,7 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                       ) : (
                         <span className="text-xs font-bold text-purple-600 dark:text-purple-400">{index + 1}</span>
                       )}
-                    </div>
+          </div>
                     <p className={`text-sm leading-relaxed transition-colors ${
                       isCompleted 
                         ? 'text-green-800 dark:text-green-200' 
@@ -735,7 +752,16 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
     </AnimatePresence>
 
           {/* Show regular instructions or empty state */}
-          {recipe.instructions.length > 0 && !showAIInstructions ? (
+          {(() => {
+            const shouldShowRegularInstructions = recipe.instructions.length > 0 && !showAIInstructions;
+            console.log('🔍 Regular Instructions Display Debug:', {
+              shouldShowRegularInstructions,
+              instructionsLength: recipe.instructions.length,
+              showAIInstructions,
+              instructions: recipe.instructions
+            });
+            return shouldShowRegularInstructions;
+          })() ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -784,7 +810,7 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
               }) : (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">No instructions available</p>
-                </div>
+            </div>
               )}
               
         {/* Add another instruction button */}
@@ -917,8 +943,8 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
             )}
           </>
         )}
-      </div>
-    )}
+            </div>
+          )}
         </div>
 
       </div>
