@@ -490,7 +490,7 @@ async function scrapeFacebookPost(url: string): Promise<{ caption: string; image
                   if (jsonMatch) {
                     caption = jsonMatch[1];
                   }
-                } catch (e) {
+                } catch {
                   // Continue with original caption
                 }
               }

@@ -162,7 +162,7 @@ Return ONLY the JSON object:`;
     const finalInstructions = finalRecipe.instructions || [];
     
     let instructionsWereGenerated = false;
-    let aiInstructions: string[] = [];
+    const aiInstructions: string[] = [];
     
     // Check if the original content had proper cooking instructions
     console.log('🔍 Checking for existing instructions in content...');

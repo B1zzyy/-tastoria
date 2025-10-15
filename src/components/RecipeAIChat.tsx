@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Bot, User, Sparkles } from 'lucide-react';
 import { Recipe } from '@/lib/recipe-parser';
+import { IngredientSection } from '@/lib/unitConverter';
 import { supabase } from '@/lib/supabase';
 import SplitText from './SplitText';
 import ReactMarkdown from 'react-markdown';
@@ -115,7 +116,7 @@ export default function RecipeAIChat({ isOpen, onClose, recipe }: RecipeAIChatPr
       });
 
       // Helper function to format ingredients
-      const formatIngredients = (ingredients: any) => {
+      const formatIngredients = (ingredients: string[] | IngredientSection[]) => {
         if (!Array.isArray(ingredients)) return 'No ingredients available';
         
         return ingredients.map(ingredient => {
