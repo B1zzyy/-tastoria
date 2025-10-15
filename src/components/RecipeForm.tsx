@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Link2, Globe, Instagram, Send } from 'lucide-react';
+import { Link2, Globe, Instagram, Facebook, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 // Custom Arrow Right component using the provided SVG
@@ -32,7 +32,7 @@ const ArrowRight = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export type SourceType = 'web' | 'instagram';
+export type SourceType = 'web' | 'instagram' | 'facebook';
 
 interface RecipeFormProps {
   onSubmit: (url: string, sourceType: SourceType) => void;
@@ -42,54 +42,73 @@ interface RecipeFormProps {
 
 export default function RecipeForm({ onSubmit, loading = false, compact = false }: RecipeFormProps) {
   const [url, setUrl] = useState('');
-  const [sourceType, setSourceType] = useState<SourceType>('web');
+  const [detectedSourceType, setDetectedSourceType] = useState<SourceType>('web');
+
+  // Function to detect source type from URL
+  const detectSourceType = (url: string): SourceType => {
+    if (!url) return 'web';
+    
+    const lowerUrl = url.toLowerCase();
+    
+    if (lowerUrl.includes('instagram.com') || lowerUrl.includes('instagr.am')) {
+      return 'instagram';
+    } else if (lowerUrl.includes('facebook.com') || lowerUrl.includes('fb.com')) {
+      return 'facebook';
+    } else {
+      return 'web';
+    }
+  };
+
+  // Update detected source type when URL changes
+  useEffect(() => {
+    const newSourceType = detectSourceType(url);
+    setDetectedSourceType(newSourceType);
+  }, [url]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (url.trim() && !loading) {
-      onSubmit(url.trim(), sourceType);
+      onSubmit(url.trim(), detectedSourceType);
       setUrl(''); // Clear the input after submission
+    }
+  };
+
+  // Function to get the appropriate icon based on detected source type
+  const getSourceIcon = (sourceType: SourceType) => {
+    switch (sourceType) {
+      case 'instagram':
+        return <Instagram className="h-4 w-4 text-muted-foreground" />;
+      case 'facebook':
+        return <Facebook className="h-4 w-4 text-muted-foreground" />;
+      default:
+        return <Link2 className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  // Function to get placeholder text based on detected source type
+  const getPlaceholderText = (sourceType: SourceType) => {
+    switch (sourceType) {
+      case 'instagram':
+        return "Paste Instagram reel/post URL...";
+      case 'facebook':
+        return "Paste Facebook post URL...";
+      default:
+        return "Paste any recipe URL...";
     }
   };
 
   if (compact) {
     return (
       <form onSubmit={handleSubmit} className="flex gap-2">
-        {/* Source Type Selector */}
-        <div className="relative">
-          <select
-            value={sourceType}
-            onChange={(e) => setSourceType(e.target.value as SourceType)}
-            className={cn(
-              "appearance-none bg-background border border-input rounded-lg px-3 py-2 text-sm",
-              "focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent",
-              "transition-all duration-200 hover:border-ring/50 pr-8"
-            )}
-            disabled={loading}
-          >
-            <option value="web">🌐 Web</option>
-            <option value="instagram">📱 IG</option>
-          </select>
-          <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-            <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
-
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            {sourceType === 'instagram' ? (
-              <Instagram className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <Link2 className="h-4 w-4 text-muted-foreground" />
-            )}
+            {getSourceIcon(detectedSourceType)}
           </div>
           <input
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder={sourceType === 'instagram' ? "Paste Instagram reel/post URL..." : "Paste another recipe URL..."}
+            placeholder={getPlaceholderText(detectedSourceType)}
             className={cn(
               "w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-input bg-background text-foreground",
               "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent",
@@ -122,71 +141,52 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
     );
   }
 
+  // Function to get the main form icon
+  const getMainFormIcon = (sourceType: SourceType) => {
+    switch (sourceType) {
+      case 'instagram':
+        return <Instagram className="h-5 w-5 text-muted-foreground" />;
+      case 'facebook':
+        return <Facebook className="h-5 w-5 text-muted-foreground" />;
+      default:
+        return <Link2 className="h-5 w-5 text-muted-foreground" />;
+    }
+  };
+
+  // Function to get main form placeholder text
+  const getMainFormPlaceholder = (sourceType: SourceType) => {
+    switch (sourceType) {
+      case 'instagram':
+        return "instagram.com/reel/...";
+      case 'facebook':
+        return "facebook.com/posts/...";
+      default:
+        return "bbcgoodfood.com/recipes/...";
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Source Type Selector */}
-      <div className="flex justify-center">
-        <div className="relative inline-flex bg-muted rounded-lg p-1" data-tutorial="source-toggle">
-          {/* Sliding Background */}
-          <motion.div
-            className="absolute inset-y-1 bg-background rounded-md shadow-sm"
-            initial={false}
-            animate={{
-              x: sourceType === 'web' ? 0 : '93.5%',
-              width: '50%'
-            }}
-            transition={{
-              type: "spring",
-              stiffness: 300,
-              damping: 30
-            }}
-          />
-          
-          <button
-            type="button"
-            onClick={() => setSourceType('web')}
-            className={cn(
-              "relative flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 z-10",
-              sourceType === 'web' 
-                ? "text-foreground" 
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Globe className="w-4 h-4" />
-            Website
-          </button>
-          <button
-            type="button"
-            onClick={() => setSourceType('instagram')}
-            className={cn(
-              "relative flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 z-10",
-              sourceType === 'instagram' 
-                ? "text-foreground" 
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Instagram className="w-4 h-4" />
-            Instagram
-          </button>
-        </div>
-      </div>
-
-      {/* Instagram Info Text - Only show when Instagram is selected */}
-      {sourceType === 'instagram' && (
+      {/* Dynamic Info Text based on detected source */}
+      {detectedSourceType === 'instagram' && (
         <div className="text-center px-4">
           <p className="text-xs text-muted-foreground">
-            If the caption doesn&apos;t include instructions, we&apos;ll generate some for you. You can always edit them after you save the recipe to match the reel perfectly.
+            We&apos;ll extract the recipe content from the Instagram post. If the post doesn&apos;t include full instructions, we&apos;ll generate some for you.
+          </p>
+        </div>
+      )}
+
+      {detectedSourceType === 'facebook' && (
+        <div className="text-center px-4">
+          <p className="text-xs text-muted-foreground">
+            We&apos;ll extract the recipe content from the Facebook post. If the post doesn&apos;t include full instructions, we&apos;ll generate some for you.
           </p>
         </div>
       )}
 
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          {sourceType === 'instagram' ? (
-            <Instagram className="h-5 w-5 text-muted-foreground" />
-          ) : (
-            <Link2 className="h-5 w-5 text-muted-foreground" />
-          )}
+          {getMainFormIcon(detectedSourceType)}
         </div>
         <input
           type="url"
@@ -197,7 +197,7 @@ export default function RecipeForm({ onSubmit, loading = false, compact = false 
               handleSubmit(e);
             }
           }}
-          placeholder={sourceType === 'instagram' ? "instagram.com/reel/..." : "bbcgoodfood.com/recipes/..."}
+          placeholder={getMainFormPlaceholder(detectedSourceType)}
           className={cn(
             "w-full pl-10 pr-12 py-4 text-lg rounded-xl border border-input bg-background text-foreground",
             "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent",

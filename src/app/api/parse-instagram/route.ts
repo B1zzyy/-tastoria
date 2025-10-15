@@ -38,16 +38,40 @@ function decodeHtmlEntities(text: string): string {
   });
 }
 
-// Instagram URL validation
+// Instagram/Facebook URL validation
 function isValidInstagramUrl(url: string): boolean {
   const instagramRegex = /^https?:\/\/(www\.)?instagram\.com\/(p|reel|tv)\/[A-Za-z0-9_-]+/;
   return instagramRegex.test(url);
+}
+
+function isValidFacebookUrl(url: string): boolean {
+  const facebookRegex = /^https?:\/\/(www\.|m\.)?(facebook\.com|fb\.com)\/(reel|posts|videos|watch)\/[A-Za-z0-9_-]+/;
+  return facebookRegex.test(url);
 }
 
 // Extract Instagram post ID from URL
 function extractInstagramPostId(url: string): string | null {
   const match = url.match(/instagram\.com\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
   return match ? match[1] : null;
+}
+
+// Extract Facebook post ID from URL
+function extractFacebookPostId(url: string): string | null {
+  const match = url.match(/(?:facebook\.com|fb\.com)\/(?:reel|posts|videos|watch)\/([A-Za-z0-9_-]+)/);
+  if (match) {
+    // Clean the post ID - remove any trailing non-numeric characters that might be added
+    let postId = match[1];
+    // If it ends with letters, try to extract just the numeric part
+    if (/[a-zA-Z]+$/.test(postId)) {
+      const numericMatch = postId.match(/^(\d+)/);
+      if (numericMatch) {
+        postId = numericMatch[1];
+        console.log('🧹 Cleaned Facebook post ID:', postId);
+      }
+    }
+    return postId;
+  }
+  return null;
 }
 
 // Extract ingredients from caption using pattern matching
@@ -362,10 +386,153 @@ function extractDataFromHtml(html: string): { caption: string | null; image: str
 }
 
 
+// Scrape Facebook post data
+async function scrapeFacebookPost(url: string): Promise<{ caption: string; image?: string } | null> {
+  try {
+    console.log('🔍 Scraping Facebook post:', url);
+    
+    // Normalize Facebook URL
+    const postId = extractFacebookPostId(url);
+    if (!postId) {
+      console.log('❌ Could not extract Facebook post ID');
+      return null;
+    }
+    
+    const normalizedUrl = `https://www.facebook.com/reel/${postId}`;
+    console.log('📝 Normalized Facebook URL:', normalizedUrl);
+    
+    // Try multiple methods to get Facebook content with more sophisticated headers
+    const methods = [
+      {
+        name: 'Direct URL with Chrome Headers',
+        url: normalizedUrl,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'max-age=0',
+          'Referer': 'https://www.google.com/',
+        }
+      },
+      {
+        name: 'Mobile URL with Safari Headers',
+        url: normalizedUrl.replace('www.facebook.com', 'm.facebook.com'),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Referer': 'https://www.google.com/',
+        }
+      },
+      {
+        name: 'Alternative Facebook URL',
+        url: normalizedUrl.replace('/reel/', '/posts/'),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Referer': 'https://www.facebook.com/',
+        }
+      }
+    ];
+
+    for (const method of methods) {
+      try {
+        console.log(`🔍 Trying ${method.name}:`, method.url);
+        
+        const response = await fetch(method.url, { headers: method.headers });
+        console.log(`📡 ${method.name} response status:`, response.status);
+
+        if (response.ok) {
+          const html = await response.text();
+          console.log(`📄 ${method.name} HTML length:`, html.length);
+          
+          // Try multiple patterns to extract post content from Facebook HTML
+          const patterns = [
+            // Try to find the full content in JSON-LD or other structured data
+            /"description":"([^"]{100,})"/i,
+            /"text":"([^"]{100,})"/i,
+            /"content":"([^"]{100,})"/i,
+            /"caption":"([^"]{100,})"/i,
+            // Try to find content in script tags
+            /window\.__INITIAL_STATE__\s*=\s*({[^}]+})/i,
+            /window\._sharedData\s*=\s*({[^}]+})/i,
+            // Meta tags (these are often truncated)
+            /<meta property="og:description" content="([^"]*)"[^>]*>/i,
+            /<meta name="description" content="([^"]*)"[^>]*>/i,
+            /<meta property="twitter:description" content="([^"]*)"[^>]*>/i,
+            /<title>([^<]*)<\/title>/i
+          ];
+          
+          for (const pattern of patterns) {
+            const contentMatch = html.match(pattern);
+            if (contentMatch && contentMatch[1].trim()) {
+              let caption = decodeHtmlEntities(contentMatch[1]);
+              
+              // If we found JSON data, try to extract the full text
+              if (pattern.source.includes('{') && caption.includes('{')) {
+                try {
+                  const jsonMatch = caption.match(/"text":"([^"]+)"/i) || 
+                                  caption.match(/"description":"([^"]+)"/i) ||
+                                  caption.match(/"content":"([^"]+)"/i);
+                  if (jsonMatch) {
+                    caption = jsonMatch[1];
+                  }
+                } catch (e) {
+                  // Continue with original caption
+                }
+              }
+              
+              // Skip if it's just generic Facebook text
+              if (!caption.includes('Facebook') && !caption.includes('Log In') && caption.length > 50) {
+                console.log(`✅ Extracted Facebook content via ${method.name} (pattern ${patterns.indexOf(pattern) + 1}):`, caption.substring(0, 200) + '...');
+                console.log(`📏 Full caption length: ${caption.length}`);
+                
+                // Extract post image
+                const imageMatch = html.match(/<meta property="og:image" content="([^"]*)"[^>]*>/i);
+                const image = imageMatch ? imageMatch[1] : undefined;
+                
+                return { caption, image };
+              }
+            }
+          }
+        } else {
+          console.log(`❌ ${method.name} failed with status:`, response.status);
+        }
+      } catch (error) {
+        console.log(`⚠️ ${method.name} failed:`, error);
+      }
+    }
+    
+    console.log('❌ All Facebook scraping methods failed');
+    return null;
+  } catch (error) {
+    console.error('❌ Error scraping Facebook post:', error);
+    return null;
+  }
+}
+
 // Scrape Instagram post data
 async function scrapeInstagramPost(url: string): Promise<{ caption: string; image?: string } | null> {
   try {
-    console.log('Scraping Instagram URL:', url);
+    const isFacebook = isValidFacebookUrl(url);
+    console.log('Scraping URL:', url, isFacebook ? '(Facebook)' : '(Instagram)');
+    
+    if (isFacebook) {
+      return await scrapeFacebookPost(url);
+    }
 
     // Try different approaches to get Instagram data
     
@@ -553,15 +720,18 @@ export async function POST(request: NextRequest) {
     console.log('Original URL:', url);
     console.log('Cleaned URL:', cleanUrl);
 
-    // Validate Instagram URL
-    if (!isValidInstagramUrl(cleanUrl)) {
+    // Validate Instagram or Facebook URL
+    const isInstagram = isValidInstagramUrl(cleanUrl);
+    const isFacebook = isValidFacebookUrl(cleanUrl);
+    
+    if (!isInstagram && !isFacebook) {
       return NextResponse.json(
-        { error: 'Invalid Instagram URL. Please provide a valid Instagram post, reel, or IGTV URL.' },
+        { error: 'Invalid URL. Please provide a valid Instagram post, reel, IGTV, or Facebook post/reel URL.' },
         { status: 400 }
       );
     }
 
-    console.log('Processing Instagram URL:', cleanUrl);
+    console.log('Processing URL:', cleanUrl, isInstagram ? '(Instagram)' : '(Facebook)');
 
     // Add timeout wrapper
     const timeoutPromise = new Promise((_, reject) => {

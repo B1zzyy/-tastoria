@@ -406,21 +406,48 @@ export default function Home() {
       return;
     }
 
-    setLoading(true);
-    setError(null);
-    setRecipe(null);
-    setCurrentRecipeUrl(url);
-    setIsRecipeCurrentlySaved(false);
-
     // Check if it's an Instagram URL
     const isInstagramUrl = url.includes('instagram.com/p/') || 
                           url.includes('instagram.com/reel/') || 
                           url.includes('instagram.com/tv/');
 
-    // If Instagram URL is detected but sourceType is 'web', auto-switch
+    // Check if it's a Facebook URL
+    const isFacebookUrl = url.includes('facebook.com') || url.includes('fb.com');
+
+    console.log('🔍 URL Detection:', { url, isInstagramUrl, isFacebookUrl, sourceType });
+
+    // Auto-detect source type if needed
     if (isInstagramUrl && sourceType === 'web') {
       sourceType = 'instagram';
+    } else if (isFacebookUrl && sourceType === 'web') {
+      sourceType = 'facebook';
     }
+
+    console.log('🔍 Final source type:', sourceType);
+
+    // Normalize Facebook URLs for consistent database storage
+    let normalizedUrl = url;
+    if (isFacebookUrl) {
+      const postIdMatch = url.match(/(?:facebook\.com|fb\.com)\/(?:reel|posts|videos|watch)\/([A-Za-z0-9_-]+)/);
+      if (postIdMatch) {
+        let postId = postIdMatch[1];
+        // Clean the post ID - remove any trailing non-numeric characters
+        if (/[a-zA-Z]+$/.test(postId)) {
+          const numericMatch = postId.match(/^(\d+)/);
+          if (numericMatch) {
+            postId = numericMatch[1];
+            console.log('🧹 Cleaned Facebook post ID in main page:', postId);
+          }
+        }
+        normalizedUrl = `https://www.facebook.com/reel/${postId}`;
+      }
+    }
+
+    setLoading(true);
+    setError(null);
+    setRecipe(null);
+    setCurrentRecipeUrl(normalizedUrl);
+    setIsRecipeCurrentlySaved(false);
 
     // Create AbortController for request cancellation
     const abortController = new AbortController();
@@ -432,7 +459,25 @@ export default function Home() {
 
     try {
       // Route to appropriate API endpoint based on source type
-      const apiEndpoint = sourceType === 'instagram' ? '/api/parse-instagram' : '/api/parse-recipe';
+      let apiEndpoint = '/api/parse-recipe'; // Default to web parsing
+      if (sourceType === 'instagram' || sourceType === 'facebook') {
+        apiEndpoint = '/api/parse-instagram'; // Instagram endpoint now handles both Instagram and Facebook
+      }
+
+      console.log('🚀 Calling API endpoint:', apiEndpoint, 'with URL:', normalizedUrl);
+      
+      // TEMPORARY: Skip the isRecipeSaved check for Facebook to test parsing
+      if (sourceType === 'facebook') {
+        console.log('🚀 TEMPORARY: Skipping isRecipeSaved check for Facebook');
+      } else {
+        // Check if recipe is already saved
+        const { isRecipeSaved } = await import('../lib/recipeService');
+        const { data: isSaved, recipeId } = await isRecipeSaved(normalizedUrl);
+        setIsRecipeCurrentlySaved(isSaved);
+        if (isSaved && recipeId) {
+          setCurrentSavedRecipeId(recipeId);
+        }
+      }
       
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -440,9 +485,12 @@ export default function Home() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: normalizedUrl }),
         signal: abortController.signal, // Add abort signal
       });
+
+      console.log('📡 API Response status:', response.status);
+      console.log('📡 API Response ok:', response.ok);
 
       // Clear timeout if request completes
       clearTimeout(timeoutId);

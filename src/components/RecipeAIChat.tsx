@@ -103,11 +103,41 @@ export default function RecipeAIChat({ isOpen, onClose, recipe }: RecipeAIChatPr
     setIsLoading(true);
 
     try {
+      // Debug: Log recipe data
+      console.log('🤖 AI Chat - Recipe data:', {
+        title: recipe.title,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        aiInstructions: recipe.metadata?.aiInstructions,
+        hasIngredients: Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0,
+        hasInstructions: Array.isArray(recipe.instructions) && recipe.instructions.length > 0,
+        hasAIInstructions: recipe.metadata?.aiInstructions && recipe.metadata.aiInstructions.length > 0
+      });
+
+      // Helper function to format ingredients
+      const formatIngredients = (ingredients: any) => {
+        if (!Array.isArray(ingredients)) return 'No ingredients available';
+        
+        return ingredients.map(ingredient => {
+          // If it's a string, return as is
+          if (typeof ingredient === 'string') {
+            return ingredient;
+          }
+          // If it's an IngredientSection object
+          if (typeof ingredient === 'object' && ingredient.ingredients) {
+            const sectionTitle = ingredient.title ? `${ingredient.title}: ` : '';
+            return sectionTitle + ingredient.ingredients.join(', ');
+          }
+          // Fallback for any other format
+          return String(ingredient);
+        }).join(', ');
+      };
+
       // Create context-aware prompt
       const recipeContext = `
 Recipe: ${recipe.title}
-Ingredients: ${recipe.ingredients.join(', ')}
-Instructions: ${recipe.instructions.join(' | ')}
+Ingredients: ${formatIngredients(recipe.ingredients)}
+Instructions: ${Array.isArray(recipe.instructions) && recipe.instructions.length > 0 ? recipe.instructions.join(' | ') : (recipe.metadata?.aiInstructions && recipe.metadata.aiInstructions.length > 0 ? recipe.metadata.aiInstructions.join(' | ') : 'No instructions available')}
 ${recipe.prepTime ? `Prep Time: ${recipe.prepTime}` : ''}
 ${recipe.cookTime ? `Cook Time: ${recipe.cookTime}` : ''}
 ${recipe.servings ? `Servings: ${recipe.servings}` : ''}

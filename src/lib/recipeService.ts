@@ -20,6 +20,15 @@ export async function saveRecipe(recipe: Recipe, url: string): Promise<{ data: S
       return { data: null, error: { message: 'User not authenticated' } }
     }
 
+    // Normalize Facebook URLs for consistent database storage
+    let normalizedUrl = url;
+    if (url.includes('facebook.com') || url.includes('fb.com')) {
+      const postIdMatch = url.match(/(?:facebook\.com|fb\.com)\/(?:reel|posts|videos|watch)\/([A-Za-z0-9_-]+)/);
+      if (postIdMatch) {
+        normalizedUrl = `https://www.facebook.com/reel/${postIdMatch[1]}`;
+      }
+    }
+
     // Get the "All Recipes" collection
     const { data: allRecipesCollection } = await supabase
       .from('collections')
@@ -33,7 +42,7 @@ export async function saveRecipe(recipe: Recipe, url: string): Promise<{ data: S
       .insert([
         {
           user_id: user.id,
-          recipe_url: url,
+          recipe_url: normalizedUrl,
           recipe_data: recipe,
           title: recipe.title,
           collection_id: allRecipesCollection?.id || null
@@ -94,12 +103,27 @@ export async function isRecipeSaved(url: string): Promise<{ data: boolean, recip
       return { data: false, recipeId: null, error: null }
     }
 
+    // Normalize Facebook URLs for consistent database queries
+    let normalizedUrl = url;
+    if (url.includes('facebook.com') || url.includes('fb.com')) {
+      const postIdMatch = url.match(/(?:facebook\.com|fb\.com)\/(?:reel|posts|videos|watch)\/([A-Za-z0-9_-]+)/);
+      if (postIdMatch) {
+        normalizedUrl = `https://www.facebook.com/reel/${postIdMatch[1]}`;
+      }
+    }
+
+    console.log('🔍 isRecipeSaved - Original URL:', url);
+    console.log('🔍 isRecipeSaved - Normalized URL:', normalizedUrl);
+    console.log('🔍 isRecipeSaved - User ID:', user.id);
+
     const { data, error } = await supabase
       .from('saved_recipes')
       .select('id')
       .eq('user_id', user.id)
-      .eq('recipe_url', url)
+      .eq('recipe_url', normalizedUrl)
       .single()
+
+    console.log('🔍 isRecipeSaved - Query result:', { data, error });
 
     return { 
       data: !!data, 

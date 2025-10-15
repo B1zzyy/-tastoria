@@ -6,7 +6,7 @@ import { convertIngredients, convertIngredientSections, convertTemperature, type
 import { updateRecipeInstructions } from '@/lib/recipeService';
 import UnitToggle from './UnitToggle';
 
-import { Clock, Users, Star, ChefHat, List, BookOpen, Check, ExternalLink, X, GripVertical, Plus, Instagram, Sparkles } from 'lucide-react';
+import { Clock, Users, Star, ChefHat, List, BookOpen, Check, ExternalLink, X, GripVertical, Plus, Instagram, Sparkles, Utensils, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import Confetti from './Confetti';
@@ -32,6 +32,7 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
   const [showAIInstructions, setShowAIInstructions] = useState(false);
   const [isEditingInstructions, setIsEditingInstructions] = useState(false);
   const [newInstruction, setNewInstruction] = useState('');
+  const [isGeneratingAIInstructions, setIsGeneratingAIInstructions] = useState(false);
 
   // Trigger confetti when all steps are completed
   useEffect(() => {
@@ -215,6 +216,50 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
     
     setEditableInstructions(newInstructions);
     setInstructionKeys(newKeys);
+  };
+
+  // Handle generating AI instructions
+  const handleGenerateAIInstructions = async () => {
+    try {
+      setIsGeneratingAIInstructions(true);
+      console.log('🤖 Generating AI instructions...');
+      
+      const response = await fetch('/api/generate-instructions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: recipe.title,
+          ingredients: recipe.ingredients
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate AI instructions');
+      }
+
+      const { instructions } = await response.json();
+      
+      // Update the recipe with AI instructions
+      const updatedRecipe = {
+        ...recipe,
+        metadata: {
+          ...recipe.metadata,
+          aiInstructions: instructions,
+          instructionsGenerated: true
+        }
+      };
+      
+      onUpdateRecipe?.(updatedRecipe);
+      setShowAIInstructions(true);
+      
+      console.log('✅ AI instructions generated successfully');
+    } catch (error) {
+      console.error('❌ Error generating AI instructions:', error);
+    } finally {
+      setIsGeneratingAIInstructions(false);
+    }
   };
 
   // Handle saving instructions
@@ -499,6 +544,18 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
           {recipe.ingredients.length > 0 ? (
             <div className="space-y-6">
               {(() => {
+                // Safety check for ingredients
+                if (!recipe.ingredients || !Array.isArray(recipe.ingredients) || recipe.ingredients.length === 0) {
+                  return (
+                    <div className="text-center py-8">
+                      <div className="w-12 h-12 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Utensils className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <p className="text-muted-foreground">No ingredients available</p>
+                    </div>
+                  );
+                }
+
                 // Check if ingredients are in sections format
                 const firstIngredient = recipe.ingredients[0];
                 const isSectioned = typeof firstIngredient === 'object' && 'ingredients' in firstIngredient;
@@ -567,18 +624,38 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                 <BookOpen className="w-5 h-5 text-primary" />
               </div>
               <h2 className="text-xl font-bold text-card-foreground">Instructions</h2>
-              {recipe.metadata?.instructionsGenerated && recipe.metadata?.aiInstructions && (
+              {(
                 <button
-                  onClick={() => setShowAIInstructions(!showAIInstructions)}
+                  onClick={() => {
+                    // If no AI instructions exist, generate them
+                    if (!recipe.metadata?.aiInstructions || recipe.metadata.aiInstructions.length === 0) {
+                      handleGenerateAIInstructions();
+                    } else {
+                      // If AI instructions exist, toggle visibility
+                      setShowAIInstructions(!showAIInstructions);
+                    }
+                  }}
+                  disabled={isGeneratingAIInstructions}
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors ${
                     showAIInstructions 
                       ? 'bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 border border-purple-200/50 dark:border-purple-700/50' 
                       : 'bg-muted/50 border border-border hover:bg-muted'
-                  }`}
+                  } ${isGeneratingAIInstructions ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  {isGeneratingAIInstructions ? (
+                    <Loader2 className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  )}
                   <span className="text-xs font-medium text-card-foreground">
-                    {showAIInstructions ? 'Hide AI Instructions' : 'Show AI Instructions'}
+                    {isGeneratingAIInstructions
+                      ? 'Generating...'
+                      : !recipe.metadata?.aiInstructions || recipe.metadata.aiInstructions.length === 0
+                        ? 'Generate AI Instructions'
+                        : showAIInstructions 
+                          ? 'Hide AI Instructions' 
+                          : 'Show AI Instructions'
+                    }
                   </span>
                 </button>
               )}
@@ -604,7 +681,7 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
             <h4 className="text-sm font-medium text-purple-600 dark:text-purple-400">AI-Generated Instructions</h4>
           </motion.div>
           <div className="space-y-3">
-            {recipe.metadata.aiInstructions.map((instruction, index) => {
+            {recipe.metadata?.aiInstructions && Array.isArray(recipe.metadata.aiInstructions) ? recipe.metadata.aiInstructions.map((instruction, index) => {
               const aiStepIndex = index + 1000; // Use high index to avoid conflicts with regular instructions
               const isCompleted = completedSteps.has(aiStepIndex);
               
@@ -647,7 +724,11 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                   </div>
                 </motion.div>
               );
-            })}
+            }) : (
+              <div className="text-center py-4">
+                <p className="text-muted-foreground">No AI instructions available</p>
+              </div>
+            )}
           </div>
         </motion.div>
       )}
@@ -661,7 +742,7 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
               transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
               className="space-y-4"
             >
-              {recipe.instructions.map((instruction, index) => {
+              {recipe.instructions && Array.isArray(recipe.instructions) ? recipe.instructions.map((instruction, index) => {
                 const isCompleted = completedSteps.has(index);
                 // Convert temperatures in instructions
                 const convertedInstruction = instruction.replace(/\d+°[CF]/gi, (match) => 
@@ -700,10 +781,14 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                     </div>
                   </div>
                 );
-              })}
+              }) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No instructions available</p>
+                </div>
+              )}
               
         {/* Add another instruction button */}
-        {isEditable && !isEditingInstructions && !showAIInstructions && (
+        {isEditable && !isEditingInstructions && !showAIInstructions && savedRecipeId && (
           <button
             onClick={() => setIsEditingInstructions(true)}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-muted-foreground/40 text-muted-foreground rounded-lg hover:border-muted-foreground/60 hover:text-foreground transition-colors bg-transparent mt-4"
@@ -749,7 +834,7 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
       <div className="py-8 lg:py-0">
         {/* Show helpful message for unsaved recipes with AI instructions */}
         <AnimatePresence>
-          {!savedRecipeId && recipe.metadata?.instructionsGenerated && recipe.metadata?.aiInstructions && recipe.metadata.aiInstructions.length > 0 && !showAIInstructions && (
+          {!savedRecipeId && !showAIInstructions && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -786,10 +871,11 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
           )}
         </AnimatePresence>
         
-        {/* Show add instruction button for saved recipes */}
-        {savedRecipeId && !showAIInstructions && (
+        {/* Show add instruction button only for saved recipes */}
+        {!showAIInstructions && savedRecipeId && (
           <>
-            {isEditable && !isEditingInstructions && (
+            {/* Show the Add Instructions button only for saved recipes */}
+            {!isEditingInstructions && (
               <button
                 onClick={() => setIsEditingInstructions(true)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-muted-foreground/40 text-muted-foreground rounded-lg hover:border-muted-foreground/60 hover:text-foreground transition-colors bg-transparent"

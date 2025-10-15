@@ -226,6 +226,10 @@ export function convertIngredient(ingredient: string, targetSystem: UnitSystem):
 }
 
 export function convertIngredients(ingredients: string[], targetSystem: UnitSystem): ConvertedIngredient[] {
+  if (!ingredients || !Array.isArray(ingredients)) {
+    console.warn('convertIngredients: ingredients is not an array:', ingredients);
+    return [];
+  }
   return ingredients.map(ingredient => convertIngredient(ingredient, targetSystem));
 }
 
@@ -240,9 +244,13 @@ export interface ConvertedIngredientSection {
 }
 
 export function convertIngredientSections(sections: IngredientSection[], targetSystem: UnitSystem): ConvertedIngredientSection[] {
+  if (!sections || !Array.isArray(sections)) {
+    console.warn('convertIngredientSections: sections is not an array:', sections);
+    return [];
+  }
   return sections.map(section => ({
     title: section.title,
-    ingredients: convertIngredients(section.ingredients, targetSystem)
+    ingredients: convertIngredients(section.ingredients || [], targetSystem)
   }));
 }
 

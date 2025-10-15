@@ -201,6 +201,8 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🤖 Sending content to Gemini for parsing...');
+    console.log('📝 Content being sent to AI (first 1000 chars):', content.substring(0, 1000));
+    console.log('📏 Total content length:', content.length);
     
     // Use Gemini to parse the recipe from the webpage content
     const recipe = await parseRecipeWithGemini(content);

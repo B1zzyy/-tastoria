@@ -44,21 +44,39 @@ EXTRACTION RULES:
 2. If information is explicitly mentioned, use it exactly as written
 3. If information is missing, provide reasonable estimates
 4. Do NOT change ingredient names or descriptions that are provided
+5. PRESERVE THE ORIGINAL LANGUAGE - if the content is in Bulgarian, Spanish, French, etc., keep it in that language
+6. Do NOT translate recipe content to English unless explicitly requested
 
 INGREDIENT SECTIONS:
-- If ingredients are grouped by sections (e.g., "For the sauce:", "For the main dish:", "For the marinade:"), organize them into sections
+- ONLY use sections if there are clearly distinct ingredient groups (e.g., "For the sauce:", "For the main dish:", "For the marinade:")
+- If there are fewer than 10 total ingredients, use a simple array instead of sections
+- If ingredients are mixed together without clear grouping, use a simple array
 - Use the exact section titles as written (e.g., "For the sauce", "For the main dish")
-- If no sections are detected, return ingredients as a simple array
 - Section format: {"title": "Section Name", "ingredients": ["ingredient1", "ingredient2"]}
+- DO NOT include nutrition/macro information in ingredients - put that in the nutrition section instead
 
 Content to parse:
 ${content}
 
 ENHANCEMENT RULES:
 - For missing instructions: Generate complete, clear cooking steps without numbers (e.g., 'Heat oil in pan' not '1. Heat oil in pan')
+- For existing instructions: Copy them EXACTLY as written - preserve all measurements, times, and details
 - For missing times: Use realistic estimates based on recipe complexity
 - For missing nutrition: Provide reasonable estimates based on ingredients
 - For missing servings: Estimate based on ingredient quantities
+
+CRITICAL INSTRUCTION RULE:
+- If the content already contains cooking instructions, extract them EXACTLY as written - do NOT shorten, simplify, or modify them
+- Preserve all details, measurements, times, and specific instructions from the original content
+- Do NOT generate new instructions if cooking steps already exist in the content
+- Only generate instructions if the content has NO cooking steps at all
+- Copy instructions word-for-word from the original content, including all measurements and timing details
+
+NUTRITION PARSING RULES:
+- If you see macro/nutrition information (calories, protein, carbs, fat, etc.), extract it to the nutrition section
+- Look for patterns like "553 калории | 46г протеин | 48г въглехидрати | 19г мазнини"
+- Convert to nutrition format: calories, protein, carbs, fat
+- Do NOT put nutrition info in ingredients - it belongs in the nutrition section
 
 TIME FORMATTING RULES:
 - If time already includes "minutes", "hours", or "hrs" → keep it exactly as written
@@ -147,34 +165,72 @@ Return ONLY the JSON object:`;
     let aiInstructions: string[] = [];
     
     // Check if the original content had proper cooking instructions
-    const hasProperInstructions = (
-      // Look for explicit instruction keywords
+    console.log('🔍 Checking for existing instructions in content...');
+    console.log('📝 Content preview:', content.substring(0, 500) + '...');
+    
+    const hasEnglishKeywords = (
       content.toLowerCase().includes('instructions:') ||
       content.toLowerCase().includes('directions:') ||
       content.toLowerCase().includes('method:') ||
       content.toLowerCase().includes('how to make') ||
-      content.toLowerCase().includes('how to cook') ||
-      // Look for numbered cooking steps (but not just ingredient lists)
-      (content.match(/\d+\.\s*(heat|add|mix|stir|cook|bake|fry|boil|simmer|season|preheat|combine|whisk|beat|fold|pour|drain|serve)/gi) && 
-       content.match(/\d+\.\s*(heat|add|mix|stir|cook|bake|fry|boil|simmer|season|preheat|combine|whisk|beat|fold|pour|drain|serve)/gi)!.length >= 3)
+      content.toLowerCase().includes('how to cook')
     );
     
-    // If no proper instructions found in content, they were likely generated
-    if (!hasProperInstructions) {
-      instructionsWereGenerated = true;
-      aiInstructions = [...finalInstructions]; // Store AI instructions separately
-    } else if (finalInstructions.length === 1 && finalInstructions[0].length < 50) {
-      // Single short instruction is likely a note/tip
-      instructionsWereGenerated = true;
-      aiInstructions = [...finalInstructions];
-    } else if (finalInstructions.length < 3 && finalInstructions.every((inst: string) => 
-      inst.toLowerCase().includes('note') || 
-      inst.toLowerCase().includes('tip') || 
-      inst.toLowerCase().includes('additional')
-    )) {
-      // Less than 3 instructions that are all notes/tips
-      instructionsWereGenerated = true;
-      aiInstructions = [...finalInstructions];
+    const hasBulgarianKeywords = (
+      content.toLowerCase().includes('изпече') ||
+      content.toLowerCase().includes('задуши') ||
+      content.toLowerCase().includes('добави') ||
+      content.toLowerCase().includes('вари') ||
+      content.toLowerCase().includes('запържи') ||
+      content.toLowerCase().includes('оставете') ||
+      content.toLowerCase().includes('нарежете')
+    );
+    
+    const hasSpanishKeywords = (
+      content.toLowerCase().includes('cocinar') ||
+      content.toLowerCase().includes('agregar') ||
+      content.toLowerCase().includes('mezclar') ||
+      content.toLowerCase().includes('freír')
+    );
+    
+    const hasFrenchKeywords = (
+      content.toLowerCase().includes('cuire') ||
+      content.toLowerCase().includes('ajouter') ||
+      content.toLowerCase().includes('mélanger') ||
+      content.toLowerCase().includes('faire')
+    );
+    
+    const hasNumberedSteps = (
+      content.match(/\d+\.\s*(heat|add|mix|stir|cook|bake|fry|boil|simmer|season|preheat|combine|whisk|beat|fold|pour|drain|serve)/gi) && 
+      content.match(/\d+\.\s*(heat|add|mix|stir|cook|bake|fry|boil|simmer|season|preheat|combine|whisk|beat|fold|pour|drain|serve)/gi)!.length >= 3
+    );
+    
+    const hasBulgarianSentences = (
+      content.match(/[а-яё]{3,}\s+[а-яё]{3,}\s+[а-яё]{3,}/gi) && 
+      content.match(/[а-яё]{3,}\s+[а-яё]{3,}\s+[а-яё]{3,}/gi)!.length >= 2
+    );
+    
+    const hasProperInstructions = hasEnglishKeywords || hasBulgarianKeywords || hasSpanishKeywords || hasFrenchKeywords || hasNumberedSteps || hasBulgarianSentences;
+    
+    console.log('🔍 Instruction detection results:');
+    console.log('- English keywords:', hasEnglishKeywords);
+    console.log('- Bulgarian keywords:', hasBulgarianKeywords);
+    console.log('- Spanish keywords:', hasSpanishKeywords);
+    console.log('- French keywords:', hasFrenchKeywords);
+    console.log('- Numbered steps:', hasNumberedSteps);
+    console.log('- Bulgarian sentences:', hasBulgarianSentences);
+    console.log('- Final result:', hasProperInstructions);
+    
+    // The key logic: if we detected proper instructions in the ORIGINAL content, they were extracted
+    // If we didn't detect any instructions in the original content, leave instructions empty for on-demand generation
+    if (hasProperInstructions) {
+      instructionsWereGenerated = false;
+      console.log('✅ Instructions were extracted from original content - NOT AI generated');
+    } else {
+      // Don't generate AI instructions automatically - let user request them on-demand
+      instructionsWereGenerated = false;
+      finalRecipe.instructions = []; // Clear any generated instructions
+      console.log('ℹ️ No instructions found in original content - leaving empty for on-demand generation');
     }
 
     console.log('🔍 Instruction analysis:');
