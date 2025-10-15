@@ -402,7 +402,7 @@ async function scrapeFacebookPost(url: string): Promise<{ caption: string; image
     console.log('📝 Normalized Facebook URL:', normalizedUrl);
     
     // Try multiple methods to get Facebook content with more sophisticated headers
-    const methods = [
+    const methods: Array<{ name: string; url: string; headers: Record<string, string> }> = [
       {
         name: 'Direct URL with Chrome Headers',
         url: normalizedUrl,
