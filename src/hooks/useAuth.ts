@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { TrialService } from '@/lib/trialService'
 import { 
-  getDeviceFingerprint, 
   associateUserWithDevice, 
   getAssociatedUserId, 
   clearDeviceAssociation 
@@ -226,7 +225,7 @@ export function useAuth() {
     })
 
     return () => subscription.unsubscribe()
-  }, [fetchUserProfile, user])
+  }, [fetchUserProfile, user, attemptDeviceBasedRecovery])
   
   // Periodic session check to ensure user stays logged in
   useEffect(() => {

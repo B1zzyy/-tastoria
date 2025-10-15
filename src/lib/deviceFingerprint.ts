@@ -115,7 +115,7 @@ export function associateUserWithDevice(userId: string): void {
     // Also store in a general user devices list
     const userDevicesKey = `tastoria-user-${userId}-devices`;
     const existingDevices = JSON.parse(localStorage.getItem(userDevicesKey) || '[]');
-    const deviceIndex = existingDevices.findIndex((d: any) => d.fingerprintId === fingerprint.id);
+    const deviceIndex = existingDevices.findIndex((d: { fingerprintId: string }) => d.fingerprintId === fingerprint.id);
     
     if (deviceIndex >= 0) {
       existingDevices[deviceIndex] = userDeviceData;
@@ -125,7 +125,7 @@ export function associateUserWithDevice(userId: string): void {
     
     // Keep only the last 5 devices per user
     if (existingDevices.length > 5) {
-      existingDevices.sort((a: any, b: any) => b.lastSeen - a.lastSeen);
+      existingDevices.sort((a: { lastSeen: number }, b: { lastSeen: number }) => b.lastSeen - a.lastSeen);
       existingDevices.splice(5);
     }
     

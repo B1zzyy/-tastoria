@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Link2, Globe, Instagram, Facebook, Send } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Link2, Instagram, Facebook, Send } from 'lucide-react';
 
 // Custom Arrow Right component using the provided SVG
 const ArrowRight = ({ className }: { className?: string }) => (
