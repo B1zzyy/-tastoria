@@ -3,6 +3,7 @@ import { Inter, Playfair_Display, Geist } from "next/font/google";
 import "./globals.css";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ToastProvider } from "@/components/ToastProvider";
+import "@/lib/sessionKeepAlive"; // Initialize session keep-alive service
 
 const inter = Inter({
   variable: "--font-inter",

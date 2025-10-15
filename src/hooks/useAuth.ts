@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { TrialService } from '@/lib/trialService'
+import { 
+  getDeviceFingerprint, 
+  associateUserWithDevice, 
+  getAssociatedUserId, 
+  clearDeviceAssociation 
+} from '@/lib/deviceFingerprint'
 import type { User } from '@supabase/supabase-js'
 
 export interface AuthUser {
@@ -91,12 +97,48 @@ export function useAuth() {
       if (session?.user) {
         console.log('✅ Session recovered for:', session.user.email)
         await fetchUserProfile(session.user)
+        // Associate user with device for future recovery
+        associateUserWithDevice(session.user.id)
         return true
       }
       
       return false
     } catch (error) {
       console.error('❌ Session recovery error:', error)
+      return false
+    }
+  }, [fetchUserProfile])
+
+  // Device-based session recovery
+  const attemptDeviceBasedRecovery = useCallback(async () => {
+    try {
+      console.log('🔍 Attempting device-based session recovery...')
+      const associatedUserId = getAssociatedUserId()
+      
+      if (!associatedUserId) {
+        console.log('ℹ️ No device association found')
+        return false
+      }
+      
+      console.log('🔍 Found device association for user:', associatedUserId)
+      
+      // Try to refresh the session
+      const { data: { session }, error } = await supabase.auth.refreshSession()
+      
+      if (error) {
+        console.error('❌ Device-based session refresh failed:', error)
+        return false
+      }
+      
+      if (session?.user && session.user.id === associatedUserId) {
+        console.log('✅ Device-based session recovery successful for:', session.user.email)
+        await fetchUserProfile(session.user)
+        return true
+      }
+      
+      return false
+    } catch (error) {
+      console.error('❌ Device-based recovery error:', error)
       return false
     }
   }, [fetchUserProfile])
@@ -117,6 +159,8 @@ export function useAuth() {
         if (session?.user) {
           // console.log('✅ Found existing session for:', session.user.email)
           await fetchUserProfile(session.user)
+          // Associate user with device for future recovery
+          associateUserWithDevice(session.user.id)
           // Initialize trial for new users (don't wait for this to complete)
           TrialService.initializeTrial(
             session.user.id, 
@@ -124,7 +168,12 @@ export function useAuth() {
             session.user.user_metadata?.name || undefined
           ).catch(err => console.warn('Trial initialization failed:', err))
         } else {
-          console.log('ℹ️ No existing session found')
+          console.log('ℹ️ No existing session found, trying device-based recovery...')
+          // Try device-based recovery as fallback
+          const deviceRecoverySuccess = await attemptDeviceBasedRecovery()
+          if (!deviceRecoverySuccess) {
+            console.log('ℹ️ Device-based recovery also failed')
+          }
         }
       } catch (error) {
         console.error('❌ Error getting initial session:', error)
@@ -142,6 +191,8 @@ export function useAuth() {
       if (event === 'SIGNED_IN' && session?.user) {
         // console.log('✅ User signed in:', session.user.email);
         await fetchUserProfile(session.user)
+        // Associate user with device for persistent login
+        associateUserWithDevice(session.user.id)
         // Initialize trial for new users (don't wait for this to complete)
         TrialService.initializeTrial(
           session.user.id, 
@@ -151,6 +202,8 @@ export function useAuth() {
       } else if (event === 'SIGNED_OUT') {
         // console.log('👋 User signed out');
         setUser(null)
+        // Clear device association on logout
+        clearDeviceAssociation()
         setLoading(false)
         return
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
@@ -159,6 +212,8 @@ export function useAuth() {
         if (!user || user.id !== session.user.id) {
           await fetchUserProfile(session.user)
         }
+        // Update device association to refresh last seen
+        associateUserWithDevice(session.user.id)
       } else if (session?.user) {
         // Handle other events with valid session
         await fetchUserProfile(session.user)
@@ -334,6 +389,31 @@ export function useAuth() {
     }
   }
 
+  // Manual session refresh function
+  const refreshSession = useCallback(async () => {
+    try {
+      console.log('🔄 Manually refreshing session...')
+      const { data: { session }, error } = await supabase.auth.refreshSession()
+      
+      if (error) {
+        console.error('❌ Manual session refresh failed:', error)
+        return false
+      }
+      
+      if (session?.user) {
+        console.log('✅ Manual session refresh successful for:', session.user.email)
+        await fetchUserProfile(session.user)
+        associateUserWithDevice(session.user.id)
+        return true
+      }
+      
+      return false
+    } catch (error) {
+      console.error('❌ Manual session refresh error:', error)
+      return false
+    }
+  }, [fetchUserProfile])
+
   return {
     user,
     loading,
@@ -341,6 +421,8 @@ export function useAuth() {
     signIn,
     signOut,
     updateProfile,
-    attemptSessionRecovery
+    attemptSessionRecovery,
+    refreshSession,
+    attemptDeviceBasedRecovery
   }
 }
