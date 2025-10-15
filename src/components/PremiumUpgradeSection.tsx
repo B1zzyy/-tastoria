@@ -113,7 +113,10 @@ export default function PremiumUpgradeSection() {
       const result = await response.json()
 
       if (result.url) {
-        window.location.href = result.url
+        // Add a small delay to show the loading state
+        setTimeout(() => {
+          window.location.href = result.url
+        }, 250)
       } else {
         throw new Error('No checkout URL received')
       }
@@ -346,12 +349,12 @@ export default function PremiumUpgradeSection() {
             transition={{ delay: 1 }}
             onClick={handleUpgrade}
             disabled={isUpgrading}
-            className="w-full bg-primary text-black py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-primary text-black py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed relative z-10"
           >
             {isUpgrading ? (
               <div className="flex items-center justify-center gap-2">
                 <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                Processing...
+                Redirecting to checkout...
               </div>
             ) : (
               'Upgrade now'
