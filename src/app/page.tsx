@@ -607,7 +607,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [checkIfRecipeSaved, user, setShowAuthModal]);
+  }, [checkIfRecipeSaved, user, setShowAuthModal, loading, toast]);
 
   // Recipe storage functions
 
@@ -670,7 +670,7 @@ export default function Home() {
     });
 
     return removeListener;
-  }, [toast]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -708,9 +708,11 @@ export default function Home() {
             >
               {userProfileImage ? (
                 <div className="w-6 h-6 rounded-full overflow-hidden -my-1">
-                  <img
+                  <Image
                     src={userProfileImage}
                     alt="Profile"
+                    width={24}
+                    height={24}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -752,9 +754,11 @@ export default function Home() {
                     <div className="flex items-center gap-3">
                       {userProfileImage ? (
                         <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                          <img
+                          <Image
                             src={userProfileImage}
                             alt="Profile"
+                            width={32}
+                            height={32}
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -1021,9 +1025,11 @@ export default function Home() {
                       >
                         {userProfileImage ? (
                           <div className="w-6 h-6 rounded-full overflow-hidden -my-1">
-                            <img
+                            <Image
                               src={userProfileImage}
                               alt="Profile"
+                              width={24}
+                              height={24}
                               className="w-full h-full object-cover"
                             />
                           </div>
@@ -1066,9 +1072,11 @@ export default function Home() {
                               <div className="flex items-center gap-3">
                                 {userProfileImage ? (
                                   <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                                    <img
+                                    <Image
                                       src={userProfileImage}
                                       alt="Profile"
+                                      width={32}
+                                      height={32}
                                       className="w-full h-full object-cover"
                                     />
                                   </div>

@@ -86,7 +86,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
         // Check if this is a duplicate signup (Supabase behavior)
         // If user exists but email is not confirmed, Supabase will still send confirmation
         // We need to detect this case
-        if (data.user && data.user.identities && data.user.identities.length === 0) {
+        if (data?.user && data.user.identities && data.user.identities.length === 0) {
           // This indicates the user already exists
           setError('An account with this email already exists. Please try signing in instead.');
           return;

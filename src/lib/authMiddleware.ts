@@ -29,7 +29,7 @@ export async function authenticateUser(request: NextRequest): Promise<Authentica
       setTimeout(() => reject(new Error('Authentication timeout')), 10000)
     );
 
-    const { data: { user }, error } = await Promise.race([getUserPromise, timeoutPromise]) as { data: { user: any }; error: any };
+    const { data: { user }, error } = await Promise.race([getUserPromise, timeoutPromise]) as { data: { user: { id: string; email: string | null } | null }; error: { message: string } | null };
     
     if (error || !user) {
       console.error('Authentication failed:', error);

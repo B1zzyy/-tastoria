@@ -6,6 +6,7 @@ import { User, Edit3, X, ChevronDown, ChevronUp, Check, Star } from 'lucide-reac
 import { useAuth } from '@/hooks/useAuth';
 import { useTrial } from '@/hooks/useTrial';
 import { supabase } from '@/lib/supabase';
+import Image from 'next/image';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -456,9 +457,11 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                 <div className="relative">
                   {profileImage ? (
                     <div className="w-32 h-32 rounded-full overflow-hidden ring-4 ring-primary/20 shadow-xl group-hover:ring-primary/40 transition-all duration-300">
-                      <img
+                      <Image
                         src={profileImage}
                         alt="Profile"
+                        width={128}
+                        height={128}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
