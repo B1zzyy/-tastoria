@@ -123,7 +123,7 @@ export default function Home() {
 
       return () => clearTimeout(safetyTimer);
     }
-  }, [loading]);
+  }, [loading, toast]);
 
   // Auto-show paywall for expired trials
   useEffect(() => {
@@ -670,7 +670,7 @@ export default function Home() {
     });
 
     return removeListener;
-  }, []);
+  }, [toast]);
 
   return (
     <div className="min-h-screen bg-background">
