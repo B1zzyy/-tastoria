@@ -276,7 +276,7 @@ export function useAuth() {
         setTimeout(() => reject(new Error('Sign up timeout after 15 seconds')), 15000)
       );
 
-      const { data, error } = await Promise.race([signUpPromise, timeoutPromise]) as { data: { user: { id: string; email: string | null; identities: any[] } } | null; error: { message: string } | null };
+      const { data, error } = await Promise.race([signUpPromise, timeoutPromise]) as { data: { user: { id: string; email: string | null; identities: { id: string; user_id: string; identity_data: Record<string, unknown>; provider: string; created_at: string; updated_at: string }[] } } | null; error: { message: string } | null };
       return { data, error }
     } catch (error) {
       console.error('Sign up error:', error);
