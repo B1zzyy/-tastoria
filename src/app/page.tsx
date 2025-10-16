@@ -428,18 +428,27 @@ export default function Home() {
     // Normalize Facebook URLs for consistent database storage
     let normalizedUrl = url;
     if (isFacebookUrl) {
-      const postIdMatch = url.match(/(?:facebook\.com|fb\.com)\/(?:reel|posts|videos|watch)\/([A-Za-z0-9_-]+)/);
-      if (postIdMatch) {
-        let postId = postIdMatch[1];
-        // Clean the post ID - remove any trailing non-numeric characters
-        if (/[a-zA-Z]+$/.test(postId)) {
-          const numericMatch = postId.match(/^(\d+)/);
-          if (numericMatch) {
-            postId = numericMatch[1];
-            console.log('🧹 Cleaned Facebook post ID in main page:', postId);
+      // Handle share URLs - DON'T normalize these, let the API resolve them
+      const shareMatch = url.match(/(?:facebook\.com|fb\.com)\/share\/r\/([A-Za-z0-9_-]+)/);
+      if (shareMatch) {
+        // Keep the original share URL for API resolution
+        normalizedUrl = url;
+        console.log('🔗 Keeping Facebook share URL for API resolution:', normalizedUrl);
+      } else {
+        // Handle regular URLs
+        const postIdMatch = url.match(/(?:facebook\.com|fb\.com)\/(?:reel|posts|videos|watch)\/([A-Za-z0-9_-]+)/);
+        if (postIdMatch) {
+          let postId = postIdMatch[1];
+          // Clean the post ID - remove any trailing non-numeric characters
+          if (/[a-zA-Z]+$/.test(postId)) {
+            const numericMatch = postId.match(/^(\d+)/);
+            if (numericMatch) {
+              postId = numericMatch[1];
+              console.log('🧹 Cleaned Facebook post ID in main page:', postId);
+            }
           }
+          normalizedUrl = `https://www.facebook.com/reel/${postId}`;
         }
-        normalizedUrl = `https://www.facebook.com/reel/${postId}`;
       }
     }
 

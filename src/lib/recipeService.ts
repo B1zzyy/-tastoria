@@ -23,9 +23,17 @@ export async function saveRecipe(recipe: Recipe, url: string): Promise<{ data: S
     // Normalize Facebook URLs for consistent database storage
     let normalizedUrl = url;
     if (url.includes('facebook.com') || url.includes('fb.com')) {
-      const postIdMatch = url.match(/(?:facebook\.com|fb\.com)\/(?:reel|posts|videos|watch)\/([A-Za-z0-9_-]+)/);
-      if (postIdMatch) {
-        normalizedUrl = `https://www.facebook.com/reel/${postIdMatch[1]}`;
+      // Handle share URLs - DON'T normalize these, let the API resolve them
+      const shareMatch = url.match(/(?:facebook\.com|fb\.com)\/share\/r\/([A-Za-z0-9_-]+)/);
+      if (shareMatch) {
+        // Keep the original share URL for API resolution
+        normalizedUrl = url;
+      } else {
+        // Handle regular URLs
+        const postIdMatch = url.match(/(?:facebook\.com|fb\.com)\/(?:reel|posts|videos|watch)\/([A-Za-z0-9_-]+)/);
+        if (postIdMatch) {
+          normalizedUrl = `https://www.facebook.com/reel/${postIdMatch[1]}`;
+        }
       }
     }
 
@@ -106,9 +114,17 @@ export async function isRecipeSaved(url: string): Promise<{ data: boolean, recip
     // Normalize Facebook URLs for consistent database queries
     let normalizedUrl = url;
     if (url.includes('facebook.com') || url.includes('fb.com')) {
-      const postIdMatch = url.match(/(?:facebook\.com|fb\.com)\/(?:reel|posts|videos|watch)\/([A-Za-z0-9_-]+)/);
-      if (postIdMatch) {
-        normalizedUrl = `https://www.facebook.com/reel/${postIdMatch[1]}`;
+      // Handle share URLs - DON'T normalize these, let the API resolve them
+      const shareMatch = url.match(/(?:facebook\.com|fb\.com)\/share\/r\/([A-Za-z0-9_-]+)/);
+      if (shareMatch) {
+        // Keep the original share URL for API resolution
+        normalizedUrl = url;
+      } else {
+        // Handle regular URLs
+        const postIdMatch = url.match(/(?:facebook\.com|fb\.com)\/(?:reel|posts|videos|watch)\/([A-Za-z0-9_-]+)/);
+        if (postIdMatch) {
+          normalizedUrl = `https://www.facebook.com/reel/${postIdMatch[1]}`;
+        }
       }
     }
 

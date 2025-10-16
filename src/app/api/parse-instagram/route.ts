@@ -45,7 +45,7 @@ function isValidInstagramUrl(url: string): boolean {
 }
 
 function isValidFacebookUrl(url: string): boolean {
-  const facebookRegex = /^https?:\/\/(www\.|m\.)?(facebook\.com|fb\.com)\/(reel|posts|videos|watch)\/[A-Za-z0-9_-]+/;
+  const facebookRegex = /^https?:\/\/(www\.|m\.)?(facebook\.com|fb\.com)\/(reel|posts|videos|watch|share\/r)\/[A-Za-z0-9_-]+/;
   return facebookRegex.test(url);
 }
 
@@ -55,8 +55,363 @@ function extractInstagramPostId(url: string): string | null {
   return match ? match[1] : null;
 }
 
+// Resolve Facebook share URL to actual post URL
+async function resolveFacebookShareUrl(shareUrl: string): Promise<string | null> {
+  try {
+    console.log('🔗 Resolving Facebook share URL:', shareUrl);
+    
+    // Method 1: Try with manual redirect to catch redirect headers
+    try {
+      console.log('🔄 Method 1: Trying manual redirect...');
+      const response = await fetch(shareUrl, {
+        method: 'HEAD',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+        },
+        redirect: 'manual'
+      });
+
+      console.log('📡 Method 1 response status:', response.status);
+      console.log('📡 Method 1 response headers:', Object.fromEntries(response.headers.entries()));
+
+      // Check if we got a redirect
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (location) {
+          console.log('✅ Method 1: Resolved Facebook share URL via redirect to:', location);
+          return location;
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Method 1: Manual redirect method failed:', error);
+    }
+
+    // Method 2: Try with automatic redirect and check final URL
+    try {
+      console.log('🔄 Method 2: Trying automatic redirect...');
+      const response = await fetch(shareUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+        },
+        redirect: 'follow'
+      });
+
+      console.log('📡 Method 2 response status:', response.status);
+      console.log('📡 Method 2 final URL:', response.url);
+
+      // Check if the final URL is different from the original
+      const finalUrl = response.url;
+      if (finalUrl !== shareUrl && finalUrl.includes('facebook.com')) {
+        console.log('✅ Method 2: Resolved Facebook share URL via automatic redirect to:', finalUrl);
+        return finalUrl;
+      }
+    } catch (error) {
+      console.log('⚠️ Method 2: Automatic redirect method failed:', error);
+    }
+
+    // Method 3: Try to extract the actual post ID from the share URL by making a request
+    try {
+      console.log('🔄 Method 3: Trying HTML parsing...');
+      const response = await fetch(shareUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+        },
+        redirect: 'follow'
+      });
+
+      console.log('📡 Method 3 response status:', response.status);
+      console.log('📡 Method 3 final URL:', response.url);
+
+      const html = await response.text();
+      console.log('📄 Method 3 HTML length:', html.length);
+      console.log('📄 Method 3 HTML preview:', html.substring(0, 500));
+      
+      // Look for the actual post ID in the HTML content
+      const postIdMatch = html.match(/\/reel\/(\d+)/);
+      if (postIdMatch) {
+        const actualPostId = postIdMatch[1];
+        const resolvedUrl = `https://www.facebook.com/reel/${actualPostId}`;
+        console.log('✅ Method 3: Extracted actual post ID from HTML:', resolvedUrl);
+        return resolvedUrl;
+      }
+
+      // Also try to find it in meta tags or other patterns
+      const metaMatch = html.match(/property="og:url" content="([^"]*\/reel\/\d+)/);
+      if (metaMatch) {
+        console.log('✅ Method 3: Found post URL in meta tags:', metaMatch[1]);
+        return metaMatch[1];
+      }
+
+      // Try other patterns
+      const otherPatterns = [
+        /"video_id":"(\d+)"/,
+        /"post_id":"(\d+)"/,
+        /"id":"(\d+)"/,
+        /reel\/(\d+)/g,
+        /"target_id":"(\d+)"/,
+        /"object_id":"(\d+)"/,
+        /"story_id":"(\d+)"/,
+        /"media_id":"(\d+)"/,
+        /"content_id":"(\d+)"/,
+        /"item_id":"(\d+)"/,
+        /"video_id":(\d+)/,
+        /"post_id":(\d+)/,
+        /"id":(\d+)/,
+        /"target_id":(\d+)/,
+        /"object_id":(\d+)/,
+        /"story_id":(\d+)/,
+        /"media_id":(\d+)/,
+        /"content_id":(\d+)/,
+        /"item_id":(\d+)/
+      ];
+
+      for (const pattern of otherPatterns) {
+        const match = html.match(pattern);
+        if (match) {
+          const id = match[1];
+          const resolvedUrl = `https://www.facebook.com/reel/${id}`;
+          console.log('✅ Method 3: Found ID with pattern:', pattern, '->', resolvedUrl);
+          return resolvedUrl;
+        }
+      }
+
+      // Try to find any long numeric ID that could be a post ID
+      const longNumericIds = html.match(/\b(\d{10,})\b/g);
+      if (longNumericIds) {
+        console.log('🔍 Found potential long numeric IDs:', longNumericIds);
+        // Try the first long numeric ID as a potential post ID
+        const potentialId = longNumericIds[0];
+        const resolvedUrl = `https://www.facebook.com/reel/${potentialId}`;
+        console.log('🔄 Method 3: Trying potential post ID:', resolvedUrl);
+        return resolvedUrl;
+      }
+    } catch (error) {
+      console.log('⚠️ Method 3: HTML parsing method failed:', error);
+    }
+
+    // Method 4: Try using Facebook's mobile API or different user agents
+    try {
+      console.log('🔄 Method 4: Trying mobile Facebook API...');
+      
+      // Try with mobile user agent
+      const mobileResponse = await fetch(shareUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Mobile/15E148 Safari/604.1',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate, br',
+        },
+        redirect: 'follow'
+      });
+
+      console.log('📡 Method 4 mobile response status:', mobileResponse.status);
+      console.log('📡 Method 4 mobile final URL:', mobileResponse.url);
+
+      if (mobileResponse.url !== shareUrl && mobileResponse.url.includes('facebook.com') && mobileResponse.url.includes('/reel/')) {
+        console.log('✅ Method 4: Mobile user agent resolved to:', mobileResponse.url);
+        return mobileResponse.url;
+      } else if (mobileResponse.url !== shareUrl) {
+        console.log('⚠️ Method 4: Mobile URL changed but not to reel:', mobileResponse.url);
+      }
+
+      // Try with different headers
+      const altResponse = await fetch(shareUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+          'Accept': '*/*',
+        },
+        redirect: 'follow'
+      });
+
+      console.log('📡 Method 4 alt response status:', altResponse.status);
+      console.log('📡 Method 4 alt final URL:', altResponse.url);
+
+      if (altResponse.url !== shareUrl && altResponse.url.includes('facebook.com') && altResponse.url.includes('/reel/')) {
+        console.log('✅ Method 4: Alt headers resolved to:', altResponse.url);
+        return altResponse.url;
+      } else if (altResponse.url !== shareUrl) {
+        console.log('⚠️ Method 4: Alt URL changed but not to reel:', altResponse.url);
+      }
+
+    } catch (error) {
+      console.log('⚠️ Method 4: Mobile/alt method failed:', error);
+    }
+
+    // Method 5: Try to use Facebook's embed endpoint or other public endpoints
+    try {
+      console.log('🔄 Method 5: Trying Facebook embed endpoint...');
+      
+      // Extract the share ID from the original URL
+      const shareMatch = shareUrl.match(/\/share\/r\/([A-Za-z0-9_-]+)/);
+      if (shareMatch) {
+        const shareId = shareMatch[1];
+        console.log('🔍 Extracted share ID:', shareId);
+        
+        // Try Facebook's embed endpoint
+        const embedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(shareUrl)}`;
+        console.log('🔗 Trying embed URL:', embedUrl);
+        
+        const embedResponse = await fetch(embedUrl, {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          },
+          redirect: 'follow'
+        });
+
+        console.log('📡 Method 5 embed response status:', embedResponse.status);
+        console.log('📡 Method 5 embed final URL:', embedResponse.url);
+
+        if (embedResponse.url !== embedUrl && embedResponse.url.includes('facebook.com')) {
+          console.log('✅ Method 5: Embed endpoint resolved to:', embedResponse.url);
+          return embedResponse.url;
+        }
+
+        // Try to extract post ID from embed response
+        const embedHtml = await embedResponse.text();
+        const embedPostIdMatch = embedHtml.match(/\/reel\/(\d+)/);
+        if (embedPostIdMatch) {
+          const actualPostId = embedPostIdMatch[1];
+          const resolvedUrl = `https://www.facebook.com/reel/${actualPostId}`;
+          console.log('✅ Method 5: Found post ID in embed response:', resolvedUrl);
+          return resolvedUrl;
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Method 5: Embed endpoint method failed:', error);
+    }
+
+    // Method 6: Try to use a different approach - make a request to the share URL with different parameters
+    try {
+      console.log('🔄 Method 6: Trying share URL with different parameters...');
+      
+      // Try adding different parameters to the share URL
+      const variations = [
+        `${shareUrl}?ref=share`,
+        `${shareUrl}?ref=embed`,
+        `${shareUrl}?ref=video`,
+        `${shareUrl}?ref=reel`,
+        `${shareUrl}?ref=post`,
+        `${shareUrl}?ref=watch`,
+        `${shareUrl}?ref=share&ref_src=embed`,
+        `${shareUrl}?ref=share&ref_src=video`,
+        `${shareUrl}?ref=share&ref_src=reel`
+      ];
+
+      for (const variation of variations) {
+        try {
+          console.log('🔗 Trying variation:', variation);
+          const response = await fetch(variation, {
+            method: 'GET',
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            },
+            redirect: 'follow'
+          });
+
+          console.log('📡 Method 6 variation response status:', response.status);
+          console.log('📡 Method 6 variation final URL:', response.url);
+
+          if (response.url !== variation && response.url.includes('facebook.com') && response.url.includes('/reel/')) {
+            console.log('✅ Method 6: Variation resolved to:', response.url);
+            return response.url;
+          }
+        } catch (error) {
+          console.log('⚠️ Method 6: Variation failed:', variation, error);
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Method 6: Parameter variation method failed:', error);
+    }
+
+    // Method 7: Try using a different approach - maybe the share ID can be converted directly
+    try {
+      console.log('🔄 Method 7: Trying direct conversion approach...');
+      
+      // Extract the share ID from the original URL
+      const shareMatch = shareUrl.match(/\/share\/r\/([A-Za-z0-9_-]+)/);
+      if (shareMatch) {
+        const shareId = shareMatch[1];
+        console.log('🔍 Extracted share ID:', shareId);
+        
+        // Try to make a request to see if we can get more info about this share ID
+        // Sometimes share IDs are just encoded versions of the actual post ID
+        const testUrls = [
+          `https://www.facebook.com/reel/${shareId}`,
+          `https://www.facebook.com/posts/${shareId}`,
+          `https://www.facebook.com/videos/${shareId}`,
+          `https://www.facebook.com/watch/${shareId}`,
+          `https://m.facebook.com/reel/${shareId}`,
+          `https://m.facebook.com/posts/${shareId}`,
+          `https://m.facebook.com/videos/${shareId}`,
+          `https://m.facebook.com/watch/${shareId}`
+        ];
+
+        for (const testUrl of testUrls) {
+          try {
+            console.log('🔗 Testing URL:', testUrl);
+            const response = await fetch(testUrl, {
+              method: 'HEAD',
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+              },
+              redirect: 'manual'
+            });
+
+            console.log('📡 Method 7 test response status:', response.status, 'for URL:', testUrl);
+
+            // If we get a 200 or redirect, this might be a valid URL
+            if (response.status === 200 || (response.status >= 300 && response.status < 400)) {
+              console.log('✅ Method 7: Found potentially valid URL:', testUrl);
+              return testUrl;
+            }
+          } catch (error) {
+            console.log('⚠️ Method 7: Test URL failed:', testUrl, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Method 7: Direct conversion method failed:', error);
+    }
+
+    console.log('❌ All methods failed to resolve Facebook share URL');
+    return null;
+  } catch (error) {
+    console.error('❌ Error resolving Facebook share URL:', error);
+    return null;
+  }
+}
+
 // Extract Facebook post ID from URL
 function extractFacebookPostId(url: string): string | null {
+  // Handle share URLs
+  const shareMatch = url.match(/(?:facebook\.com|fb\.com)\/share\/r\/([A-Za-z0-9_-]+)/);
+  if (shareMatch) {
+    return shareMatch[1];
+  }
+
+  // Handle regular URLs
   const match = url.match(/(?:facebook\.com|fb\.com)\/(?:reel|posts|videos|watch)\/([A-Za-z0-9_-]+)/);
   if (match) {
     // Clean the post ID - remove any trailing non-numeric characters that might be added
@@ -732,6 +1087,23 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Processing URL:', cleanUrl, isInstagram ? '(Instagram)' : '(Facebook)');
+    console.log('🔍 Checking for share URL pattern in:', cleanUrl);
+    console.log('🔍 Contains /share/r/:', cleanUrl.includes('/share/r/'));
+
+    // Resolve Facebook share URLs to actual post URLs
+    let finalUrl = cleanUrl;
+    if (isFacebook && cleanUrl.includes('/share/r/')) {
+      console.log('🔗 Detected Facebook share URL, resolving...');
+      const resolvedUrl = await resolveFacebookShareUrl(cleanUrl);
+      if (resolvedUrl) {
+        finalUrl = resolvedUrl;
+        console.log('✅ Using resolved URL:', finalUrl);
+      } else {
+        console.log('⚠️ Could not resolve share URL, using original');
+      }
+    } else {
+      console.log('ℹ️ Not a share URL or not Facebook, using original URL');
+    }
 
     // Add timeout wrapper
     const timeoutPromise = new Promise((_, reject) => {
@@ -740,7 +1112,7 @@ export async function POST(request: NextRequest) {
 
     const parsePromise = async () => {
       // Scrape the Instagram post
-      const postData = await scrapeInstagramPost(cleanUrl);
+      const postData = await scrapeInstagramPost(finalUrl);
       
       if (!postData || !postData.caption) {
         return {
@@ -756,9 +1128,14 @@ export async function POST(request: NextRequest) {
       
       const recipe = await parseRecipeWithGemini(postData.caption);
       
-      // Set Instagram-specific properties
-      recipe.image = 'instagram-video';
-      recipe.instagramUrl = cleanUrl;
+      // Set platform-specific properties
+      if (isInstagram) {
+        recipe.image = 'instagram-video';
+        recipe.instagramUrl = cleanUrl;
+      } else if (isFacebook) {
+        recipe.image = 'facebook-video';
+        recipe.facebookUrl = cleanUrl;
+      }
       
       if (!recipe) {
         console.log('❌ Gemini failed to parse recipe from caption - trying fallback extraction...');
@@ -774,7 +1151,13 @@ export async function POST(request: NextRequest) {
             const enhancedRecipe = await generateInstructionsFromIngredients(fallbackRecipe, postData.caption);
             if (enhancedRecipe && enhancedRecipe.instructions && enhancedRecipe.instructions.length > 0) {
               console.log('✅ Successfully generated complete recipe from fallback');
-              enhancedRecipe.instagramUrl = cleanUrl;
+              if (isInstagram) {
+                enhancedRecipe.image = 'instagram-video';
+                enhancedRecipe.instagramUrl = cleanUrl;
+              } else if (isFacebook) {
+                enhancedRecipe.image = 'facebook-video';
+                enhancedRecipe.facebookUrl = cleanUrl;
+              }
               return { recipe: enhancedRecipe };
             }
           } catch (error) {

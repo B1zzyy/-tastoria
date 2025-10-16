@@ -49,6 +49,7 @@ export interface Recipe {
   ingredients: string[] | IngredientSection[];
   instructions: string[];
   instagramUrl?: string; // For Instagram video popup
+  facebookUrl?: string; // For Facebook video popup
   nutrition?: {
     calories?: number | string;
     protein?: string;

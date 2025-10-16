@@ -28,6 +28,7 @@ export interface Recipe {
   };
   image?: string;
   instagramUrl?: string; // For Instagram video popup
+  facebookUrl?: string; // For Facebook video popup
   metadata?: {
     instructionsGenerated: boolean;
     aiInstructions?: string[]; // Store AI-generated instructions separately
@@ -48,12 +49,16 @@ EXTRACTION RULES:
 6. Do NOT translate recipe content to English unless explicitly requested
 
 INGREDIENT SECTIONS:
-- ONLY use sections if there are clearly distinct ingredient groups (e.g., "For the sauce:", "For the main dish:", "For the marinade:")
-- If there are fewer than 10 total ingredients, use a simple array instead of sections
-- If ingredients are mixed together without clear grouping, use a simple array
-- Use the exact section titles as written (e.g., "For the sauce", "For the main dish")
+- Extract ALL ingredients from ALL sections in the content
+- Use sections when there are clearly distinct ingredient groups (e.g., "🥩 Шаурма с пиле:", "🍚 Ароматен жълт ориз:", "🧄 Чеснов бял сос:")
+- Use the exact section titles as written (e.g., "🥩 Шаурма с пиле", "🍚 Ароматен жълт ориз")
 - Section format: {"title": "Section Name", "ingredients": ["ingredient1", "ingredient2"]}
+- CRITICAL: Extract EVERY ingredient from EVERY section - do not miss any ingredients
+- Each line that contains an ingredient should be included as a separate ingredient
 - DO NOT include nutrition/macro information in ingredients - put that in the nutrition section instead
+- DO NOT include cooking instructions in ingredients - those belong in the instructions section
+- EXAMPLE: For content with "🥩 Шаурма с пиле:\n1000г пилешко бутче\n30г счукан чесън\n2 ч.л. сол", extract as:
+  {"title": "🥩 Шаурма с пиле", "ingredients": ["1000г пилешко бутче (без кожа и кост)", "30г счукан чесън", "2 ч.л. сол"]}
 
 Content to parse:
 ${content}
@@ -62,7 +67,8 @@ ENHANCEMENT RULES:
 - For missing instructions: Generate complete, clear cooking steps without numbers (e.g., 'Heat oil in pan' not '1. Heat oil in pan')
 - For existing instructions: Copy them EXACTLY as written - preserve all measurements, times, and details
 - For missing times: Use realistic estimates based on recipe complexity
-- For missing nutrition: Provide reasonable estimates based on ingredients
+- For missing nutrition: ONLY provide estimates if NO nutrition information exists in the original content
+- For existing nutrition: Extract EXACTLY as written - do NOT generate estimates
 - For missing servings: Estimate based on ingredient quantities
 
 CRITICAL INSTRUCTION RULE:
@@ -73,10 +79,17 @@ CRITICAL INSTRUCTION RULE:
 - Copy instructions word-for-word from the original content, including all measurements and timing details
 
 NUTRITION PARSING RULES:
-- If you see macro/nutrition information (calories, protein, carbs, fat, etc.), extract it to the nutrition section
+- If you see macro/nutrition information (calories, protein, carbs, fat, etc.), extract ONLY the numeric values to the nutrition section
 - Look for patterns like "553 калории | 46г протеин | 48г въглехидрати | 19г мазнини"
-- Convert to nutrition format: calories, protein, carbs, fat
+- Extract ONLY the numeric values, NO units or Bulgarian labels
+- EXAMPLE: If content has "553 калории | 46г протеин | 48г въглехидрати | 19г мазнини", extract as:
+  {"calories": "553", "protein": "46", "carbs": "48", "fat": "19"}
+- Do NOT include the Bulgarian words "калории", "протеин", "въглехидрати", "мазнини" in the nutrition values
+- Do NOT include units like "г", "g", "grams" in the nutrition values
 - Do NOT put nutrition info in ingredients - it belongs in the nutrition section
+- CRITICAL: If nutrition info exists in the content, extract it exactly - do NOT generate estimates
+- Only generate nutrition estimates if NO nutrition information is provided in the original content
+- When extracting existing nutrition, extract ONLY the numbers, remove all text and units
 
 TIME FORMATTING RULES:
 - If time already includes "minutes", "hours", or "hrs" → keep it exactly as written
@@ -302,7 +315,15 @@ Return ONLY the JSON object:`;
       decodedContent.match(/за\s+\d+\s*часа/gi) // "за 2 часа" (for 2 hours)
     );
     
-    const hasProperInstructions = hasEnglishKeywords || hasBulgarianKeywords || hasSpanishKeywords || hasFrenchKeywords || hasNumberedSteps || hasBulgarianSentences || hasBulgarianCookingInstructions;
+    // Check if content contains only notes/tips (not actual cooking instructions)
+    const hasOnlyNotes = (
+      decodedContent.toLowerCase().includes('additional notes:') ||
+      decodedContent.toLowerCase().includes('notes:') ||
+      decodedContent.toLowerCase().includes('tips:') ||
+      decodedContent.toLowerCase().includes('suggestions:')
+    );
+    
+    const hasProperInstructions = (hasEnglishKeywords || hasBulgarianKeywords || hasSpanishKeywords || hasFrenchKeywords || hasNumberedSteps || hasBulgarianSentences || hasBulgarianCookingInstructions) && !hasOnlyNotes;
     
     console.log('🔍 Instruction detection results:');
     console.log('- English keywords:', hasEnglishKeywords);
@@ -312,6 +333,7 @@ Return ONLY the JSON object:`;
     console.log('- Numbered steps:', hasNumberedSteps);
     console.log('- Bulgarian sentences:', hasBulgarianSentences);
     console.log('- Bulgarian cooking instructions:', hasBulgarianCookingInstructions);
+    console.log('- Has only notes/tips:', hasOnlyNotes);
     console.log('- Final result:', hasProperInstructions);
     
     // The key logic: if we detected proper instructions in the ORIGINAL content, they were extracted

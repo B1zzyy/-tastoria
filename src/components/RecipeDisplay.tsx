@@ -6,7 +6,7 @@ import { convertIngredients, convertIngredientSections, convertTemperature, type
 import { updateRecipeInstructions } from '@/lib/recipeService';
 import UnitToggle from './UnitToggle';
 
-import { Clock, Users, Star, ChefHat, List, BookOpen, Check, ExternalLink, X, GripVertical, Plus, Instagram, Sparkles, Utensils, Loader2 } from 'lucide-react';
+import { Clock, Users, Star, ChefHat, List, BookOpen, Check, ExternalLink, X, GripVertical, Plus, Instagram, Facebook, Sparkles, Utensils, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import Confetti from './Confetti';
@@ -327,11 +327,21 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                           {recipe.title}
                         </h1>
                       </div>
-                      {/* Instagram open button - top right corner */}
+                      {/* Platform open button - top right corner */}
                       {recipe.image === 'instagram-video' && recipe.instagramUrl && (
                         <div className="absolute top-4 right-4">
                           <button
                             onClick={() => setShowInstagramPopup(true)}
+                            className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
+                          >
+                            <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />
+                          </button>
+                        </div>
+                      )}
+                      {recipe.image === 'facebook-video' && recipe.facebookUrl && (
+                        <div className="absolute top-4 right-4">
+                          <button
+                            onClick={() => window.open(recipe.facebookUrl, '_blank')}
                             className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
                           >
                             <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />
@@ -354,11 +364,21 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                       {recipe.title}
                     </h1>
                   </div>
-                  {/* Instagram open button - top right corner */}
+                  {/* Platform open button - top right corner */}
                   {recipe.image === 'instagram-video' && recipe.instagramUrl && (
                     <div className="absolute top-4 right-4">
                       <button
                         onClick={() => setShowInstagramPopup(true)}
+                        className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
+                      >
+                        <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />
+                      </button>
+                    </div>
+                  )}
+                  {recipe.image === 'facebook-video' && recipe.facebookUrl && (
+                    <div className="absolute top-4 right-4">
+                      <button
+                        onClick={() => window.open(recipe.facebookUrl, '_blank')}
                         className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
                       >
                         <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />
@@ -383,7 +403,7 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                       {recipe.title}
                     </h1>
                   </div>
-                  {/* Instagram open button - top right corner */}
+                  {/* Platform open button - top right corner */}
                   {recipe.image === 'instagram-video' && recipe.instagramUrl && (
                     <div className="absolute top-4 right-4">
                       <button
@@ -394,9 +414,29 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                       </button>
                     </div>
                   )}
+                  {recipe.image === 'facebook-video' && recipe.facebookUrl && (
+                    <div className="absolute top-4 right-4">
+                      <button
+                        onClick={() => window.open(recipe.facebookUrl, '_blank')}
+                        className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
+                      >
+                        <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />
+                      </button>
+                    </div>
+                  )}
+                  {recipe.image === 'facebook-video' && recipe.facebookUrl && (
+                    <div className="absolute top-4 right-4">
+                      <button
+                        onClick={() => window.open(recipe.facebookUrl, '_blank')}
+                        className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
+                      >
+                        <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
-            } else if (recipe.image && recipe.image !== 'instagram-video') {
+            } else if (recipe.image && recipe.image !== 'instagram-video' && recipe.image !== 'facebook-video') {
               // Fall back to original image
               return (
                 <div className="relative aspect-video overflow-hidden">
@@ -413,11 +453,21 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                       {recipe.title}
                     </h1>
                   </div>
-                  {/* Instagram open button - top right corner */}
+                  {/* Platform open button - top right corner */}
                   {recipe.image === 'instagram-video' && recipe.instagramUrl && (
                     <div className="absolute top-4 right-4">
                       <button
                         onClick={() => setShowInstagramPopup(true)}
+                        className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
+                      >
+                        <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />
+                      </button>
+                    </div>
+                  )}
+                  {recipe.image === 'facebook-video' && recipe.facebookUrl && (
+                    <div className="absolute top-4 right-4">
+                      <button
+                        onClick={() => window.open(recipe.facebookUrl, '_blank')}
                         className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
                       >
                         <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />
@@ -439,10 +489,34 @@ export default function RecipeDisplay({ recipe, onUpdateRecipe, isEditable = fal
                       {recipe.title}
                     </h1>
                   </div>
-                  {/* Instagram open button - top right corner */}
+                  {/* Platform open button - top right corner */}
                   <div className="absolute top-4 right-4">
                     <button
                       onClick={() => setShowInstagramPopup(true)}
+                      className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
+                    >
+                      <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />
+                    </button>
+                  </div>
+                </div>
+              );
+            } else if (recipe.image === 'facebook-video' && recipe.facebookUrl) {
+              // Fallback for Facebook recipes without custom preview
+              return (
+                <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-blue-700 via-blue-800 to-blue-900 flex items-center justify-center">
+                  {/* Facebook logo */}
+                  <Facebook className="w-16 h-16 sm:w-20 sm:h-20 text-white" />
+                  
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight tracking-tight">
+                      {recipe.title}
+                    </h1>
+                  </div>
+                  {/* Platform open button - top right corner */}
+                  <div className="absolute top-4 right-4">
+                    <button
+                      onClick={() => window.open(recipe.facebookUrl, '_blank')}
                       className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 hover:scale-105 group"
                     >
                       <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:scale-110 transition-transform" />

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
-import { Clock, User, Folder, ArrowLeft, Instagram, Trash2, Pen, Plus, Pin, PinOff, Search, X } from 'lucide-react';
+import { Clock, User, Folder, ArrowLeft, Instagram, Facebook, Trash2, Pen, Plus, Pin, PinOff, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { deleteSavedRecipe, updateRecipeTitle, updateRecipeCustomPreview, togglePinRecipe, getSavedRecipes } from '@/lib/recipeService';
 import { recipeCache } from '@/lib/recipeCache';
@@ -143,6 +143,14 @@ const CollectionThumbnail = ({
                       {recipeData[index] ? renderCustomPreview(recipeData[index], true) : (
                         <div className="w-full h-full bg-gradient-to-br from-gray-700 via-gray-800 to-black flex items-center justify-center">
                           <Instagram className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                        </div>
+                      )}
+                    </div>
+                  ) : thumbnails[index] === 'facebook-video' ? (
+                    <div className="w-full h-full">
+                      {recipeData[index] ? renderCustomPreview(recipeData[index], true) : (
+                        <div className="w-full h-full bg-gradient-to-br from-blue-700 via-blue-800 to-blue-900 flex items-center justify-center">
+                          <Facebook className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                         </div>
                       )}
                     </div>
@@ -597,7 +605,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
     }
     
     // Default case: show original recipe image if available, otherwise Instagram logo
-    if (recipe.recipe_data.image && recipe.recipe_data.image !== 'instagram-video') {
+    if (recipe.recipe_data.image && recipe.recipe_data.image !== 'instagram-video' && recipe.recipe_data.image !== 'facebook-video') {
       return (
         <Image
           src={recipe.recipe_data.image}
@@ -904,7 +912,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                           {/* Recipe Image */}
                           {savedRecipe.recipe_data.image && (
                             <div className="aspect-video relative overflow-hidden">
-                              {savedRecipe.recipe_data.image === 'instagram-video' ? (
+                              {savedRecipe.recipe_data.image === 'instagram-video' || savedRecipe.recipe_data.image === 'facebook-video' ? (
                                 <div className="relative w-full h-full">
                                   {renderCustomPreview(savedRecipe)}
                                 </div>
@@ -994,7 +1002,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                               {/* Recipe Image */}
                               {savedRecipe.recipe_data.image && (
                                 <div className="aspect-video relative overflow-hidden">
-                                  {savedRecipe.recipe_data.image === 'instagram-video' ? (
+                                  {savedRecipe.recipe_data.image === 'instagram-video' || savedRecipe.recipe_data.image === 'facebook-video' ? (
                                     <div className="relative w-full h-full">
                                       {renderCustomPreview(savedRecipe)}
                                     </div>
@@ -1076,7 +1084,7 @@ export default function SavedRecipes({ isOpen, onClose, onSelectRecipe }: SavedR
                             {/* Recipe Image */}
                             {savedRecipe.recipe_data.image && (
                               <div className="aspect-video relative overflow-hidden">
-                                {savedRecipe.recipe_data.image === 'instagram-video' ? (
+                                {savedRecipe.recipe_data.image === 'instagram-video' || savedRecipe.recipe_data.image === 'facebook-video' ? (
                                   <div className="relative w-full h-full">
                                     {renderCustomPreview(savedRecipe)}
                                   </div>

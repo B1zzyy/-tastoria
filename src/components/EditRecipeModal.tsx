@@ -787,7 +787,7 @@ export default function EditRecipeModal({ isOpen, onClose, recipe, onSave, onDel
                          ? 'border-primary shadow-lg shadow-primary/25'
                          : 'border-border hover:border-primary/50'
                      }`}>
-                       {recipe.image && recipe.image !== 'instagram-video' ? (
+                       {recipe.image && recipe.image !== 'instagram-video' && recipe.image !== 'facebook-video' ? (
                          <Image
                            src={recipe.image}
                            alt="Original recipe"
