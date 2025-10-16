@@ -34,6 +34,7 @@ import { PaymentService } from '@/lib/paymentService';
 import { supabase } from '@/lib/supabase';
 import Footer from '@/components/Footer';
 import { ToastContainer } from '@/components/Toast';
+import { ConnectionHealth } from '@/lib/connectionHealth';
 
 
 export default function Home() {
@@ -106,6 +107,21 @@ export default function Home() {
     } else {
       // Reset skeleton when loading stops
       setShowSkeleton(false);
+    }
+  }, [loading]);
+
+  // Safety mechanism to reset loading state if it gets stuck
+  useEffect(() => {
+    if (loading) {
+      const safetyTimer = setTimeout(() => {
+        console.log('⚠️ Loading state stuck for 60 seconds, resetting...');
+        setLoading(false);
+        setShowSkeleton(false);
+        setError('Request timed out. Please try again.');
+        toast.error("Error getting recipe", "Refresh the page and try again.");
+      }, 60000); // 60 second safety timeout
+
+      return () => clearTimeout(safetyTimer);
     }
   }, [loading]);
 
@@ -399,10 +415,22 @@ export default function Home() {
     setError(null);
   };
 
-  const handleParseRecipe = useCallback(async (url: string, sourceType: SourceType = 'web') => {
+  const handleParseRecipe = useCallback(async (url: string, sourceType: SourceType = 'web', retryCount = 0) => {
     // Check if user is logged in
     if (!user) {
       setShowAuthModal(true);
+      return;
+    }
+
+    // Prevent multiple simultaneous requests
+    if (loading) {
+      console.log('⚠️ Request already in progress, ignoring duplicate request');
+      return;
+    }
+
+    // Check connection health before making request
+    if (!ConnectionHealth.isConnected()) {
+      setError('No internet connection. Please check your network and try again.');
       return;
     }
 
@@ -463,8 +491,9 @@ export default function Home() {
     
     // Set timeout to cancel request after 30 seconds
     const timeoutId = setTimeout(() => {
+      console.log('⏰ Request timeout - aborting');
       abortController.abort();
-    }, 45000);
+    }, 30000);
 
     try {
       // Route to appropriate API endpoint based on source type
@@ -488,11 +517,26 @@ export default function Home() {
         }
       }
       
+      // Get session token with timeout
+      let sessionToken = '';
+      try {
+        const sessionPromise = supabase.auth.getSession();
+        const sessionTimeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session fetch timeout')), 5000)
+        );
+        
+        const { data: { session } } = await Promise.race([sessionPromise, sessionTimeoutPromise]) as { data: { session: { access_token: string } | null } };
+        sessionToken = session?.access_token || '';
+      } catch (error) {
+        console.error('Failed to get session token:', error);
+        throw new Error('Authentication failed - please try logging in again');
+      }
+
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Authorization': `Bearer ${sessionToken}`,
         },
         body: JSON.stringify({ url: normalizedUrl }),
         signal: abortController.signal, // Add abort signal
@@ -542,12 +586,24 @@ export default function Home() {
       if (err instanceof Error) {
         if (err.name === 'AbortError') {
           setError('Request timed out after 30 seconds. Please try again or check if the URL is accessible.');
+          toast.error("Error getting recipe", "Refresh the page and try again.");
+        } else if (retryCount < 2 && (err.message.includes('timeout') || err.message.includes('network') || err.message.includes('fetch'))) {
+          // Retry on network/timeout errors up to 2 times
+          console.log(`🔄 Retrying request (attempt ${retryCount + 1}/2)...`);
+          setTimeout(() => {
+            handleParseRecipe(url, sourceType, retryCount + 1);
+          }, 1000 * (retryCount + 1)); // Exponential backoff
+          return;
         } else {
           setError(err.message);
         }
       } else {
         setError('An error occurred while parsing the recipe');
       }
+      
+      // Reset loading state on error
+      setLoading(false);
+      setShowSkeleton(false);
     } finally {
       setLoading(false);
     }
@@ -600,6 +656,21 @@ export default function Home() {
       document.body.style.overflow = 'unset';
     };
   }, []);
+
+  // Initialize connection health monitoring
+  useEffect(() => {
+    ConnectionHealth.init();
+    
+    const removeListener = ConnectionHealth.addListener((isOnline) => {
+      if (!isOnline) {
+        toast.error("Connection lost", "Please check your internet connection");
+      } else {
+        toast.info("Connection restored");
+      }
+    });
+
+    return removeListener;
+  }, [toast]);
 
   return (
     <div className="min-h-screen bg-background">

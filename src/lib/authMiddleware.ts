@@ -23,10 +23,16 @@ export async function authenticateUser(request: NextRequest): Promise<Authentica
 
     const token = authHeader.substring(7);
     
-    // Verify the JWT token with Supabase
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    // Add timeout to prevent hanging
+    const getUserPromise = supabase.auth.getUser(token);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Authentication timeout')), 10000)
+    );
+
+    const { data: { user }, error } = await Promise.race([getUserPromise, timeoutPromise]) as { data: { user: any }; error: any };
     
     if (error || !user) {
+      console.error('Authentication failed:', error);
       return null;
     }
 

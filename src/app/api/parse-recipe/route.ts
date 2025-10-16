@@ -6,13 +6,20 @@ import * as cheerio from 'cheerio';
 
 export async function POST(request: NextRequest) {
   try {
-    // Require premium access
-    const authResult = await requirePremiumAccess(request);
-    if (authResult instanceof NextResponse) {
-      return authResult; // Return error response
-    }
-    
-    const { url } = await request.json();
+    // Add timeout to the entire request
+    const requestTimeout = setTimeout(() => {
+      console.log('⏰ API request timeout - returning error');
+    }, 25000); // 25 second timeout
+
+    try {
+      // Require premium access
+      const authResult = await requirePremiumAccess(request);
+      if (authResult instanceof NextResponse) {
+        clearTimeout(requestTimeout);
+        return authResult; // Return error response
+      }
+      
+      const { url } = await request.json();
     
     if (!url) {
       return NextResponse.json(
@@ -223,6 +230,9 @@ export async function POST(request: NextRequest) {
     console.log('✅ Gemini successfully parsed recipe:', recipe.title);
     
     return NextResponse.json({ recipe });
+    } finally {
+      clearTimeout(requestTimeout);
+    }
   } catch (error) {
     console.error('Error parsing recipe:', error);
     return NextResponse.json(

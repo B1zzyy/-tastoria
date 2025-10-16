@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ToastProvider';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
   };
   
   const { signUp, signIn } = useAuth();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +76,9 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
         console.log('Signup response:', { data, error });
         
         if (error) {
+          if (error.message.includes('timeout')) {
+            toast.error("Error creating account", "Refresh the page and try again.");
+          }
           setError(error.message);
           return;
         }
@@ -100,6 +105,9 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
         console.log('Sign in result:', { error });
         
         if (error) {
+          if (error.message.includes('timeout')) {
+            toast.error("Error logging in", "Refresh the page and try again.");
+          }
           setError(error.message);
           return;
         }
@@ -113,6 +121,9 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
       }
     } catch (err) {
       if (err instanceof Error) {
+        if (err.message.includes('timeout')) {
+          toast.error("Error logging in", "Refresh the page and try again.");
+        }
         setError(err.message);
       } else {
         setError('An unexpected error occurred');

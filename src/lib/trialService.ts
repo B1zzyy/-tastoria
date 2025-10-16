@@ -172,20 +172,32 @@ export class TrialService {
    * Check if user can access a feature
    */
   static async canAccessFeature(userId: string): Promise<boolean> {
-    const trialStatus = await this.getTrialStatus(userId)
-    
-    // Paid users can access everything
-    if (trialStatus.isPaidUser) {
-      return true
-    }
+    try {
+      // Add timeout to prevent hanging
+      const trialStatusPromise = this.getTrialStatus(userId);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Trial check timeout')), 10000)
+      );
 
-    // Trial users can access everything during trial
-    if (trialStatus.isTrialActive) {
-      return true
-    }
+      const trialStatus = await Promise.race([trialStatusPromise, timeoutPromise]) as TrialStatus;
+      
+      // Paid users can access everything
+      if (trialStatus.isPaidUser) {
+        return true
+      }
 
-    // Expired trial users cannot access premium features
-    return false
+      // Trial users can access everything during trial
+      if (trialStatus.isTrialActive) {
+        return true
+      }
+
+      // Expired trial users cannot access premium features
+      return false
+    } catch (error) {
+      console.error('Error checking feature access:', error);
+      // Default to allowing access if there's an error (fail open)
+      return true;
+    }
   }
 
   /**

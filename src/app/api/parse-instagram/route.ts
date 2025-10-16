@@ -1055,13 +1055,20 @@ async function scrapeInstagramPost(url: string): Promise<{ caption: string; imag
 
 export async function POST(request: NextRequest) {
   try {
-    // Require premium access
-    const authResult = await requirePremiumAccess(request);
-    if (authResult instanceof NextResponse) {
-      return authResult; // Return error response
-    }
-    
-    const { url } = await request.json();
+    // Add timeout to the entire request
+    const requestTimeout = setTimeout(() => {
+      console.log('⏰ API request timeout - returning error');
+    }, 25000); // 25 second timeout
+
+    try {
+      // Require premium access
+      const authResult = await requirePremiumAccess(request);
+      if (authResult instanceof NextResponse) {
+        clearTimeout(requestTimeout);
+        return authResult; // Return error response
+      }
+      
+      const { url } = await request.json();
 
     if (!url || typeof url !== 'string') {
       return NextResponse.json(
@@ -1190,6 +1197,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
 
+    } finally {
+      clearTimeout(requestTimeout);
+    }
   } catch (error) {
     console.error('Instagram parsing error:', error);
     

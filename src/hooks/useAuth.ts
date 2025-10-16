@@ -260,24 +260,48 @@ export function useAuth() {
 
 
   const signUp = async (email: string, password: string, name: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name: name
+    try {
+      // Add timeout to prevent hanging
+      const signUpPromise = supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name
+          }
         }
-      }
-    })
-    return { data, error }
+      });
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Sign up timeout after 15 seconds')), 15000)
+      );
+
+      const { data, error } = await Promise.race([signUpPromise, timeoutPromise]) as { data: any; error: any };
+      return { data, error }
+    } catch (error) {
+      console.error('Sign up error:', error);
+      return { data: null, error: { message: error instanceof Error ? error.message : 'Sign up failed' } }
+    }
   }
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    })
-    return { data, error }
+    try {
+      // Add timeout to prevent hanging
+      const signInPromise = supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Sign in timeout after 15 seconds')), 15000)
+      );
+
+      const { data, error } = await Promise.race([signInPromise, timeoutPromise]) as { data: any; error: any };
+      return { data, error }
+    } catch (error) {
+      console.error('Sign in error:', error);
+      return { data: null, error: { message: error instanceof Error ? error.message : 'Sign in failed' } }
+    }
   }
 
   const signOut = async () => {
